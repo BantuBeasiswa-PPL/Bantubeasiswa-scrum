@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useContrastMode } from '../../hooks/useContrastMode';
 
 // ─── Helper: get user initials for avatar ────────────────────────────────────
 function getInitials(nama = '') {
@@ -39,9 +38,8 @@ function SidebarItem({ item, isActive, onClose }) {
       href={item.href}
       onClick={onClose}
       className={`
-        flex items-center px-4 py-3 rounded-lg mx-2 text-sm font-medium
+        flex items-center gap-3 px-4 py-3 rounded-lg mx-2 text-sm font-medium
         transition-all duration-200 group
-        ${item.icon ? 'gap-3' : ''}
         ${
           isActive
             ? 'bg-white/20 text-white border-l-4 border-white pl-3'
@@ -49,7 +47,7 @@ function SidebarItem({ item, isActive, onClose }) {
         }
       `}
     >
-      {item.icon && <span className="text-lg leading-none">{item.icon}</span>}
+      <span className="text-lg leading-none">{item.icon}</span>
       <span className="leading-tight">{item.label}</span>
     </Link>
   );
@@ -62,9 +60,6 @@ export default function BaseLayout({ children, user, menuItems }) {
 
   const nama  = user?.nama  || 'Pengguna';
   const role  = user?.role  || 'mahasiswa';
-
-  // Hook Kontras Mode PBI-09
-  const { isHighContrast, toggleContrast } = useContrastMode(user?.accountId);
 
   const roleLabel = {
     admin:      'Administrator',
@@ -202,7 +197,6 @@ export default function BaseLayout({ children, user, menuItems }) {
           <div className="flex items-center gap-2">
             {/* Kontras Button */}
             <button
-              onClick={toggleContrast}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all hover:shadow-sm"
               style={{
                 borderColor: '#ffc107',
@@ -212,8 +206,8 @@ export default function BaseLayout({ children, user, menuItems }) {
               title="Toggle kontras tinggi"
               aria-label="Toggle kontras"
             >
-              <span style={{ color: '#ffc107' }}>{isHighContrast ? '☀' : '◑'}</span>
-              <span className="hidden sm:inline">{isHighContrast ? 'Normal' : 'Kontras'}</span>
+              <span style={{ color: '#ffc107' }}>◑</span>
+              <span className="hidden sm:inline">Kontras</span>
             </button>
 
             {/* Font Size Controls */}

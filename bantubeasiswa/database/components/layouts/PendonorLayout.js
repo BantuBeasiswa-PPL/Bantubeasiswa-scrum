@@ -4,18 +4,22 @@ const menuItems = [
   {
     label: 'Profil Pendonor',
     href: '/pendonor/profil',
+    icon: '🏢',
   },
   {
     label: 'Kelola Program',
     href: '/pendonor/program',
+    icon: '🎓',
   },
   {
     label: 'Seleksi Pendaftar',
     href: '/pendonor/seleksi',
+    icon: '👥',
   },
   {
     label: 'Dashboard Laporan',
     href: '/pendonor/laporan',
+    icon: '📈',
   },
 ];
 

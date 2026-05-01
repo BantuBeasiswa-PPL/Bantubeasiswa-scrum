@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-  // 3. Verifikasi password (menggunakan kolom kataKunci sesuai skema kamu)
+  // 3. Verifikasi password (menggunakan kolom kataKunci sesuai skema awal)
   const valid = await bcrypt.compare(password, user.kataKunci);
 
   if (!valid) {
