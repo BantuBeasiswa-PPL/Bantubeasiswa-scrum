@@ -38,8 +38,9 @@ function SidebarItem({ item, isActive, onClose }) {
       href={item.href}
       onClick={onClose}
       className={`
-        flex items-center gap-3 px-4 py-3 rounded-lg mx-2 text-sm font-medium
+        flex items-center px-4 py-3 rounded-lg mx-2 text-sm font-medium
         transition-all duration-200 group
+        ${item.icon ? 'gap-3' : ''}
         ${
           isActive
             ? 'bg-white/20 text-white border-l-4 border-white pl-3'
@@ -47,7 +48,7 @@ function SidebarItem({ item, isActive, onClose }) {
         }
       `}
     >
-      <span className="text-lg leading-none">{item.icon}</span>
+      {item.icon && <span className="text-lg leading-none">{item.icon}</span>}
       <span className="leading-tight">{item.label}</span>
     </Link>
   );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import Link from 'next/link';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const COLORS = {
@@ -78,6 +79,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword ] = useState(false);
   const [error,        setError        ] = useState('');
   const [loading,      setLoading      ] = useState(false);
+
+  const { registered } = router.query;
 
   // ── Handle Login ────────────────────────────────────────────────────────────
   async function handleLogin(e) {
@@ -325,6 +328,16 @@ export default function LoginPage() {
                 </a>
               </div>
 
+              {/* ── Success Message ────────────────────────────────────────── */}
+              {registered && !error && (
+                <div
+                  className="flex items-start gap-2.5 px-4 py-3 rounded-lg mb-4 text-sm bg-green-50 border border-green-200 text-green-700"
+                  role="alert"
+                >
+                  <span>Pendaftaran berhasil! Silakan login.</span>
+                </div>
+              )}
+
               {/* ── Error Message ─────────────────────────────────────────── */}
               {error && (
                 <div
@@ -372,15 +385,31 @@ export default function LoginPage() {
             {/* ── Footer teks ───────────────────────────────────────────── */}
             <p className="text-center text-sm mt-6" style={{ color: '#6b7280' }}>
               Belum punya akun?{' '}
-              <a
-                href="#"
-                className="font-semibold transition-colors"
-                style={{ color: COLORS.primaryBlue }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = COLORS.accentGold)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = COLORS.primaryBlue)}
-              >
-                Daftar sebagai Pendonor
-              </a>
+              {selectedRole === 'mahasiswa' ? (
+                <Link
+                  href="/register/mahasiswa"
+                  className="font-semibold transition-colors"
+                  style={{ color: COLORS.primaryBlue }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = COLORS.accentGold)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = COLORS.primaryBlue)}
+                >
+                  Daftar sebagai Mahasiswa
+                </Link>
+              ) : selectedRole === 'pendonor' ? (
+                <a
+                  href="#"
+                  className="font-semibold transition-colors"
+                  style={{ color: COLORS.primaryBlue }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = COLORS.accentGold)}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = COLORS.primaryBlue)}
+                >
+                  Daftar sebagai Pendonor
+                </a>
+              ) : (
+                <span className="font-semibold text-gray-400">
+                  Hubungi Super Admin
+                </span>
+              )}
             </p>
           </div>
         </div>
