@@ -50,6 +50,7 @@ export function withAuth(context, allowedRoles) {
         accountId: decoded.accountId,
         email    : decoded.email,
         role     : decoded.role,
+        nama     : decoded.nama ?? '',
       },
     },
   };
