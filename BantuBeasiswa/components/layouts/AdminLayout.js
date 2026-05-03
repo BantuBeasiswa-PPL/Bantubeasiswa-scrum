@@ -6,6 +6,10 @@ const menuItems = [
     href: '/admin/dashboard',
   },
   {
+    label: 'Dashboard Analitik Wilayah',
+    href: '/admin/dashboard-analitik',
+  },
+  {
     label: 'Kelola Data Wilayah',
     href: '/admin/wilayah',
   },
