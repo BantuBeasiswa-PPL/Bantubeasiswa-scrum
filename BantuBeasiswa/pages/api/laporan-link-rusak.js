@@ -1,5 +1,5 @@
-import { supabase } from '../../../lib/db';
-import { verifyToken } from '../../../lib/auth';
+import { supabase } from '../../lib/db';
+import { verifyToken } from '../../lib/auth';
 
 /**
  * POST /api/laporan-link-rusak

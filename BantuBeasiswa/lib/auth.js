@@ -48,9 +48,10 @@ export function withAuth(context, allowedRoles) {
     props: {
       user: {
         accountId: decoded.accountId,
+        userId   : decoded.userId   ?? null,
         email    : decoded.email,
         role     : decoded.role,
-        nama     : decoded.nama ?? '',
+        nama     : decoded.nama     ?? '',
       },
     },
   };

@@ -1,13 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '../../../components/layouts/MahasiswaLayout';
-import { supabase } from '../../../lib/supabase';
+import { supabase } from '../../../lib/db';
 import { uploadDokumen } from '../../../lib/uploadDokumen';
-
-/* ─────────────────────────────────────────────────────────────────
-   Dummy user – ganti dengan data dari session / cookie di integrasi
-   ───────────────────────────────────────────────────────────────── */
-const DUMMY_USER = { nama: 'Budi Santoso', role: 'mahasiswa' };
+import { withAuth } from '../../../lib/auth';
 
 /* ── Step definitions ─────────────────────────────────────────── */
 const STEPS = ['Personal', 'Academic', 'Documents', 'Review'];
@@ -751,7 +747,7 @@ function validateStep(step, personal, academic, dokumen) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════════ */
-export default function DaftarBeasiswa() {
+export default function DaftarBeasiswa({ user }) {
   const router = useRouter();
   const { beasiswaId } = router.query;
 
@@ -779,14 +775,12 @@ export default function DaftarBeasiswa() {
     motivation_letter: { status: 'pending', url: '', error: '' },
   });
 
-  /* ── Logged-in user ── */
-  const [userId, setUserId] = useState(null);
 
   /* ── Form state ── */
   const [personal, setPersonal] = useState({
-    nama_lengkap: DUMMY_USER.nama,   // pre-fill dari profil
+    nama_lengkap: user?.nama || '',  // pre-fill dari profil
     nim: '',
-    email: '',
+    email: user?.email || '',
     alamat: '',
   });
 
@@ -846,21 +840,7 @@ export default function DaftarBeasiswa() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  /* ── Resolve user_id from cookie session ── */
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/user/me');
-        if (!res.ok) return; // keep UI usable; submit will show proper error
-        const json = await res.json();
-        if (!cancelled) setUserId(json?.user?.id ?? null);
-      } catch {
-        // ignore; handled on submit
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  /* Tidak perlu /api/user/me karena userId sudah ada di prop user dari JWT */
 
   /* ── Submit: cek duplikat + cek kuota + insert pendaftaran ── */
   const handleSubmit = async () => {
@@ -878,78 +858,39 @@ export default function DaftarBeasiswa() {
       return;
     }
 
-    if (!userId) {
+    if (!user?.userId) {
       setSubmitError('Kamu belum login atau sesi kamu sudah habis. Silakan login ulang.');
-      return;
-    }
-
-    const beasiswaIdNum = Number(beasiswaId);
-    if (!Number.isFinite(beasiswaIdNum)) {
-      setSubmitError('ID beasiswa tidak valid.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // 1) Cek duplikat pendaftaran (user sudah pernah mendaftar ke beasiswa ini)
-      const { data: existing, error: existingErr } = await supabase
-        .from('pendaftaran')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('beasiswa_id', beasiswaIdNum)
-        .maybeSingle();
+      // Panggil API /api/pendaftaran/create (server-side: auth, cek duplikat, kuota, insert)
+      const res  = await fetch('/api/pendaftaran/create', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ beasiswaId }),
+      });
+      const json = await res.json();
 
-      if (existingErr) throw existingErr;
-      if (existing?.id) {
-        setSubmitError('Kamu sudah mendaftar program ini sebelumnya');
-        setPendaftaranId(existing.id);
+      if (res.status === 409) {
+        // Sudah pernah daftar
+        setSubmitError(json.message);
+        setPendaftaranId(json.pendaftaranId);
+        setIsSubmitting(false);
         return;
       }
 
-      // 2) Cek status beasiswa & kuota tersisa
-      const { data: beasiswa, error: beasiswaErr } = await supabase
-        .from('beasiswa')
-        .select('status, kuota')
-        .eq('id', beasiswaIdNum)
-        .single();
-
-      if (beasiswaErr) throw beasiswaErr;
-      if (!beasiswa) {
-        setSubmitError('Beasiswa tidak ditemukan.');
+      if (!res.ok) {
+        setSubmitError(json.message || 'Terjadi kesalahan saat submit pendaftaran');
+        setIsSubmitting(false);
         return;
       }
 
-      if (String(beasiswa.status).toUpperCase() !== 'AKTIF') {
-        setSubmitError('Program beasiswa sudah tidak aktif');
-        return;
-      }
-
-      const { count: pendaftarCount, error: countErr } = await supabase
-        .from('pendaftaran')
-        .select('id', { count: 'exact', head: true })
-        .eq('beasiswa_id', beasiswaIdNum);
-
-      if (countErr) throw countErr;
-      const kuota = Number(beasiswa.kuota ?? 0);
-      const terpakai = Number(pendaftarCount ?? 0);
-      if (kuota > 0 && terpakai >= kuota) {
-        setSubmitError('Kuota pendaftar sudah terpenuhi');
-        return;
-      }
-
-      // 3) Insert pendaftaran baru
-      const { data: newPendaftaran, error: insertErr } = await supabase
-        .from('pendaftaran')
-        .insert({ user_id: userId, beasiswa_id: beasiswaIdNum, status: 'TERDAFTAR' })
-        .select()
-        .single();
-
-      if (insertErr) throw insertErr;
-
-      const newId = newPendaftaran?.id ?? null;
+      const newId = json.pendaftaranId ?? null;
       setPendaftaranId(newId);
 
-      // 4) Upload dokumen (sequential) + insert ke tabel dokumen
+      // Upload dokumen (sequential)
       await uploadRemainingDocs(newId);
     } catch (e) {
       setSubmitError(e?.message || 'Terjadi kesalahan saat submit pendaftaran');
@@ -972,10 +913,10 @@ export default function DaftarBeasiswa() {
     const { error: dokErr } = await supabase
       .from('dokumen')
       .insert({
-        pendaftaran_id: pendId,
+        pendaftaranId: pendId,
         jenis,
-        file_url: publicUrl,
-        status_dokumen: 'MENUNGGU',
+        fileUrl: publicUrl,
+        statusDokumen: 'MENUNGGU',
       });
     if (dokErr) {
       throw new Error(`Gagal menyimpan metadata dokumen ${jenis}: ${dokErr.message}`);
@@ -1060,46 +1001,13 @@ export default function DaftarBeasiswa() {
     !validateFile(dokumen.transkrip);
 
   if (isSuccess && pendaftaranId) {
-    return (
-      <MahasiswaLayout user={DUMMY_USER}>
-        <div className="max-w-3xl mx-auto space-y-6">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h1 className="text-2xl font-bold text-gray-800">Pendaftaran Berhasil</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Dokumen kamu sudah berhasil diupload dan sedang menunggu verifikasi.
-            </p>
-
-            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-              ID Pendaftaran:{' '}
-              <span className="font-mono font-semibold">{pendaftaranId}</span>
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => router.push('/mahasiswa/dashboard')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-                  bg-[#0056b3] text-white hover:bg-[#004494] transition-colors"
-              >
-                Lihat Tracking Status
-              </button>
-              <button
-                type="button"
-                onClick={() => router.push('/mahasiswa/dashboard')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
-                  border border-gray-200 text-gray-600 hover:bg-gray-50"
-              >
-                Kembali ke Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      </MahasiswaLayout>
-    );
+    // Redirect langsung ke tracker status
+    router.replace(`/mahasiswa/status-pendaftaran?id=${pendaftaranId}`);
+    return null;
   }
 
   return (
-    <MahasiswaLayout user={DUMMY_USER}>
+    <MahasiswaLayout user={user}>
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* ── Page header ── */}
@@ -1243,4 +1151,9 @@ export default function DaftarBeasiswa() {
       </div>
     </MahasiswaLayout>
   );
+}
+
+// ─── SSR Auth Guard ───────────────────────────────────────────────────────────
+export async function getServerSideProps(context) {
+  return withAuth(context, 'mahasiswa');
 }

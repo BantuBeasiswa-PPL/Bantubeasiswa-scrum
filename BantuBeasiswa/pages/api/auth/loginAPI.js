@@ -26,14 +26,15 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-  // 2b. Ambil nama dari tabel user (profil)
+  // 2b. Ambil nama + userId dari tabel user (profil)
   const { data: profil } = await supabase
     .from('user')
-    .select('nama')
+    .select('nama, userId')
     .eq('accountId', user.accountId)
     .single();
 
-  const nama = profil?.nama ?? '';
+  const nama   = profil?.nama   ?? '';
+  const userId = profil?.userId ?? null;
 
   // 3. Verifikasi password (plain text — hanya untuk testing, ganti ke bcrypt di production)
   const valid = password === user.kataKunci;
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
 
   // 4. Buat JWT token
   const token = jwt.sign(
-    { accountId: user.accountId, role: user.role, email: user.email, nama },
+    { accountId: user.accountId, role: user.role, email: user.email, nama, userId },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );

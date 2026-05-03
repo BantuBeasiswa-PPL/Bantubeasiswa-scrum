@@ -3,27 +3,33 @@ import BaseLayout from './BaseLayout';
 const menuItems = [
   {
     label: 'Dashboard',
-    href: '/mahasiswa/dashboard',
+    href : '/mahasiswa/dashboard',
+    icon : '🏠',
   },
   {
     label: 'Cari Beasiswa',
-    href: '/mahasiswa/cari',
+    href : '/mahasiswa/cari',
+    icon : '🔍',
   },
   {
     label: 'Status Pendaftaran',
-    href: '/mahasiswa/pendaftaran',
+    href : '/mahasiswa/pendaftaran',
+    icon : '📋',
   },
   {
     label: 'Tutorial Administrasi',
-    href: '/mahasiswa/tutorial',
+    href : '/mahasiswa/tutorial',
+    icon : '📚',
   },
   {
     label: 'Beasiswa Favorit',
-    href: '/mahasiswa/favorit',
+    href : '/mahasiswa/favorit',
+    icon : '⭐',
   },
   {
     label: 'Bantuan',
-    href: '/mahasiswa/bantuan',
+    href : '/mahasiswa/bantuan',
+    icon : '💬',
   },
 ];
 
