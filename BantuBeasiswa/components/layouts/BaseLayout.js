@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useContrastMode } from '../../lib/useContrastMode';
+// import { useFontSize } from '../../lib/useFontSize'; // PBI-10: Font Resizer (disabled for now)
 
 // ─── Helper: get user initials for avatar ────────────────────────────────────
 function getInitials(nama = '') {
@@ -59,6 +61,8 @@ export default function BaseLayout({ children, user, menuItems }) {
   const router = useRouter();
   const [sidebarOpen,   setSidebarOpen  ] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const { isHighContrast, toggle: toggleContrast } = useContrastMode(user?.id);
+  // const { level: fontLevel, decrease: decreaseFont, increase: increaseFont, canDecrease, canIncrease } = useFontSize(user?.id); // PBI-10: Font Resizer (disabled for now)
 
   async function handleLogout() {
     setLogoutLoading(true);
@@ -254,39 +258,58 @@ export default function BaseLayout({ children, user, menuItems }) {
           <div className="flex items-center gap-2">
             {/* Kontras Button */}
             <button
+              onClick={toggleContrast}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all hover:shadow-sm"
               style={{
-                borderColor: '#ffc107',
-                color: '#0056b3',
-                backgroundColor: '#fff9e6',
+                borderColor: isHighContrast ? '#000000' : '#ffc107',
+                color: isHighContrast ? '#ffffff' : '#0056b3',
+                backgroundColor: isHighContrast ? '#000000' : '#fff9e6',
               }}
-              title="Toggle kontras tinggi"
-              aria-label="Toggle kontras"
+              title={isHighContrast ? 'Nonaktifkan kontras tinggi' : 'Aktifkan kontras tinggi'}
+              aria-label="Toggle kontras tinggi"
             >
-              <span style={{ color: '#ffc107' }}>◑</span>
-              <span className="hidden sm:inline">Kontras</span>
+              <span style={{ color: isHighContrast ? '#ffff00' : '#ffc107' }}>
+                {isHighContrast ? '◑' : '◑'}
+              </span>
+              <span className="hidden sm:inline">
+                {isHighContrast ? 'Normal' : 'Kontras'}
+              </span>
             </button>
 
-            {/* Font Size Controls */}
+            {/* Font Size Controls - PBI-10: DISABLED FOR NOW */}
+            {/* 
             <div className="flex items-center rounded-lg border overflow-hidden" style={{ borderColor: '#e5e7eb' }}>
               <button
+                onClick={decreaseFont}
+                disabled={!canDecrease}
                 className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
-                style={{ color: '#0056b3' }}
-                title="Perkecil font"
+                style={{
+                  color: canDecrease ? '#0056b3' : '#cccccc',
+                  cursor: canDecrease ? 'pointer' : 'not-allowed',
+                  opacity: canDecrease ? 1 : 0.5,
+                }}
+                title={canDecrease ? 'Perkecil font' : 'Ukuran teks sudah minimum'}
                 aria-label="Perkecil ukuran font"
               >
                 −
               </button>
               <div className="w-px h-5 bg-gray-200" />
               <button
+                onClick={increaseFont}
+                disabled={!canIncrease}
                 className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
-                style={{ color: '#0056b3' }}
-                title="Perbesar font"
+                style={{
+                  color: canIncrease ? '#0056b3' : '#cccccc',
+                  cursor: canIncrease ? 'pointer' : 'not-allowed',
+                  opacity: canIncrease ? 1 : 0.5,
+                }}
+                title={canIncrease ? 'Perbesar font' : 'Ukuran teks sudah maksimal'}
                 aria-label="Perbesar ukuran font"
               >
                 +
               </button>
             </div>
+            */}
 
             {/* User badge (desktop) */}
             <div
