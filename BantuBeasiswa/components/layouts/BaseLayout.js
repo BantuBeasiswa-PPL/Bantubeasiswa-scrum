@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useContrastMode } from '../../lib/useContrastMode';
+import { useFontSize } from '../../lib/useFontSize';
 
 // ─── Helper: get user initials for avatar ────────────────────────────────────
 function getInitials(nama = '') {
@@ -59,6 +61,8 @@ export default function BaseLayout({ children, user, menuItems }) {
   const router = useRouter();
   const [sidebarOpen,   setSidebarOpen  ] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const { isHighContrast, toggle: toggleContrast } = useContrastMode(user?.id);
+  const { level: fontLevel, decrease: decreaseFont, increase: increaseFont, canDecrease, canIncrease } = useFontSize(user?.id);
 
   async function handleLogout() {
     setLogoutLoading(true);
@@ -102,7 +106,7 @@ export default function BaseLayout({ children, user, menuItems }) {
       >
         {/* Brand / Logo */}
         <div className="px-4 pt-6 pb-4 border-b border-white/20">
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2.5 mb-6">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"
               style={{ backgroundColor: '#ffc107', color: '#0056b3' }}
@@ -254,34 +258,51 @@ export default function BaseLayout({ children, user, menuItems }) {
           <div className="flex items-center gap-2">
             {/* Kontras Button */}
             <button
+              onClick={toggleContrast}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all hover:shadow-sm"
               style={{
-                borderColor: '#ffc107',
-                color: '#0056b3',
-                backgroundColor: '#fff9e6',
+                borderColor: isHighContrast ? '#000000' : '#ffc107',
+                color: isHighContrast ? '#ffffff' : '#0056b3',
+                backgroundColor: isHighContrast ? '#000000' : '#fff9e6',
               }}
-              title="Toggle kontras tinggi"
-              aria-label="Toggle kontras"
+              title={isHighContrast ? 'Nonaktifkan kontras tinggi' : 'Aktifkan kontras tinggi'}
+              aria-label="Toggle kontras tinggi"
             >
-              <span style={{ color: '#ffc107' }}>◑</span>
-              <span className="hidden sm:inline">Kontras</span>
+              <span style={{ color: isHighContrast ? '#ffff00' : '#ffc107' }}>
+                {isHighContrast ? '◑' : '◑'}
+              </span>
+              <span className="hidden sm:inline">
+                {isHighContrast ? 'Normal' : 'Kontras'}
+              </span>
             </button>
 
             {/* Font Size Controls */}
             <div className="flex items-center rounded-lg border overflow-hidden" style={{ borderColor: '#e5e7eb' }}>
               <button
-                className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
-                style={{ color: '#0056b3' }}
-                title="Perkecil font"
+                onClick={decreaseFont}
+                disabled={!canDecrease}
+                className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100"
+                style={{
+                  color: canDecrease ? '#0056b3' : '#cccccc',
+                  cursor: canDecrease ? 'pointer' : 'not-allowed',
+                  opacity: canDecrease ? 1 : 0.5,
+                }}
+                title={canDecrease ? 'Perkecil font' : 'Ukuran teks sudah minimum'}
                 aria-label="Perkecil ukuran font"
               >
                 −
               </button>
-              <div className="w-px h-5 bg-gray-200" />
+              <div className="w-px h-6 bg-gray-200" />
               <button
-                className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
-                style={{ color: '#0056b3' }}
-                title="Perbesar font"
+                onClick={increaseFont}
+                disabled={!canIncrease}
+                className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100"
+                style={{
+                  color: canIncrease ? '#0056b3' : '#cccccc',
+                  cursor: canIncrease ? 'pointer' : 'not-allowed',
+                  opacity: canIncrease ? 1 : 0.5,
+                }}
+                title={canIncrease ? 'Perbesar font' : 'Ukuran teks sudah maksimal'}
                 aria-label="Perbesar ukuran font"
               >
                 +
