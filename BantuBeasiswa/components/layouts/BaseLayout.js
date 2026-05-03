@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContrastMode } from '../../lib/useContrastMode';
-// import { useFontSize } from '../../lib/useFontSize'; // PBI-10: Font Resizer (disabled for now)
+import { useFontSize } from '../../lib/useFontSize';
 
 // ─── Helper: get user initials for avatar ────────────────────────────────────
 function getInitials(nama = '') {
@@ -62,7 +62,7 @@ export default function BaseLayout({ children, user, menuItems }) {
   const [sidebarOpen,   setSidebarOpen  ] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const { isHighContrast, toggle: toggleContrast } = useContrastMode(user?.id);
-  // const { level: fontLevel, decrease: decreaseFont, increase: increaseFont, canDecrease, canIncrease } = useFontSize(user?.id); // PBI-10: Font Resizer (disabled for now)
+  const { level: fontLevel, decrease: decreaseFont, increase: increaseFont, canDecrease, canIncrease } = useFontSize(user?.id);
 
   async function handleLogout() {
     setLogoutLoading(true);
@@ -106,7 +106,7 @@ export default function BaseLayout({ children, user, menuItems }) {
       >
         {/* Brand / Logo */}
         <div className="px-4 pt-6 pb-4 border-b border-white/20">
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2.5 mb-6">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"
               style={{ backgroundColor: '#ffc107', color: '#0056b3' }}
@@ -276,13 +276,12 @@ export default function BaseLayout({ children, user, menuItems }) {
               </span>
             </button>
 
-            {/* Font Size Controls - PBI-10: DISABLED FOR NOW */}
-            {/* 
+            {/* Font Size Controls */}
             <div className="flex items-center rounded-lg border overflow-hidden" style={{ borderColor: '#e5e7eb' }}>
               <button
                 onClick={decreaseFont}
                 disabled={!canDecrease}
-                className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
+                className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100"
                 style={{
                   color: canDecrease ? '#0056b3' : '#cccccc',
                   cursor: canDecrease ? 'pointer' : 'not-allowed',
@@ -293,11 +292,11 @@ export default function BaseLayout({ children, user, menuItems }) {
               >
                 −
               </button>
-              <div className="w-px h-5 bg-gray-200" />
+              <div className="w-px h-6 bg-gray-200" />
               <button
                 onClick={increaseFont}
                 disabled={!canIncrease}
-                className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
+                className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100"
                 style={{
                   color: canIncrease ? '#0056b3' : '#cccccc',
                   cursor: canIncrease ? 'pointer' : 'not-allowed',
@@ -309,7 +308,6 @@ export default function BaseLayout({ children, user, menuItems }) {
                 +
               </button>
             </div>
-            */}
 
             {/* User badge (desktop) */}
             <div
