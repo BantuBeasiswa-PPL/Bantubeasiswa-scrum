@@ -1,30 +1,9 @@
 import BaseLayout from './BaseLayout';
 
 const menuItems = [
-  {
-    label: 'Dashboard',
-    href: '/mahasiswa/dashboard',
-  },
-  {
-    label: 'Cari Beasiswa',
-    href: '/mahasiswa/cari',
-  },
-  {
-    label: 'Status Pendaftaran',
-    href: '/mahasiswa/pendaftaran',
-  },
-  {
-    label: 'Tutorial Administrasi',
-    href: '/mahasiswa/tutorial',
-  },
-  {
-    label: 'Beasiswa Favorit',
-    href: '/mahasiswa/favorit',
-  },
-  {
-    label: 'Bantuan',
-    href: '/mahasiswa/bantuan',
-  },
+  { label: 'Dashboard', href: '/mahasiswa/dashboard' },
+  { label: 'Cari Beasiswa', href: '/mahasiswa/cari' },
+  { label: 'Status Pendaftaran', href: '/mahasiswa/status-pendaftaran' },
 ];
 
 /**

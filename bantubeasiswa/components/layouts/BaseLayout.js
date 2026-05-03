@@ -33,7 +33,15 @@ function HamburgerIcon({ open }) {
 }
 
 // ─── Sidebar Item ─────────────────────────────────────────────────────────────
-function SidebarItem({ item, isActive, onClose }) {
+function sidebarPathActive(pathname, item) {
+  const paths = item.activePaths?.length ? item.activePaths : [item.href];
+  return paths.some(
+    (p) => pathname === p || (p !== '/' && pathname.startsWith(p)),
+  );
+}
+
+function SidebarItem({ item, pathname, onClose }) {
+  const isActive = sidebarPathActive(pathname, item);
   return (
     <Link
       href={item.href}
@@ -44,7 +52,7 @@ function SidebarItem({ item, isActive, onClose }) {
         ${item.icon ? 'gap-3' : ''}
         ${
           isActive
-            ? 'bg-white/20 text-white border-l-4 border-white pl-3'
+            ? 'bg-white text-[#0056b3] shadow-md border-l-4 border-[#ffc107] pl-3'
             : 'text-blue-100 hover:bg-white/10 hover:text-white border-l-4 border-transparent pl-3'
         }
       `}
@@ -103,9 +111,12 @@ export default function BaseLayout({ children, user, menuItems }) {
             >
               BB
             </div>
-            <span className="text-white font-bold text-base leading-tight">
-              BantuBeasiswa
-            </span>
+            <div className="leading-tight">
+              <span className="text-white font-bold text-base block">BantuBeasiswa</span>
+              <span className="text-blue-200 text-[11px] font-medium tracking-wide uppercase">
+                Admin Portal
+              </span>
+            </div>
           </div>
 
           {/* User Avatar + Info */}
@@ -131,10 +142,7 @@ export default function BaseLayout({ children, user, menuItems }) {
             <SidebarItem
               key={item.href}
               item={item}
-              isActive={
-                item.href === router.pathname ||
-                (item.href !== '/' && router.pathname.startsWith(item.href))
-              }
+              pathname={router.pathname}
               onClose={() => setSidebarOpen(false)}
             />
           ))}

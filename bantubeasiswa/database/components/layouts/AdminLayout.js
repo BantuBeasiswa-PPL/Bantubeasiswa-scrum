@@ -8,7 +8,7 @@ const menuItems = [
   },
   {
     label: 'Kelola Data Wilayah',
-    href: '/admin/wilayah',
+    href: '/admin/kelola-wilayah',
     icon: '🗺️',
   },
   {
