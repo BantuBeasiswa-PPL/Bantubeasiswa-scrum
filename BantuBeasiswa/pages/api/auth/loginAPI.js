@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/db'; 
-import bcrypt from 'bcryptjs';
+// import bcrypt from 'bcryptjs'; // dinonaktifkan sementara untuk testing
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 
@@ -13,8 +13,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Email, password, dan role harus diisi' });
   }
 
-  // 2. GANTI CONST LAMA: Cari akun menggunakan Supabase Client
-  // Kita langsung mengambil satu data (single) yang email dan rolenya cocok
+  // 2. Cari akun berdasarkan email + role
   const { data: user, error } = await supabase
     .from('account')
     .select('*')
@@ -27,8 +26,17 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-  // 3. Verifikasi password (menggunakan kolom kataKunci sesuai skema awal)
-  const valid = await bcrypt.compare(password, user.kataKunci);
+  // 2b. Ambil nama dari tabel user (profil)
+  const { data: profil } = await supabase
+    .from('user')
+    .select('nama')
+    .eq('accountId', user.accountId)
+    .single();
+
+  const nama = profil?.nama ?? '';
+
+  // 3. Verifikasi password (plain text — hanya untuk testing, ganti ke bcrypt di production)
+  const valid = password === user.kataKunci;
 
   if (!valid) {
     return res.status(401).json({ message: 'Email atau password salah' });
@@ -36,7 +44,7 @@ export default async function handler(req, res) {
 
   // 4. Buat JWT token
   const token = jwt.sign(
-    { accountId: user.accountId, role: user.role, email: user.email },
+    { accountId: user.accountId, role: user.role, email: user.email, nama },
     process.env.JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -44,21 +52,21 @@ export default async function handler(req, res) {
   // 5. Simpan di cookie HTTP-only
   res.setHeader('Set-Cookie', serialize('token', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // Aktifkan secure jika sudah online (HTTPS)
-    path: '/',
-    maxAge: 60 * 60 * 24 * 7, // 7 hari
+    secure  : process.env.NODE_ENV === 'production',
+    path    : '/',
+    maxAge  : 60 * 60 * 24 * 7, // 7 hari
     sameSite: 'lax',
   }));
 
   // 6. Map redirect berdasarkan role
   const redirectMap = {
     mahasiswa: '/mahasiswa/dashboard',
-    pendonor:  '/pendonor/dashboard',
-    admin:     '/admin/dashboard',
+    pendonor : '/pendonor/dashboard',
+    admin    : '/admin/dashboard',
   };
 
   return res.status(200).json({ 
-    message: 'Login berhasil',
+    message : 'Login berhasil',
     redirect: redirectMap[role] || '/'
   });
 }

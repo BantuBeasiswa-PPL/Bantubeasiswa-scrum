@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useContrastMode } from '../../hooks/useContrastMode';
 
 // ─── Helper: get user initials for avatar ────────────────────────────────────
 function getInitials(nama = '') {
@@ -58,13 +57,20 @@ function SidebarItem({ item, isActive, onClose }) {
 // ─── Main BaseLayout ──────────────────────────────────────────────────────────
 export default function BaseLayout({ children, user, menuItems }) {
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen,   setSidebarOpen  ] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+
+  async function handleLogout() {
+    setLogoutLoading(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } finally {
+      router.push('/login');
+    }
+  }
 
   const nama  = user?.nama  || 'Pengguna';
   const role  = user?.role  || 'mahasiswa';
-
-  // Hook Kontras Mode PBI-09
-  const { isHighContrast, toggleContrast } = useContrastMode(user?.accountId);
 
   const roleLabel = {
     admin:      'Administrator',
@@ -140,10 +146,56 @@ export default function BaseLayout({ children, user, menuItems }) {
           ))}
         </nav>
 
-        {/* Bottom: version tag */}
-        <div className="px-4 py-3 border-t border-white/20">
+        {/* Bottom: Logout + version tag */}
+        <div className="px-4 py-3 border-t border-white/20 space-y-2">
+          <button
+            id="btn-logout"
+            onClick={handleLogout}
+            disabled={logoutLoading}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200"
+            style={{
+              backgroundColor: logoutLoading ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)',
+              color          : logoutLoading ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)',
+              border         : '1px solid rgba(255,255,255,0.15)',
+              cursor         : logoutLoading ? 'not-allowed' : 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              if (!logoutLoading) {
+                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.18)';
+                e.currentTarget.style.color = '#ffffff';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!logoutLoading) {
+                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+              }
+            }}
+          >
+            {logoutLoading ? (
+              <>
+                <span style={{
+                  width: '12px', height: '12px',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTop: '2px solid white',
+                  borderRadius: '50%',
+                  display: 'inline-block',
+                  animation: 'spin 0.7s linear infinite',
+                }} />
+                Keluar...
+              </>
+            ) : (
+              <>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                </svg>
+                Keluar
+              </>
+            )}
+          </button>
           <p className="text-blue-200 text-xs text-center">v1.0.0 · BantuBeasiswa</p>
         </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </aside>
 
       {/* ── MAIN AREA (navbar + content) ─────────────────────────────────── */}
@@ -202,7 +254,6 @@ export default function BaseLayout({ children, user, menuItems }) {
           <div className="flex items-center gap-2">
             {/* Kontras Button */}
             <button
-              onClick={toggleContrast}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all hover:shadow-sm"
               style={{
                 borderColor: '#ffc107',
@@ -212,8 +263,8 @@ export default function BaseLayout({ children, user, menuItems }) {
               title="Toggle kontras tinggi"
               aria-label="Toggle kontras"
             >
-              <span style={{ color: '#ffc107' }}>{isHighContrast ? '☀' : '◑'}</span>
-              <span className="hidden sm:inline">{isHighContrast ? 'Normal' : 'Kontras'}</span>
+              <span style={{ color: '#ffc107' }}>◑</span>
+              <span className="hidden sm:inline">Kontras</span>
             </button>
 
             {/* Font Size Controls */}
