@@ -4,12 +4,12 @@
 --         SPMB SMA Pradita Dirgantara TA 2026/2027 (62 Kabupaten)
 -- Jalankan di Supabase SQL Editor setelah schema.sql dieksekusi
 -- ============================================================
--- Kolom: nama TEXT, tipe TEXT, kode TEXT, "isAfirmasi" BOOL, "is3T" BOOL
+-- Kolom: nama TEXT, tipe TEXT, mode TEXT, "isAfirmasi" BOOL, "is3T" BOOL
 -- Tipe  : 'Terdepan' (perbatasan), 'Terluar' (pulau terluar),
 --         'Tertinggal' (daerah tertinggal)
 -- ============================================================
 
-INSERT INTO wilayah (nama, tipe, kode, "isAfirmasi", "is3T") VALUES
+INSERT INTO wilayah (nama, tipe, mode, "isAfirmasi", "is3T") VALUES
 
   -- ── SUMATERA UTARA ─────────────────────────────────────────────────────
   ('Kab. Nias, Sumatera Utara',                 'Terluar',    '3T', FALSE, TRUE),
