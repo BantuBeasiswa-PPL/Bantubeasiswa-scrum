@@ -6,8 +6,9 @@ const menuItems = [
     href: '/admin/dashboard',
   },
   {
-    label: 'Kelola Data Wilayah',
-    href: '/admin/wilayah',
+    label       : 'Kelola Data Wilayah',
+    href        : '/admin/kelola-wilayah',
+    activePaths : ['/admin/kelola-wilayah', '/admin/wilayah'],
   },
   {
     label: 'Kelola Pendonor',

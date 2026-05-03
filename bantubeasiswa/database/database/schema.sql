@@ -122,7 +122,7 @@ CREATE TABLE wilayah (
     "wilayahId"  BIGSERIAL PRIMARY KEY,
     nama         TEXT        NOT NULL,
     tipe         TEXT        NOT NULL,   -- contoh: 'provinsi', 'kabupaten', 'kota'
-    mode         TEXT,
+    kode         TEXT,
     "isAfirmasi" BOOLEAN     NOT NULL DEFAULT FALSE,
     "is3T"       BOOLEAN     NOT NULL DEFAULT FALSE,
     "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -335,7 +335,7 @@ INSERT INTO pendonor ("accountId", "statusOrganisasi", kontak, alamat) VALUES
     (6, 'PT Inovasi Bangsa Tbk.',       '031-77789012', 'Jl. Pemuda No. 45, Surabaya');
 
 -- 5.5 wilayah
-INSERT INTO wilayah (nama, tipe, mode, "isAfirmasi", "is3T") VALUES
+INSERT INTO wilayah (nama, tipe, kode, "isAfirmasi", "is3T") VALUES
     ('Jawa Barat',        'provinsi',  'reguler',   FALSE, FALSE),
     ('Jawa Timur',        'provinsi',  'reguler',   FALSE, FALSE),
     ('Papua',             'provinsi',  'afirmasi',  TRUE,  TRUE),
