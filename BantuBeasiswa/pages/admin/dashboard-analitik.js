@@ -141,6 +141,8 @@ export default function DashboardAnalitikPage({ user }) {
     totalPendaftar: 0,
     fulfillmentRate: 0,
     totalKontribusi: 0,
+    totalPendonor: 0,
+    totalWilayah3T: 0,
   });
   const [chartData, setChartData] = useState([]);
   const [topProvinces, setTopProvinces] = useState([]);
@@ -174,6 +176,12 @@ export default function DashboardAnalitikPage({ user }) {
         (sum, row) => sum + (row.jumlah_dana || 0),
         0
       ) || 0;
+
+      // 3.5 Total pendonor
+      const pendonorRes = await supabase
+        .from('account')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'pendonor');
 
       // 4. Fetch wilayah untuk distribusi
       const wilayahRes = await supabase.from('wilayah').select('*');
@@ -234,6 +242,8 @@ export default function DashboardAnalitikPage({ user }) {
         totalPendaftar: pendaftarRes.count || 0,
         fulfillmentRate: fulfillmentRate,
         totalKontribusi: totalKontribusi,
+        totalPendonor: pendonorRes.count || 0,
+        totalWilayah3T: total3TProvinces,
       });
 
       setChartData([
@@ -256,6 +266,28 @@ export default function DashboardAnalitikPage({ user }) {
     fetchAllData();
   }, [fetchAllData]);
 
+  // ─── Toggle Afirmasi Status ───────────────────────────────────────────────
+  const handleToggleAfirmasi = async (id, currentStatus) => {
+    try {
+      const { error } = await supabase
+        .from('wilayah')
+        .update({ is_afirmasi: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setRegionalMetrics((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, isAfirmasi: !currentStatus } : item
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      alert('Gagal memperbarui status afirmasi');
+    }
+  };
+
   // ─── Format currency ──────────────────────────────────────────────────────
   function formatRupiah(value) {
     return new Intl.NumberFormat('id-ID', {
@@ -269,10 +301,10 @@ export default function DashboardAnalitikPage({ user }) {
   return (
     <>
       <Head>
-        <title>Dashboard Analitik Wilayah · BantuBeasiswa Admin</title>
+        <title>Dashboard Analitik & Statistik · BantuBeasiswa Admin</title>
         <meta
           name="description"
-          content="Analitik komprehensif distribusi beasiswa berdasarkan kategori wilayah 3T"
+          content="Dashboard gabungan statistik dan analitik platform BantuBeasiswa untuk administrator."
         />
       </Head>
 
@@ -290,11 +322,11 @@ export default function DashboardAnalitikPage({ user }) {
                 color: C.dark,
               }}
             >
-              Dashboard Analitik Wilayah
+              Dashboard Analitik & Statistik
             </h1>
           </div>
           <p style={{ fontSize: 13, color: '#6b7280', marginLeft: 14 }}>
-            Analisis komprehensif distribusi beasiswa per kategori wilayah, donor, dan provinsi
+            Ringkasan performa platform dan analisis distribusi beasiswa secara keseluruhan
           </p>
         </div>
 
@@ -330,6 +362,8 @@ export default function DashboardAnalitikPage({ user }) {
               <SkeletonStatCard />
               <SkeletonStatCard />
               <SkeletonStatCard />
+              <SkeletonStatCard />
+              <SkeletonStatCard />
             </>
           ) : (
             <>
@@ -348,6 +382,20 @@ export default function DashboardAnalitikPage({ user }) {
                 subtext="Semua pendaftaran beasiswa"
               />
               <StatCard
+                label="Mitra Pendonor"
+                count={stats.totalPendonor}
+                icon="🏢"
+                accentColor="#059669"
+                subtext="Pendonor terdaftar di platform"
+              />
+              <StatCard
+                label="Wilayah 3T Terdaftar"
+                count={stats.totalWilayah3T}
+                icon="🗺️"
+                accentColor="#d97706"
+                subtext="Wilayah terdepan, terluar, tertinggal"
+              />
+              <StatCard
                 label="3T Priority Fulfillment"
                 count={`${stats.fulfillmentRate}%`}
                 icon="🎯"
@@ -364,6 +412,55 @@ export default function DashboardAnalitikPage({ user }) {
             </>
           )}
         </div>
+
+        {/* ── Additional Placeholders from Statistik Dashboard ────────────── */}
+        {!loading && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
+            {/* Recent Activity placeholder */}
+            <div
+              style={{
+                background: C.white,
+                border: '1px solid #e5e7eb',
+                borderRadius: 12,
+                padding: 20,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: C.dark }}>Aktivitas Terbaru</h2>
+                <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 9999, background: '#e8f0fb', color: C.blue, fontWeight: 500 }}>
+                  Coming soon
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', textAlign: 'center' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: '#6b7280' }}>Tabel aktivitas pendaftaran akan ditampilkan di sini</p>
+                <p style={{ fontSize: 12, marginTop: 4, color: '#9ca3af' }}>Fitur ini sedang dalam pengembangan</p>
+              </div>
+            </div>
+
+            {/* Quick Stats / Distribusi placeholder */}
+            <div
+              style={{
+                background: C.white,
+                border: '1px solid #e5e7eb',
+                borderRadius: 12,
+                padding: 20,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: C.dark }}>Distribusi Status</h2>
+                <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 9999, background: '#e8f0fb', color: C.blue, fontWeight: 500 }}>
+                  Coming soon
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', textAlign: 'center' }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🥧</div>
+                <p style={{ fontSize: 14, fontWeight: 500, color: '#6b7280' }}>Chart distribusi status pendaftaran</p>
+                <p style={{ fontSize: 12, marginTop: 4, color: '#9ca3af' }}>(Recharts — segera hadir)</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Bar Chart Section ─────────────────────────────────────────── */}
         {!loading && chartData.length > 0 && (
@@ -494,6 +591,218 @@ export default function DashboardAnalitikPage({ user }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Setup Database Provinsi Afirmasi ───────────────────────────── */}
+        {!loading && (
+          <div
+            style={{
+              background: C.white,
+              border: '1px solid #e5e7eb',
+              borderRadius: 12,
+              padding: '20px',
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: C.dark }}>
+                Setup Database Provinsi Afirmasi
+              </h2>
+              <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                Kelola status prioritas 16 entitas provinsi kategori afirmasi. Status ini digunakan sebagai filter pencarian mahasiswa.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: 20,
+              }}
+            >
+              {/* Peta Placeholder */}
+              <div
+                style={{
+                  background: C.gray_light,
+                  borderRadius: 8,
+                  padding: 20,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px dashed #d1d5db',
+                  minHeight: 300,
+                }}
+              >
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🗺️</div>
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>
+                  Peta Distribusi Wilayah Afirmasi
+                </h3>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: '#6b7280',
+                    textAlign: 'center',
+                    marginTop: 8,
+                  }}
+                >
+                  Visualisasi peta wilayah afirmasi sedang dalam tahap integrasi dengan pustaka pemetaan.
+                </p>
+                <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        background: C.blue,
+                      }}
+                    />
+                    <span style={{ fontSize: 12, color: C.dark }}>Prioritas Utama</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span
+                      style={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        background: '#d1d5db',
+                      }}
+                    />
+                    <span style={{ fontSize: 12, color: C.dark }}>Non-Afirmasi</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Daftar Provinsi Afirmasi */}
+              <div>
+                <div
+                  style={{
+                    overflowY: 'auto',
+                    maxHeight: 400,
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 8,
+                  }}
+                >
+                  <table
+                    style={{
+                      width: '100%',
+                      borderCollapse: 'collapse',
+                      fontSize: 13,
+                    }}
+                  >
+                    <thead
+                      style={{
+                        position: 'sticky',
+                        top: 0,
+                        background: '#f9fafb',
+                        zIndex: 1,
+                        borderBottom: '1px solid #e5e7eb',
+                      }}
+                    >
+                      <tr>
+                        <th
+                          style={{
+                            padding: '12px 14px',
+                            textAlign: 'left',
+                            fontWeight: 600,
+                            color: '#6b7280',
+                          }}
+                        >
+                          Nama Wilayah
+                        </th>
+                        <th
+                          style={{
+                            padding: '12px 14px',
+                            textAlign: 'left',
+                            fontWeight: 600,
+                            color: '#6b7280',
+                          }}
+                        >
+                          Kategori
+                        </th>
+                        <th
+                          style={{
+                            padding: '12px 14px',
+                            textAlign: 'center',
+                            fontWeight: 600,
+                            color: '#6b7280',
+                          }}
+                        >
+                          Status Afirmasi
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {regionalMetrics.map((row) => (
+                        <tr
+                          key={`afirmasi-${row.id}`}
+                          style={{ borderBottom: '1px solid #f3f4f6' }}
+                        >
+                          <td
+                            style={{
+                              padding: '12px 14px',
+                              fontWeight: 500,
+                              color: C.dark,
+                            }}
+                          >
+                            {row.nama}
+                          </td>
+                          <td
+                            style={{
+                              padding: '12px 14px',
+                              color: '#6b7280',
+                            }}
+                          >
+                            {row.tipe || 'Provinsi'}
+                          </td>
+                          <td
+                            style={{
+                              padding: '12px 14px',
+                              textAlign: 'center',
+                            }}
+                          >
+                            <button
+                              onClick={() => handleToggleAfirmasi(row.id, row.isAfirmasi)}
+                              style={{
+                                background: row.isAfirmasi ? C.blue : '#e5e7eb',
+                                border: 'none',
+                                borderRadius: 20,
+                                width: 44,
+                                height: 24,
+                                position: 'relative',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                              }}
+                              title={
+                                row.isAfirmasi
+                                  ? 'Nonaktifkan status afirmasi'
+                                  : 'Aktifkan status afirmasi'
+                              }
+                            >
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  top: 2,
+                                  left: row.isAfirmasi ? 22 : 2,
+                                  width: 20,
+                                  height: 20,
+                                  background: '#fff',
+                                  borderRadius: '50%',
+                                  transition: 'all 0.2s',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                                }}
+                              />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}
