@@ -86,6 +86,39 @@ function WilayahBadge({ wilayah }) {
   );
 }
 
+// ─── Public homepage layout ──────────────────────────────────────────────────
+function PublicLayout({ children }) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+          <div>
+            <p className="text-lg font-bold text-blue-900">BantuBeasiswa</p>
+            <p className="text-sm text-gray-600">Cari beasiswa tanpa harus masuk terlebih dahulu.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="rounded-lg border border-blue-500 bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/register/mahasiswa"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              Daftar
+            </Link>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {children}
+      </main>
+    </div>
+  );
+}
+
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 function SkeletonBeasiswaCard() {
   return (
@@ -239,8 +272,9 @@ function EmptyState({ onReset }) {
 }
 
 // ─── Halaman Utama ────────────────────────────────────────────────────────────
-export default function CariBeasiswaPage({ user }) {
+export default function CariBeasiswaPage({ user, publicMode = false }) {
   const router = useRouter();
+  const Layout = publicMode ? PublicLayout : MahasiswaLayout;
 
   // ── State filter + data ────────────────────────────────────────────────────────────────
   const [keyword,          setKeyword       ] = useState('');
@@ -338,7 +372,7 @@ export default function CariBeasiswaPage({ user }) {
           content="Cari dan filter beasiswa aktif berdasarkan kata kunci, wilayah afirmasi, dan daerah 3T." />
       </Head>
 
-      <MahasiswaLayout user={user}>
+      <Layout user={user}>
 
         {/* ── Page Header ──────────────────────────────────────────────────── */}
         <div className="mb-6">
@@ -474,7 +508,7 @@ export default function CariBeasiswaPage({ user }) {
           }
         </div>
 
-      </MahasiswaLayout>
+      </Layout>
     </>
   );
 }
