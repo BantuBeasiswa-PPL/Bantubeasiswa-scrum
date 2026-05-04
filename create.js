@@ -1,18 +1,26 @@
 import { verifyToken } from '../../../lib/auth';
-import { supabase } from '../../../lib/supabase';
+import { getServerSupabase } from '../../../lib/supabaseServer';
+
+function parseBeasiswaId(raw) {
+  if (raw == null || raw === '') return NaN;
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  return Number(String(s).trim());
+}
 
 /**
  * POST /api/pendaftaran/create
  *
- * Body: { beasiswa_id: number }
+ * Body: { beasiswaId: number }
  *
- * Alur berurutan (chain):
- *  1. Auth → account_id dari JWT
- *  2. Resolusi user_id dari tabel "user"
+ * Alur:
+ *  1. Auth → accountId dari JWT
+ *  2. Resolusi userId dari tabel "user" (via accountId)
  *  3. Cek duplikat pendaftaran
- *  4. Cek beasiswa masih aktif
+ *  4. Cek beasiswa masih aktif + deadline
  *  5. Cek kuota tersisa
- *  6. INSERT pendaftaran → return pendaftaran_id
+ *  6. INSERT pendaftaran → return pendaftaranId
+ *
+ * Kolom tabel pendaftaran: pendaftaranId, userId, beasiswaId, status, createdAt, updatedAt
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -20,31 +28,47 @@ export default async function handler(req, res) {
   /* ── 1. Auth ── */
   const decoded = verifyToken(req);
   if (!decoded) return res.status(401).json({ message: 'Tidak terautentikasi' });
-
-  const { beasiswa_id } = req.body;
-  if (!beasiswa_id) {
-    return res.status(400).json({ message: 'beasiswa_id wajib diisi' });
+  if (decoded.role !== 'mahasiswa') {
+    return res.status(403).json({ message: 'Hanya mahasiswa yang dapat mendaftar beasiswa' });
   }
 
-  /* ── 2. Resolusi user_id ── */
-  const { data: userData, error: userError } = await supabase
-    .from('user')
-    .select('id')
-    .eq('account_id', decoded.accountId)
-    .single();
-
-  if (userError || !userData) {
-    return res.status(404).json({ message: 'Profil mahasiswa tidak ditemukan' });
+  const beasiswaIdNum = parseBeasiswaId(req.body?.beasiswaId);
+  if (!Number.isFinite(beasiswaIdNum) || beasiswaIdNum <= 0) {
+    return res.status(400).json({ message: 'beasiswaId tidak valid' });
   }
-  const userId = userData.id;
+
+  let supabase;
+  try {
+    supabase = getServerSupabase();
+  } catch (e) {
+    console.error('[pendaftaran/create] supabase init:', e);
+    return res.status(500).json({ message: 'Konfigurasi database tidak tersedia' });
+  }
+
+  /* ── 2. Resolusi userId ── */
+  // Jika userId sudah ada di JWT (login baru), pakai langsung
+  let userId = decoded.userId ?? null;
+
+  if (!userId) {
+    // Fallback: lookup via accountId
+    const { data: userData, error: userError } = await supabase
+      .from('user')
+      .select('userId')
+      .eq('accountId', decoded.accountId)
+      .single();
+
+    if (userError || !userData) {
+      return res.status(404).json({ message: 'Profil mahasiswa tidak ditemukan' });
+    }
+    userId = userData.userId;
+  }
 
   /* ── 3. Cek duplikat ── */
-  // maybeSingle() tidak error kalau row tidak ada (berbeda dengan single())
   const { data: existing, error: dupError } = await supabase
     .from('pendaftaran')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('beasiswa_id', beasiswa_id)
+    .select('pendaftaranId')
+    .eq('userId', userId)
+    .eq('beasiswaId', beasiswaIdNum)
     .maybeSingle();
 
   if (dupError) {
@@ -54,34 +78,36 @@ export default async function handler(req, res) {
 
   if (existing) {
     return res.status(409).json({
-      code: 'DUPLICATE',
-      message: 'Kamu sudah mendaftar program ini sebelumnya',
-      pendaftaran_id: existing.id,
+      code         : 'DUPLICATE',
+      message      : 'Kamu sudah mendaftar program ini sebelumnya',
+      pendaftaranId: existing.pendaftaranId,
     });
   }
 
-  /* ── 4. Cek beasiswa aktif ── */
+  /* ── 4. Cek beasiswa aktif + deadline ── */
   const { data: beasiswa, error: beasiswaError } = await supabase
     .from('beasiswa')
     .select('status, kuota, deadline, judul')
-    .eq('id', beasiswa_id)
+    .eq('beasiswaId', beasiswaIdNum)
     .single();
 
   if (beasiswaError || !beasiswa) {
+    if (beasiswaError) {
+      console.error('[pendaftaran/create] lookup beasiswa:', beasiswaError.message, { beasiswaIdNum });
+    }
     return res.status(404).json({ message: 'Beasiswa tidak ditemukan' });
   }
 
   if (beasiswa.status !== 'aktif') {
     return res.status(400).json({
-      code: 'NOT_ACTIVE',
+      code   : 'NOT_ACTIVE',
       message: `Pendaftaran beasiswa ini sudah ${beasiswa.status === 'ditutup' ? 'ditutup' : 'tidak tersedia'}`,
     });
   }
 
-  // Cek deadline
   if (beasiswa.deadline && new Date(beasiswa.deadline) < new Date()) {
     return res.status(400).json({
-      code: 'DEADLINE_PASSED',
+      code   : 'DEADLINE_PASSED',
       message: 'Batas waktu pendaftaran beasiswa ini sudah berakhir',
     });
   }
@@ -89,9 +115,9 @@ export default async function handler(req, res) {
   /* ── 5. Cek kuota tersisa ── */
   const { count: jumlahPendaftar, error: countError } = await supabase
     .from('pendaftaran')
-    .select('*', { count: 'exact', head: true }) // head:true = tidak fetch rows, hanya count
-    .eq('beasiswa_id', beasiswa_id)
-    .neq('status', 'DITOLAK'); // pendaftar yang ditolak tidak dihitung terhadap kuota
+    .select('*', { count: 'exact', head: true })
+    .eq('beasiswaId', beasiswaIdNum)
+    .neq('status', 'DITOLAK');
 
   if (countError) {
     console.error('[pendaftaran/create] hitung kuota:', countError);
@@ -100,7 +126,7 @@ export default async function handler(req, res) {
 
   if (beasiswa.kuota !== null && jumlahPendaftar >= beasiswa.kuota) {
     return res.status(400).json({
-      code: 'QUOTA_FULL',
+      code   : 'QUOTA_FULL',
       message: `Kuota pendaftar sudah terpenuhi (${beasiswa.kuota} orang)`,
     });
   }
@@ -109,11 +135,11 @@ export default async function handler(req, res) {
   const { data: newPendaftaran, error: insertError } = await supabase
     .from('pendaftaran')
     .insert({
-      user_id:     userId,
-      beasiswa_id: beasiswa_id,
-      status:      'TERDAFTAR',
+      userId    : userId,
+      beasiswaId: beasiswaIdNum,
+      status    : 'TERDAFTAR',
     })
-    .select('id, status, created_at')
+    .select('pendaftaranId, status, createdAt')
     .single();
 
   if (insertError || !newPendaftaran) {
@@ -122,11 +148,11 @@ export default async function handler(req, res) {
   }
 
   return res.status(201).json({
-    message: 'Pendaftaran berhasil dibuat',
-    pendaftaran_id: newPendaftaran.id,
-    status:         newPendaftaran.status,
-    created_at:     newPendaftaran.created_at,
-    beasiswa_judul: beasiswa.judul,
-    sisa_kuota:     beasiswa.kuota !== null ? beasiswa.kuota - (jumlahPendaftar + 1) : null,
+    message      : 'Pendaftaran berhasil dibuat',
+    pendaftaranId: newPendaftaran.pendaftaranId,
+    status       : newPendaftaran.status,
+    createdAt    : newPendaftaran.createdAt,
+    beasiswaJudul: beasiswa.judul,
+    sisaKuota    : beasiswa.kuota !== null ? beasiswa.kuota - (jumlahPendaftar + 1) : null,
   });
 }
