@@ -1,12 +1,5 @@
-import { useEffect } from "react";
-import { useRouter } from "next/router";
+import CariBeasiswaPage from './mahasiswa/cari';
 
 export default function Home() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/login");
-  }, [router]);
-
-  return null;
+  return <CariBeasiswaPage publicMode />;
 }
