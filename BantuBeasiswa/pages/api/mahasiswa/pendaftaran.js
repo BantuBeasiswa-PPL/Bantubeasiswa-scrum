@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/db';
 import { verifyToken } from '../../../lib/auth';
+import { normalizeMahasiswaPendaftaranRow } from '../../../lib/mahasiswaPendaftaranRow';
 
 /**
  * GET /api/mahasiswa/pendaftaran
@@ -52,5 +53,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'Gagal mengambil data pendaftaran.' });
   }
 
-  return res.status(200).json(data ?? []);
+  const rows = Array.isArray(data) ? data.map(normalizeMahasiswaPendaftaranRow) : [];
+  return res.status(200).json(rows);
 }

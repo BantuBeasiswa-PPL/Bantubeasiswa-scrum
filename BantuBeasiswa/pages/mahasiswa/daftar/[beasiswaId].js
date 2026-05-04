@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '../../../components/layouts/MahasiswaLayout';
-import { supabase } from '../../../lib/db';
-import { uploadDokumen } from '../../../lib/uploadDokumen';
 import { withAuth } from '../../../lib/auth';
 
 /* ── Step definitions ─────────────────────────────────────────── */
@@ -863,13 +861,20 @@ export default function DaftarBeasiswa({ user }) {
       return;
     }
 
+    const beasiswaIdNum = Number(beasiswaId);
+    if (!Number.isFinite(beasiswaIdNum)) {
+      setSubmitError('ID beasiswa tidak valid. Silakan muat ulang halaman dan coba lagi.');
+      setIsSubmitting(false);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Panggil API /api/pendaftaran/create (server-side: auth, cek duplikat, kuota, insert)
       const res  = await fetch('/api/pendaftaran/create', {
         method : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ beasiswaId }),
+        body   : JSON.stringify({ beasiswaId: beasiswaIdNum }),
       });
       const json = await res.json();
 
@@ -905,24 +910,43 @@ export default function DaftarBeasiswa({ user }) {
     { jenis: 'motivation_letter', file: dokumen.motivation_letter, required: false, label: 'Motivation Letter' },
   ].filter(e => e.file));
 
-  const uploadSingleDoc = async (pendId, { jenis, file }) => {
-    // a) upload ke storage + ambil public url
-    const { publicUrl } = await uploadDokumen(supabase, file, pendId, jenis);
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const s = reader.result;
+        if (typeof s !== 'string') {
+          reject(new Error('Gagal membaca file'));
+          return;
+        }
+        const i = s.indexOf(',');
+        resolve(i >= 0 ? s.slice(i + 1) : s);
+      };
+      reader.onerror = () => reject(reader.error || new Error('Gagal membaca file'));
+      reader.readAsDataURL(file);
+    });
 
-    // b) insert row dokumen
-    const { error: dokErr } = await supabase
-      .from('dokumen')
-      .insert({
+  const uploadSingleDoc = async (pendId, { jenis, file }) => {
+    const fileBase64 = await fileToBase64(file);
+    const res = await fetch('/api/dokumen/upload', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({
         pendaftaranId: pendId,
         jenis,
-        fileUrl: publicUrl,
-        statusDokumen: 'MENUNGGU',
-      });
-    if (dokErr) {
-      throw new Error(`Gagal menyimpan metadata dokumen ${jenis}: ${dokErr.message}`);
+        fileBase64,
+        mimeType: file.type || 'application/octet-stream',
+        fileName: file.name || '',
+      }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      const extra = json.detail ? ` (${json.detail})` : '';
+      throw new Error((json.message || `Gagal mengunggah dokumen ${jenis}`) + extra);
     }
 
-    return publicUrl;
+    return json.publicUrl || '';
   };
 
   const uploadRemainingDocs = async (pendId) => {
