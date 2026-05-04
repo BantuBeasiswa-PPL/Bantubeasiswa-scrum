@@ -28,6 +28,36 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Deskripsi minimal 20 karakter.' });
   }
 
+  // ── Resolusi userId ──────────────────────────────────────────────────────
+  let userId = decoded.userId ?? null;
+
+  if (!userId) {
+    // Fallback: lookup via accountId - coba camelCase dulu (schema lama)
+    let { data: userData, error: userError } = await supabase
+      .from('user')
+      .select('userId')
+      .eq('accountId', decoded.accountId)
+      .single();
+
+    // Jika gagal, coba snake_case (schema baru)
+    if (userError) {
+      const result = await supabase
+        .from('user')
+        .select('id')
+        .eq('account_id', decoded.accountId)
+        .single();
+      userData = result.data;
+      userError = result.error;
+      if (!userError && userData) userId = userData.id;
+    } else if (userData) {
+      userId = userData.userId;
+    }
+
+    if (!userId) {
+      return res.status(404).json({ message: 'Profil mahasiswa tidak ditemukan.' });
+    }
+  }
+
   // ── Cek beasiswa ada ─────────────────────────────────────────────────────
   const { data: beasiswa, error: beasiswaError } = await supabase
     .from('beasiswa')
@@ -43,10 +73,10 @@ export default async function handler(req, res) {
   const { error } = await supabase
     .from('laporan_link_rusak')
     .insert({
-      user_id    : decoded.accountId,
-      beasiswa_id: Number(beasiswaId),
-      deskripsi  : deskripsiTrimmed,
-      // tanggal_lapor dan status diisi default DB
+      userId    : userId,
+      beasiswaId: Number(beasiswaId),
+      deskripsi : deskripsiTrimmed,
+      // tanggalLapor dan status diisi default DB
     });
 
   if (error) {

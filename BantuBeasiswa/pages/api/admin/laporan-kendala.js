@@ -22,31 +22,30 @@ export default async function handler(req, res) {
       // Ambil semua tiket dengan join ke user dan beasiswa
       const { data: tiket, error: tiketErr } = await supabase
         .from('laporan_link_rusak')
-        .select('*, user:user_id(nama, email), beasiswa:beasiswa_id(judul)')
-        .order('tanggal_lapor', { ascending: false });
+        .select('*, user:userId(nama, email), beasiswa:beasiswaId(judul)')
+        .order('tanggalLapor', { ascending: false });
 
       if (tiketErr) throw tiketErr;
 
       // ── Hitung stat cards dari data yang sudah diambil ──────────────────
       const now          = Date.now();
       const MS_24H       = 24 * 60 * 60 * 1000;
+      const ACTIVE_STATUSES = ['pending', 'diproses'];
 
-      const totalAktif   = tiket.filter((t) => t.status === 'open').length;
+      const totalAktif   = tiket.filter((t) => ACTIVE_STATUSES.includes(t.status)).length;
       const totalUrgent  = tiket.filter((t) => {
-        const isOpen    = t.status === 'open';
-        const ageMs     = now - new Date(t.tanggal_lapor).getTime();
-        return isOpen && ageMs > MS_24H;
+        const isActive = ACTIVE_STATUSES.includes(t.status);
+        const ageMs    = now - new Date(t.tanggalLapor).getTime();
+        return isActive && ageMs > MS_24H;
       }).length;
 
-      // Rata-rata waktu penyelesaian (resolved saja) dalam jam
+      // Rata-rata waktu penyelesaian (resolved / selesai saja) dalam jam
       const resolved     = tiket.filter(
-        (t) => t.status === 'resolved' && t.tanggal_lapor
+        (t) => ['resolved', 'selesai'].includes(t.status) && t.tanggalLapor
       );
       let avgJam         = null;
       if (resolved.length > 0) {
-        // Karena tidak ada kolom tanggal_selesai, kita pakai updated_at kalau ada,
-        // atau tampilkan nilai dummy yang konsisten
-        avgJam = 18; // dummy: 18 jam rata-rata (ganti kalau ada kolom waktu selesai)
+        avgJam = 18; // dummy: ganti jika ada data waktu selesai nyata
       }
 
       return res.status(200).json({
@@ -68,20 +67,19 @@ export default async function handler(req, res) {
   // PATCH — update satu tiket
   // ══════════════════════════════════════════════════════════════════════════
   if (req.method === 'PATCH') {
-    const { id, status, catatan_admin } = req.body;
+    const { id, status } = req.body;
 
     if (!id) {
       return res.status(400).json({ message: 'ID tiket harus disertakan.' });
     }
 
-    const VALID_STATUS = ['open', 'in_progress', 'resolved'];
+    const VALID_STATUS = ['pending', 'diproses', 'selesai', 'ditutup'];
     if (status && !VALID_STATUS.includes(status)) {
       return res.status(400).json({ message: 'Status tidak valid.' });
     }
 
     const payload = {};
-    if (status)        payload.status        = status;
-    if (catatan_admin !== undefined) payload.catatan_admin = catatan_admin;
+    if (status) payload.status = status;
 
     if (Object.keys(payload).length === 0) {
       return res.status(400).json({ message: 'Tidak ada field yang diupdate.' });
@@ -90,7 +88,7 @@ export default async function handler(req, res) {
     const { error } = await supabase
       .from('laporan_link_rusak')
       .update(payload)
-      .eq('id', id);
+      .eq('laporanId', id);
 
     if (error) {
       console.error('[PATCH /api/admin/laporan-kendala]', error);

@@ -42,7 +42,7 @@ export function useStatusPendaftaran(pendaftaranId) {
 
       const { data, error: fetchError } = await supabase
         .from('pendaftaran')
-        .select('status, createdAt, beasiswa(judul, pendonor(nama_organisasi))')
+        .select('status, createdAt, beasiswa(judul, pendonor(statusOrganisasi))')
         .eq('pendaftaranId', pendaftaranId)
         .single();
 

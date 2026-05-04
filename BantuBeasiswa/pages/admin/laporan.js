@@ -12,9 +12,10 @@ const C = {
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CFG = {
-  open       : { label: 'Open',        bg: '#fee2e2', color: '#b91c1c'  },
-  in_progress: { label: 'In Progress', bg: '#fef9c3', color: '#92400e'  },
-  resolved   : { label: 'Resolved',    bg: '#d1fae5', color: '#065f46'  },
+  pending : { label: 'Pending', bg: '#fee2e2', color: '#b91c1c' },
+  diproses: { label: 'Diproses', bg: '#fef9c3', color: '#92400e' },
+  selesai : { label: 'Selesai',  bg: '#d1fae5', color: '#065f46' },
+  ditutup : { label: 'Ditutup',  bg: '#e5e7ff', color: '#3730a3' },
 };
 
 function StatusBadge({ status }) {
@@ -71,7 +72,7 @@ function fmtTgl(iso) {
 }
 
 // ─── Filter bar ───────────────────────────────────────────────────────────────
-const FILTER_STATUS = ['semua', 'open', 'in_progress', 'resolved'];
+const FILTER_STATUS = ['semua', 'pending', 'diproses', 'selesai'];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function LaporanKendalaPage({ user }) {
@@ -108,7 +109,7 @@ export default function LaporanKendalaPage({ user }) {
       t.user?.nama?.toLowerCase().includes(q)   ||
       t.deskripsi?.toLowerCase().includes(q)    ||
       t.beasiswa?.judul?.toLowerCase().includes(q) ||
-      String(t.id).includes(q);
+      String(t.laporanId).includes(q);
     return matchStatus && matchSearch;
   });
 
@@ -234,12 +235,12 @@ export default function LaporanKendalaPage({ user }) {
                       </tr>
                     )
                     : displayed.map((t, idx) => {
-                      const isUrgent = t.status === 'open' &&
-                        (Date.now() - new Date(t.tanggal_lapor).getTime()) > 86400000;
+                      const isUrgent = ['pending', 'diproses'].includes(t.status) &&
+                        (Date.now() - new Date(t.tanggalLapor).getTime()) > 86400000;
                       return (
                         <tr
-                          key={t.id}
-                          id={`tiket-row-${t.id}`}
+                          key={t.laporanId}
+                          id={`tiket-row-${t.laporanId}`}
                           onClick={() => setSelected(t)}
                           style={{
                             borderTop: '1px solid #f3f4f6',
@@ -253,7 +254,7 @@ export default function LaporanKendalaPage({ user }) {
                           {/* Ticket ID */}
                           <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap' }}>
                             <span style={{ fontWeight: 700, color: C.blue, fontFamily: 'monospace', fontSize: '0.8rem' }}>
-                              #{String(t.id).padStart(4, '0')}
+                              #{String(t.laporanId).padStart(4, '0')}
                             </span>
                             {isUrgent && (
                               <span style={{ marginLeft: '0.375rem', fontSize: '0.7rem', background: '#fee2e2', color: C.red, padding: '0.1rem 0.375rem', borderRadius: '9999px', fontWeight: 700 }}>
@@ -282,7 +283,7 @@ export default function LaporanKendalaPage({ user }) {
                           </td>
                           {/* Tanggal */}
                           <td style={{ padding: '0.875rem 1rem', whiteSpace: 'nowrap', color: '#6b7280', fontSize: '0.8125rem' }}>
-                            {fmtTgl(t.tanggal_lapor)}
+                            {fmtTgl(t.tanggalLapor)}
                           </td>
                         </tr>
                       );

@@ -71,8 +71,6 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
   const [modalOpen,      setModalOpen     ] = useState(false);
   const [laporDisabled,  setLaporDisabled ] = useState(false);
   const [laporCountdown, setLaporCountdown] = useState(0);
-  const [daftarLoading,  setDaftarLoading ] = useState(false);
-  const [daftarError,    setDaftarError   ] = useState('');
 
   // Anti-spam setelah laporan berhasil
   const handleLaporSuccess = () => {
@@ -98,26 +96,8 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
   // ─ Handler tombol Daftar Sekarang ────────────────────────────────────────
   async function handleDaftar() {
     if (!user) { router.push('/login'); return; }
-    setDaftarLoading(true);
-    setDaftarError('');
-    try {
-      const res  = await fetch('/api/pendaftaran', {
-        method : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ beasiswaId: beasiswa.beasiswaId }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setDaftarError(data.message || 'Gagal mendaftar.');
-        return;
-      }
-      // Redirect ke halaman tracker status pendaftaran
-      router.push(`/mahasiswa/status-pendaftaran?id=${data.pendaftaranId}`);
-    } catch {
-      setDaftarError('Terjadi kesalahan jaringan. Coba lagi.');
-    } finally {
-      setDaftarLoading(false);
-    }
+    // Redirect ke halaman formulir pendaftaran lengkap
+    router.push(`/mahasiswa/daftar/${beasiswa.beasiswaId}`);
   }
 
   // ─ Fallback error ─────────────────────────────────────────────────────────
@@ -318,47 +298,25 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
                     Pastikan Anda telah membaca semua syarat sebelum mendaftar.
                   </p>
 
-                  {/* Error daftar */}
-                  {daftarError && (
-                    <p className="text-xs text-center mb-2 px-2 py-1.5 rounded-lg"
-                      style={{ color: '#b91c1c', backgroundColor: '#fff1f2' }}>
-                      {daftarError}
-                    </p>
-                  )}
-
                   <button
                     id="btn-daftar-beasiswa"
                     onClick={handleDaftar}
-                    disabled={daftarLoading}
                     className="w-full text-center py-3 rounded-lg text-sm font-bold text-white transition-all duration-200"
                     style={{
-                      backgroundColor: daftarLoading ? '#6b7280' : C.blue,
-                      boxShadow      : daftarLoading ? 'none' : '0 4px 14px rgba(0,86,179,0.3)',
-                      cursor         : daftarLoading ? 'not-allowed' : 'pointer',
+                      backgroundColor: C.blue,
+                      boxShadow      : '0 4px 14px rgba(0,86,179,0.3)',
+                      cursor         : 'pointer',
                       border         : 'none',
                       display        : 'flex',
                       alignItems     : 'center',
                       justifyContent : 'center',
                       gap            : '0.5rem',
                     }}
-                    onMouseEnter={(e) => { if (!daftarLoading) e.currentTarget.style.backgroundColor = '#004494'; }}
-                    onMouseLeave={(e) => { if (!daftarLoading) e.currentTarget.style.backgroundColor = daftarLoading ? '#6b7280' : C.blue; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#004494'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = C.blue; }}
                   >
-                    {daftarLoading ? (
-                      <>
-                        <span style={{
-                          width: '14px', height: '14px',
-                          border: '2px solid rgba(255,255,255,0.4)',
-                          borderTop: '2px solid white',
-                          borderRadius: '50%',
-                          display: 'inline-block',
-                          animation: 'spin 0.7s linear infinite',
-                        }} />
-                        Mendaftarkan...
-                      </>
-                    ) : 'Daftar Sekarang'}
+                    Daftar Sekarang
                   </button>
-                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
                 </>
               )}
 
