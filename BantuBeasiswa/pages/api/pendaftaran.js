@@ -18,9 +18,21 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Login sebagai mahasiswa untuk mendaftar.' });
   }
 
-  const userId = decoded.userId;
+  // Resolve userId: try JWT first, fallback to DB lookup
+  let userId = decoded.userId ?? null;
+
   if (!userId) {
-    return res.status(401).json({ message: 'Session tidak valid, silakan login ulang.' });
+    // Fallback: cari userId dari tabel user berdasarkan accountId
+    const { data: profil } = await supabase
+      .from('user')
+      .select('userId')
+      .eq('accountId', decoded.accountId)
+      .single();
+    userId = profil?.userId ?? null;
+  }
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Profil mahasiswa tidak ditemukan. Silakan login ulang.' });
   }
 
   const { beasiswaId } = req.body;

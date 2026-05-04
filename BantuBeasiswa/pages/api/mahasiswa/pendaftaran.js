@@ -15,9 +15,20 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Unauthorized' });
   }
 
-  const userId = decoded.userId;
+  // Resolve userId: JWT first, fallback DB lookup
+  let userId = decoded.userId ?? null;
+
   if (!userId) {
-    return res.status(401).json({ message: 'Session tidak valid, silakan login ulang.' });
+    const { data: profil } = await supabase
+      .from('user')
+      .select('userId')
+      .eq('accountId', decoded.accountId)
+      .single();
+    userId = profil?.userId ?? null;
+  }
+
+  if (!userId) {
+    return res.status(401).json({ message: 'Profil mahasiswa tidak ditemukan.' });
   }
 
   const { data, error } = await supabase

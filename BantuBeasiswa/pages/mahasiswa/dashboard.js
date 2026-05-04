@@ -51,10 +51,10 @@ const QUICK_LINKS = [
 
 // ─── Tips ─────────────────────────────────────────────────────────────────────
 const TIPS = [
-  { icon: '📄', text: 'Siapkan transkrip nilai terbaru sebelum mendaftar beasiswa.' },
-  { icon: '✍️', text: 'Tulis esai motivasi yang jujur dan spesifik sesuai program beasiswa.' },
-  { icon: '⏰', text: 'Pantau deadline secara rutin agar tidak kelewatan kesempatan.' },
-  { icon: '📌', text: 'Simpan beasiswa favorit agar mudah dibandingkan nanti.' },
+  { text: 'Siapkan transkrip nilai terbaru sebelum mendaftar beasiswa.' },
+  { text: 'Tulis esai motivasi yang jujur dan spesifik sesuai program beasiswa.' },
+  { text: 'Pantau deadline secara rutin agar tidak kelewatan kesempatan.' },
+  { text: 'Simpan beasiswa favorit agar mudah dibandingkan nanti.' },
 ];
 
 // ─── Quick Link Card ──────────────────────────────────────────────────────────

@@ -6,33 +6,35 @@ const C = {
 };
 
 const STATUS_OPTIONS = [
-  { value: 'open',        label: '🔴 Open'        },
-  { value: 'in_progress', label: '🟡 In Progress' },
-  { value: 'resolved',    label: '🟢 Resolved'    },
+  { value: 'pending',  label: '🔴 Pending'  },
+  { value: 'diproses', label: '🟡 Diproses' },
+  { value: 'selesai',  label: '🟢 Selesai'  },
+  { value: 'ditutup',  label: '⚫ Ditutup'  },
 ];
 
 export default function TiketDetailPanel({ tiket, onClose, onUpdated }) {
-  const [status,   setStatus  ] = useState('open');
-  const [catatan,  setCatatan ] = useState('');
-  const [saving,   setSaving  ] = useState(false);
-  const [err,      setErr     ] = useState('');
+  const [status, setStatus] = useState('pending');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState('');
 
   useEffect(() => {
     if (tiket) {
-      setStatus(tiket.status || 'open');
-      setCatatan(tiket.catatan_admin || '');
+      setStatus(tiket.status || 'pending');
       setErr('');
     }
   }, [tiket]);
 
   const handleSave = async () => {
-    if (!catatan.trim()) { setErr('Tulis balasan/catatan terlebih dahulu.'); return; }
+    if (status === tiket.status) {
+      setErr('Pilih status baru terlebih dahulu.');
+      return;
+    }
     setSaving(true); setErr('');
     try {
       const res = await fetch('/api/admin/laporan-kendala', {
         method : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ id: tiket.id, status, catatan_admin: catatan.trim() }),
+        body   : JSON.stringify({ id: tiket.laporanId, status }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
@@ -81,7 +83,7 @@ export default function TiketDetailPanel({ tiket, onClose, onUpdated }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>
-                    Tiket #{String(tiket.id).padStart(4, '0')}
+                    Tiket #{String(tiket.laporanId).padStart(4, '0')}
                   </p>
                   <h2 style={{ color: C.white, fontWeight: 700, fontSize: '1rem', margin: 0 }}>
                     Detail Laporan
@@ -114,7 +116,7 @@ export default function TiketDetailPanel({ tiket, onClose, onUpdated }) {
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontWeight: 600, fontSize: '0.9rem', color: C.dark, margin: 0 }}>{tiket.user?.nama || '—'}</p>
                     <p style={{ fontSize: '0.78rem', color: '#6b7280', margin: '0.1rem 0 0' }}>{tiket.user?.email || '—'}</p>
-                    <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.1rem 0 0' }}>ID Akun: {tiket.user_id}</p>
+                    <p style={{ fontSize: '0.72rem', color: '#9ca3af', margin: '0.1rem 0 0' }}>ID Akun: {tiket.userId}</p>
                   </div>
                 </div>
               </section>
@@ -132,34 +134,12 @@ export default function TiketDetailPanel({ tiket, onClose, onUpdated }) {
                 <p style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.625rem' }}>Message History</p>
                 <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.75rem', padding: '0.875rem 1rem' }}>
                   <p style={{ fontSize: '0.75rem', color: '#3b82f6', marginBottom: '0.375rem', fontWeight: 600 }}>
-                    Pelapor · {new Date(tiket.tanggal_lapor).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    Pelapor · {new Date(tiket.tanggalLapor).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                   <p style={{ fontSize: '0.875rem', color: '#1e40af', lineHeight: 1.65, margin: 0 }}>
                     {tiket.deskripsi}
                   </p>
                 </div>
-              </section>
-
-              {/* Admin notes */}
-              <section>
-                <label htmlFor="panel-catatan" style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.5rem' }}>
-                  Official Feedback / Notes
-                </label>
-                <textarea
-                  id="panel-catatan"
-                  rows={4}
-                  value={catatan}
-                  onChange={(e) => { setCatatan(e.target.value); setErr(''); }}
-                  placeholder="Tulis balasan atau catatan internal untuk tiket ini..."
-                  style={{
-                    width: '100%', boxSizing: 'border-box', resize: 'vertical',
-                    padding: '0.75rem', fontSize: '0.875rem', borderRadius: '0.625rem',
-                    border: `1.5px solid ${err ? C.red : '#d1d5db'}`, outline: 'none',
-                    color: C.dark, lineHeight: 1.6, fontFamily: 'inherit',
-                  }}
-                  onFocus={(e) => (e.target.style.borderColor = err ? C.red : C.blue)}
-                  onBlur={(e)  => (e.target.style.borderColor = err ? C.red : '#d1d5db')}
-                />
               </section>
 
               {/* Status dropdown */}
@@ -220,7 +200,7 @@ export default function TiketDetailPanel({ tiket, onClose, onUpdated }) {
                     </svg>
                     Menyimpan...
                   </>
-                ) : '✉ Send Reply & Close'}
+                ) : 'Update Status'}
                 <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
               </button>
             </div>
