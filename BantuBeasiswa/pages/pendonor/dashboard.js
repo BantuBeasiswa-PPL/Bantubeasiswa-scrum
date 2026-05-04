@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
 import { withAuth } from '../../lib/auth';
 
@@ -257,8 +258,9 @@ export default function PendonorDashboardPage({ user }) {
             </p>
           </div>
 
-          {/* Tombol Tambah Program — placeholder */}
-          <button
+          {/* Tombol Tambah Program */}
+          <Link
+            href="/pendonor/program"
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white shrink-0 transition-all hover:shadow-md active:scale-95"
             style={{ backgroundColor: C.blue }}
           >
@@ -266,7 +268,7 @@ export default function PendonorDashboardPage({ user }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
             Tambah Program
-          </button>
+          </Link>
         </div>
 
         {/* ── Summary Cards ─────────────────────────────────────────────── */}
