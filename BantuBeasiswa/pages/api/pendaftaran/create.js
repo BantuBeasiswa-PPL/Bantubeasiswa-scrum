@@ -1,5 +1,5 @@
 import { verifyToken } from '../../../lib/auth';
-import { supabase } from '../../../lib/db';
+import { getServerSupabase } from '../../../lib/supabaseServer';
 
 /**
  * POST /api/pendaftaran/create
@@ -11,7 +11,7 @@ import { supabase } from '../../../lib/db';
  *  2. Resolusi userId dari tabel "user" (via accountId)
  *  3. Cek duplikat pendaftaran
  *  4. Cek beasiswa masih aktif + deadline
- *  5. Cek kuota tersisa
+ *  5. Hitung jumlah pendaftar saat ini
  *  6. INSERT pendaftaran → return pendaftaranId
  *
  * Kolom tabel pendaftaran: pendaftaranId, userId, beasiswaId, status, createdAt, updatedAt
@@ -31,6 +31,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'beasiswaId wajib diisi' });
   }
 
+  const supabase = getServerSupabase();
+
   /* ── 2. Resolusi userId ── */
   // Jika userId sudah ada di JWT (login baru), pakai langsung
   let userId = decoded.userId ?? null;
@@ -48,7 +50,6 @@ export default async function handler(req, res) {
     }
     userId = userData.userId;
   }
-
   const beasiswaIdNum = Number(beasiswaId);
   if (!Number.isFinite(beasiswaIdNum)) {
     return res.status(400).json({ message: 'beasiswaId tidak valid' });
@@ -78,11 +79,16 @@ export default async function handler(req, res) {
   /* ── 4. Cek beasiswa aktif + deadline ── */
   const { data: beasiswa, error: beasiswaError } = await supabase
     .from('beasiswa')
-    .select('status, kuota, deadline, judul')
+    .select('status, deadline, judul')
     .eq('beasiswaId', beasiswaIdNum)
     .single();
 
-  if (beasiswaError || !beasiswa) {
+  if (beasiswaError) {
+    console.error('[pendaftaran/create] lookup beasiswa:', beasiswaError);
+    return res.status(500).json({ message: 'Gagal memeriksa data beasiswa. Silakan coba lagi.' });
+  }
+
+  if (!beasiswa) {
     return res.status(404).json({ message: 'Beasiswa tidak ditemukan' });
   }
 
@@ -100,7 +106,7 @@ export default async function handler(req, res) {
     });
   }
 
-  /* ── 5. Cek kuota tersisa ── */
+  /* ── 5. Hitung jumlah pendaftar saat ini ── */
   const { count: jumlahPendaftar, error: countError } = await supabase
     .from('pendaftaran')
     .select('*', { count: 'exact', head: true })
@@ -108,15 +114,8 @@ export default async function handler(req, res) {
     .neq('status', 'DITOLAK');
 
   if (countError) {
-    console.error('[pendaftaran/create] hitung kuota:', countError);
-    return res.status(500).json({ message: 'Gagal memeriksa kuota' });
-  }
-
-  if (beasiswa.kuota !== null && jumlahPendaftar >= beasiswa.kuota) {
-    return res.status(400).json({
-      code   : 'QUOTA_FULL',
-      message: `Kuota pendaftar sudah terpenuhi (${beasiswa.kuota} orang)`,
-    });
+    console.error('[pendaftaran/create] hitung jumlah pendaftar:', countError);
+    return res.status(500).json({ message: 'Gagal menghitung jumlah pendaftar' });
   }
 
   /* ── 6. INSERT pendaftaran baru ── */
@@ -141,6 +140,6 @@ export default async function handler(req, res) {
     status       : newPendaftaran.status,
     createdAt    : newPendaftaran.createdAt,
     beasiswaJudul: beasiswa.judul,
-    sisaKuota    : beasiswa.kuota !== null ? beasiswa.kuota - (jumlahPendaftar + 1) : null,
+    sisaKuota    : null,
   });
 }

@@ -14,7 +14,7 @@ export async function uploadDokumen(supabase, file, pendaftaranId, jenis) {
   // Tentukan nama file unik
   const ext      = file.name.split('.').pop() || 'pdf';
   const fileName = `${pendaftaranId}/${jenis}_${Date.now()}.${ext}`;
-  const bucket   = 'dokumen-pendaftaran';
+  const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || 'dokumen-pendaftaran';
 
   // Upload ke Supabase Storage
   const { error: uploadError } = await supabase.storage
@@ -26,7 +26,10 @@ export async function uploadDokumen(supabase, file, pendaftaranId, jenis) {
     });
 
   if (uploadError) {
-    throw new Error(`Upload gagal: ${uploadError.message}`);
+    const message = uploadError.message?.includes('Bucket not found')
+      ? `Upload gagal: bucket \"${bucket}\" tidak ditemukan. Pastikan bucket sudah dibuat di Supabase Storage atau set NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET. Jika Anda memiliki SUPABASE_SERVICE_ROLE_KEY, jalankan npm run ensure-bucket.`
+      : `Upload gagal: ${uploadError.message}`;
+    throw new Error(message);
   }
 
   // Ambil public URL

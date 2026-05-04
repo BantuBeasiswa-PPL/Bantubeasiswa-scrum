@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import MahasiswaLayout from '../../components/layouts/MahasiswaLayout';
 import { withAuth } from '../../lib/auth';
+import { normalizeMahasiswaPendaftaranRow } from '../../lib/mahasiswaPendaftaranRow';
 
 const C = {
   blue : '#0056b3',
@@ -109,7 +110,8 @@ export default function PendaftaranPage({ user }) {
         const res  = await fetch('/api/mahasiswa/pendaftaran');
         const data = await res.json();
         if (!res.ok) { setError(data.message || 'Gagal memuat data.'); return; }
-        setList(data);
+        const rows = Array.isArray(data) ? data.map(normalizeMahasiswaPendaftaranRow) : [];
+        setList(rows);
       } catch {
         setError('Terjadi kesalahan jaringan.');
       } finally {
@@ -188,9 +190,13 @@ export default function PendaftaranPage({ user }) {
           ) : list.length === 0 ? (
             <EmptyState />
           ) : (
-            list.map((item) => (
+            list.map((item, index) => (
               <div
-                key={item.id}
+                key={
+                  item.pendaftaranId != null && item.pendaftaranId !== ''
+                    ? String(item.pendaftaranId)
+                    : `pendaftaran-row-${index}`
+                }
                 style={{
                   display        : 'grid',
                   gridTemplateColumns: '1fr 120px 140px 100px',
