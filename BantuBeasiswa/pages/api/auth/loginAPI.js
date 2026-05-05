@@ -26,15 +26,50 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-  // 2b. Ambil nama + userId dari tabel user (profil)
-  const { data: profil } = await supabase
-    .from('user')
-    .select('nama, userId')
-    .eq('accountId', user.accountId)
-    .single();
+  // 2b. Ambil nama + userId dari tabel user (profil) — untuk mahasiswa
+  let nama   = '';
+  let userId = null;
 
-  const nama   = profil?.nama   ?? '';
-  const userId = profil?.userId ?? null;
+  if (role === 'mahasiswa') {
+    const { data: profil } = await supabase
+      .from('user')
+      .select('nama, userId')
+      .eq('accountId', user.accountId)
+      .single();
+
+    nama   = profil?.nama   ?? '';
+    userId = profil?.userId ?? null;
+  } else if (role === 'pendonor') {
+    // Cek apakah pendonor profile sudah ada
+    let { data: pendonor } = await supabase
+      .from('pendonor')
+      .select('id, nama_organisasi')
+      .eq('accountId', user.accountId)
+      .single();
+
+    // Jika belum ada, buat profile pendonor default
+    if (!pendonor) {
+      const { data: newPendonor, error: createError } = await supabase
+        .from('pendonor')
+        .insert({
+          accountId: user.accountId,
+          nama_organisasi: email.split('@')[0] || 'Organisasi Baru',
+          status_verifikasi: 'pending'
+        })
+        .select('id, nama_organisasi')
+        .single();
+
+      if (createError) {
+        console.error('[loginAPI] Error creating pendonor profile:', createError);
+        return res.status(500).json({ message: 'Gagal membuat profil pendonor' });
+      }
+
+      pendonor = newPendonor;
+    }
+
+    nama = pendonor?.nama_organisasi ?? '';
+    userId = pendonor?.id ?? null;
+  }
 
   // 3. Verifikasi password (plain text — hanya untuk testing, ganti ke bcrypt di production)
   const valid = password === user.kataKunci;
