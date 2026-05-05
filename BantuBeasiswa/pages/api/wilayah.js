@@ -1,11 +1,5 @@
 import { getServerSupabase } from '../../lib/supabaseServer';
 
-/**
- * GET /api/wilayah
- * Mengambil semua data wilayah untuk dropdown/filter.
- *
- * Response: Array of wilayah objects
- */
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
 
@@ -14,7 +8,7 @@ export default async function handler(req, res) {
 
     const { data: wilayahList, error } = await supabase
       .from('wilayah')
-      .select('wilayahId, nama, tipe, isAfirmasi, is3T')
+      .select('wilayahId, nama, tipe, isAfirmasi, is3T, jenis_3t, provinsiId, provinsi ( provinsiId, nama )')
       .order('nama', { ascending: true });
 
     if (error) {

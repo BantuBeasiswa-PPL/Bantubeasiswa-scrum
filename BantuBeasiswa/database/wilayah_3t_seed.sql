@@ -2,20 +2,28 @@
 -- BantuBeasiswa – Seed Data Wilayah 3T (PBI-01)
 -- Sumber: Daftar Daerah Tertinggal, Terluar, dan Terpencil (3T)
 --         SPMB SMA Pradita Dirgantara TA 2026/2027 (62 Kabupaten)
--- Jalankan di Supabase SQL Editor setelah schema.sql dieksekusi
+-- Jalankan di Supabase SQL Editor SETELAH schema.sql dan seed provinsi dieksekusi
 -- ============================================================
--- Kolom: nama TEXT, tipe TEXT, mode TEXT, "isAfirmasi" BOOL, "is3T" BOOL
--- Tipe  : 'Terdepan' (perbatasan), 'Terluar' (pulau terluar),
---         'Tertinggal' (daerah tertinggal)
+-- Kolom baru (skema 2026-05-05):
+--   provinsiId : FK ke provinsi."provinsiId"
+--   tipe       : 'kabupaten' | 'kota'
+--   mode       : '3T'
+--   isAfirmasi : BOOL
+--   is3T       : BOOL
+--   jenis_3t   : 'Terdepan' | 'Terluar' | 'Tertinggal'
+-- ============================================================
+-- CATATAN: Ganti nilai provinsiId sesuai ID aktual di tabel provinsi.
+--          Gunakan: SELECT "provinsiId", nama FROM provinsi;
 -- ============================================================
 
-INSERT INTO wilayah (nama, tipe, mode, "isAfirmasi", "is3T") VALUES
+INSERT INTO wilayah ("provinsiId", nama, tipe, mode, "isAfirmasi", "is3T", "jenis_3t") VALUES
 
-  -- ── SUMATERA UTARA ─────────────────────────────────────────────────────
-  ('Kab. Nias, Sumatera Utara',                 'Terluar',    '3T', FALSE, TRUE),
-  ('Kab. Nias Selatan, Sumatera Utara',         'Terluar',    '3T', FALSE, TRUE),
-  ('Kab. Nias Utara, Sumatera Utara',           'Terluar',    '3T', FALSE, TRUE),
-  ('Kab. Nias Barat, Sumatera Utara',           'Terluar',    '3T', FALSE, TRUE),
+  -- ── SUMATERA UTARA ────────────────────────────────────────────────────────────────────
+  -- CATATAN: Ganti <PROV_SUMUT_ID> dengan provinsiId aktual dari tabel provinsi
+  (NULL, 'Kab. Nias, Sumatera Utara',                 'kabupaten', '3T', FALSE, TRUE, 'Terluar'),
+  (NULL, 'Kab. Nias Selatan, Sumatera Utara',         'kabupaten', '3T', FALSE, TRUE, 'Terluar'),
+  (NULL, 'Kab. Nias Utara, Sumatera Utara',           'kabupaten', '3T', FALSE, TRUE, 'Terluar'),
+  (NULL, 'Kab. Nias Barat, Sumatera Utara',           'kabupaten', '3T', FALSE, TRUE, 'Terluar'),
 
   -- ── SUMATERA BARAT ──────────────────────────────────────────────────────
   ('Kab. Kepulauan Mentawai, Sumatera Barat',   'Terluar',    '3T', FALSE, TRUE),
@@ -100,8 +108,8 @@ INSERT INTO wilayah (nama, tipe, mode, "isAfirmasi", "is3T") VALUES
 --
 -- Verifikasi setelah INSERT:
 --   SELECT COUNT(*) FROM wilayah WHERE "is3T" = TRUE;
---   SELECT nama, tipe FROM wilayah WHERE "is3T" = TRUE ORDER BY nama;
+--   SELECT nama, "jenis_3t" FROM wilayah WHERE "is3T" = TRUE ORDER BY nama;
 --
--- Cek per tipe:
---   SELECT tipe, COUNT(*) FROM wilayah WHERE "is3T" = TRUE GROUP BY tipe;
+-- Cek per jenis_3t:
+--   SELECT "jenis_3t", COUNT(*) FROM wilayah WHERE "is3T" = TRUE GROUP BY "jenis_3t";
 -- ============================================================

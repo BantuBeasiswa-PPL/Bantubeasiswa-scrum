@@ -1,6 +1,10 @@
 -- ============================================================
 -- BantuBeasiswa – PostgreSQL Schema for Supabase
--- Generated: 2026-04-15
+-- Updated: 2026-05-05
+-- Perubahan: Pisah tabel provinsi dari wilayah.
+--   - Tabel provinsi (baru): menyimpan data provinsi & isAfirmasi
+--   - Tabel wilayah (update): hanya kab/kota, referensi ke provinsiId
+--     tipe → 'kabupaten' | 'kota', jenis_3t → 'Terluar'|'Tertinggal'|'Terdepan'|null
 -- Run this entire script in Supabase SQL Editor
 -- ============================================================
 
@@ -17,6 +21,7 @@ DROP TABLE IF EXISTS pendaftaran       CASCADE;
 DROP TABLE IF EXISTS beasiswa_wilayah  CASCADE;
 DROP TABLE IF EXISTS beasiswa          CASCADE;
 DROP TABLE IF EXISTS wilayah           CASCADE;
+DROP TABLE IF EXISTS provinsi          CASCADE;
 DROP TABLE IF EXISTS pendonor          CASCADE;
 DROP TABLE IF EXISTS admin             CASCADE;
 DROP TABLE IF EXISTS "user"            CASCADE;
@@ -116,21 +121,34 @@ CREATE TABLE pendonor (
 );
 
 -- ----------------------------------------------------------
--- 3.5 wilayah
+-- 3.5 provinsi
 -- ----------------------------------------------------------
-CREATE TABLE wilayah (
-    "wilayahId"  BIGSERIAL PRIMARY KEY,
+CREATE TABLE provinsi (
+    "provinsiId" BIGSERIAL PRIMARY KEY,
     nama         TEXT        NOT NULL,
-    tipe         TEXT        NOT NULL,   -- contoh: 'provinsi', 'kabupaten', 'kota'
-    mode         TEXT,
     "isAfirmasi" BOOLEAN     NOT NULL DEFAULT FALSE,
-    "is3T"       BOOLEAN     NOT NULL DEFAULT FALSE,
     "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
     "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ----------------------------------------------------------
--- 3.6 beasiswa
+-- 3.6 wilayah (hanya kabupaten/kota)
+-- ----------------------------------------------------------
+CREATE TABLE wilayah (
+    "wilayahId"  BIGSERIAL PRIMARY KEY,
+    "provinsiId" BIGINT      NOT NULL REFERENCES provinsi("provinsiId") ON DELETE CASCADE,
+    nama         TEXT        NOT NULL,
+    tipe         TEXT        NOT NULL,   -- 'kabupaten' | 'kota'
+    mode         TEXT,                  -- 'reguler' | 'afirmasi' | '3T'
+    "isAfirmasi" BOOLEAN     NOT NULL DEFAULT FALSE,
+    "is3T"       BOOLEAN     NOT NULL DEFAULT FALSE,
+    "jenis_3t"   TEXT,                  -- 'Terluar' | 'Tertinggal' | 'Terdepan' | NULL
+    "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    "updatedAt"  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ----------------------------------------------------------
+-- 3.7 beasiswa
 -- ----------------------------------------------------------
 CREATE TABLE beasiswa (
     "beasiswaId"      BIGSERIAL PRIMARY KEY,
@@ -147,7 +165,7 @@ CREATE TABLE beasiswa (
 );
 
 -- ----------------------------------------------------------
--- 3.7 beasiswa_wilayah  (junction table, composite PK)
+-- 3.8 beasiswa_wilayah  (junction table, composite PK)
 -- ----------------------------------------------------------
 CREATE TABLE beasiswa_wilayah (
     "beasiswaId"  BIGINT NOT NULL REFERENCES beasiswa("beasiswaId") ON DELETE CASCADE,
@@ -155,6 +173,17 @@ CREATE TABLE beasiswa_wilayah (
     keterangan    TEXT,
     "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY ("beasiswaId", "wilayahId")
+);
+
+-- ----------------------------------------------------------
+-- 3.9 beasiswa_provinsi  (junction table untuk target level provinsi)
+-- ----------------------------------------------------------
+CREATE TABLE beasiswa_provinsi (
+    "beasiswaId" BIGINT NOT NULL REFERENCES beasiswa("beasiswaId") ON DELETE CASCADE,
+    "provinsiId" BIGINT NOT NULL REFERENCES provinsi("provinsiId") ON DELETE CASCADE,
+    keterangan   TEXT,
+    "createdAt"  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY ("beasiswaId", "provinsiId")
 );
 
 -- ----------------------------------------------------------
@@ -334,14 +363,19 @@ INSERT INTO pendonor ("accountId", "statusOrganisasi", kontak, alamat) VALUES
     (5, 'Yayasan Pendidikan Nusantara', '021-55512345', 'Jl. Merdeka No. 1, Jakarta Pusat'),
     (6, 'PT Inovasi Bangsa Tbk.',       '031-77789012', 'Jl. Pemuda No. 45, Surabaya');
 
--- 5.5 wilayah
-INSERT INTO wilayah (nama, tipe, mode, "isAfirmasi", "is3T") VALUES
-    ('Jawa Barat',        'provinsi',  'reguler',   FALSE, FALSE),
-    ('Jawa Timur',        'provinsi',  'reguler',   FALSE, FALSE),
-    ('Papua',             'provinsi',  'afirmasi',  TRUE,  TRUE),
-    ('Nusa Tenggara Timur','provinsi', 'afirmasi',  TRUE,  TRUE),
-    ('Bandung',           'kota',      'reguler',   FALSE, FALSE),
-    ('Surabaya',          'kota',      'reguler',   FALSE, FALSE);
+-- 5.5 provinsi
+INSERT INTO provinsi (nama, "isAfirmasi") VALUES
+    ('Jawa Barat',           FALSE),
+    ('Jawa Timur',           FALSE),
+    ('Papua',                TRUE),
+    ('Nusa Tenggara Timur',  TRUE);
+
+-- 5.6 wilayah (kab/kota — provinsiId sesuai urutan insert di atas)
+INSERT INTO wilayah ("provinsiId", nama, tipe, mode, "isAfirmasi", "is3T", "jenis_3t") VALUES
+    (1, 'Kota Bandung',  'kota',      'reguler',  FALSE, FALSE, NULL),
+    (2, 'Kota Surabaya', 'kota',      'reguler',  FALSE, FALSE, NULL),
+    (3, 'Kab. Jayawijaya','kabupaten','3T',        FALSE, TRUE, 'Tertinggal'),
+    (4, 'Kab. Kupang',   'kabupaten', '3T',        FALSE, TRUE, 'Tertinggal');
 
 -- 5.6 beasiswa
 INSERT INTO beasiswa ("pendonorId", judul, jalur, deadline, deskripsi, syarat, "linkPendaftaran", status) VALUES

@@ -1,8 +1,9 @@
 import { supabase } from '../../../../lib/db';
 import { verifyToken } from '../../../../lib/auth';
 
-const VALID_TIPE = ['Terdepan', 'Terluar', 'Tertinggal'];
-const SELECT_FIELDS = 'wilayahId, nama, tipe, mode, isAfirmasi, is3T';
+const VALID_TIPE = ['kabupaten', 'kota'];
+const VALID_JENIS_3T = ['Terdepan', 'Terluar', 'Tertinggal'];
+const SELECT_FIELDS = 'wilayahId, provinsiId, nama, tipe, mode, isAfirmasi, is3T, jenis_3t, provinsi ( provinsiId, nama )';
 
 function requireAdmin(req, res) {
   const decoded = verifyToken(req);
@@ -23,12 +24,18 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'PUT') {
-    const { nama, tipe, mode, isAfirmasi, is3T } = req.body || {};
+    const { nama, tipe, mode, isAfirmasi, is3T, jenis_3t, provinsiId } = req.body || {};
 
     if (!nama || typeof nama !== 'string' || !nama.trim()) {
       return res.status(400).json({ message: 'Nama wilayah wajib diisi.' });
     }
     if (!VALID_TIPE.includes(tipe)) {
+      return res.status(400).json({ message: 'Tipe wilayah tidak valid. Gunakan kabupaten atau kota.' });
+    }
+    if (!provinsiId) {
+      return res.status(400).json({ message: 'Provinsi wajib dipilih.' });
+    }
+    if (is3T && !VALID_JENIS_3T.includes(jenis_3t)) {
       return res.status(400).json({ message: 'Kategori 3T tidak valid.' });
     }
 
@@ -36,9 +43,11 @@ export default async function handler(req, res) {
       const payload = {
         nama: nama.trim(),
         tipe,
+        provinsiId: Number(provinsiId),
         mode: typeof mode === 'string' ? mode.trim() : null,
         isAfirmasi: Boolean(isAfirmasi),
         is3T: Boolean(is3T),
+        jenis_3t: is3T ? jenis_3t : null,
       };
 
       const { data, error } = await supabase

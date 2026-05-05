@@ -11,8 +11,10 @@ import { verifyToken } from '../../../../lib/auth';
  *   nominal: number,
  *   kuota: number,
  *   deadline: string (ISO date),
- *   wilayahIds: number[] (array of wilayah IDs)
+ *   provinsiIds: number[] (array of provinsi IDs yang dipilih pendonor)
  * }
+ *
+ * Flow: provinsiIds → resolve semua wilayahId per provinsi → insert beasiswa_wilayah
  *
  * Response: { beasiswaId: number, message: string }
  */
@@ -39,7 +41,7 @@ export default async function handler(req, res) {
       return res.status(404).json({ message: 'Profil pendonor tidak ditemukan' });
     }
 
-    const { judul, deskripsi, syarat, nominal, kuota, deadline, wilayahIds } = req.body;
+    const { judul, deskripsi, syarat, nominal, kuota, deadline, provinsiIds } = req.body;
 
     // Validation
     if (!judul?.trim()) {
@@ -54,14 +56,28 @@ export default async function handler(req, res) {
     if (!deadline) {
       return res.status(400).json({ message: 'Deadline wajib diisi' });
     }
-    if (!Array.isArray(wilayahIds) || wilayahIds.length === 0) {
-      return res.status(400).json({ message: 'Minimal satu wilayah target harus dipilih' });
+    if (!Array.isArray(provinsiIds) || provinsiIds.length === 0) {
+      return res.status(400).json({ message: 'Minimal satu provinsi target harus dipilih' });
     }
 
     // Validasi deadline tidak di masa lalu
-    const deadlineDate = new Date(deadline);
-    if (deadlineDate <= new Date()) {
+    if (new Date(deadline) <= new Date()) {
       return res.status(400).json({ message: 'Deadline harus di masa depan' });
+    }
+
+    // Resolve: provinsiIds → wilayahIds (semua kab/kota dalam provinsi yang dipilih)
+    const { data: wilayahData, error: wilayahResolveError } = await supabase
+      .from('wilayah')
+      .select('wilayahId')
+      .in('provinsiId', provinsiIds.map(Number));
+
+    if (wilayahResolveError) {
+      console.error('[pendonor/beasiswa/create] wilayah resolve error:', wilayahResolveError);
+      return res.status(500).json({ message: 'Gagal memproses wilayah target' });
+    }
+
+    if (!wilayahData || wilayahData.length === 0) {
+      return res.status(400).json({ message: 'Tidak ada wilayah (kab/kota) yang terdaftar untuk provinsi yang dipilih' });
     }
 
     // Insert beasiswa baru
@@ -77,7 +93,7 @@ export default async function handler(req, res) {
         deadline: deadline,
         status: 'draft', // Default status draft, perlu approval admin
       })
-      .select('id')
+      .select('beasiswaId')
       .single();
 
     if (insertError) {
@@ -85,10 +101,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: 'Gagal membuat program beasiswa' });
     }
 
-    // Insert wilayah target
-    const wilayahInserts = wilayahIds.map(wilayahId => ({
-      beasiswaId: beasiswa.id,
-      wilayahId: parseInt(wilayahId),
+    // Insert beasiswa_wilayah untuk setiap kab/kota dalam provinsi yang dipilih
+    const wilayahInserts = wilayahData.map((w) => ({
+      beasiswaId: beasiswa.beasiswaId,
+      wilayahId: w.wilayahId,
     }));
 
     const { error: wilayahError } = await supabase
@@ -103,8 +119,8 @@ export default async function handler(req, res) {
     }
 
     return res.status(201).json({
-      beasiswaId: beasiswa.id,
-      message: 'Program beasiswa berhasil dibuat dan menunggu approval admin'
+      beasiswaId: beasiswa.beasiswaId,
+      message: 'Program beasiswa berhasil dibuat dan menunggu approval admin',
     });
   } catch (err) {
     console.error('[pendonor/beasiswa/create]', err);
