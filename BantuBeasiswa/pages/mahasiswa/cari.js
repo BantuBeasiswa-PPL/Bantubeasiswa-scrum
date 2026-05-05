@@ -5,9 +5,9 @@ import { useRouter } from 'next/router';
 import MahasiswaLayout from '../../components/layouts/MahasiswaLayout';
 import { withAuth } from '../../lib/auth';
 import {
-  fetchBeasiswa,
-  fetchWilayahAfirmasi,
-  fetchWilayah3T,
+  fetchBeasiswaWithFilter,
+  fetchAllProvinsi,
+  fetchWilayahByProvinsi,
 } from '../../lib/beasiswaQuery';
 
 // ─── Color tokens (sama dengan file lain di project) ─────────────────────────
@@ -276,15 +276,15 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
   const router = useRouter();
   const Layout = publicMode ? PublicLayout : MahasiswaLayout;
 
-  // ── State filter + data ────────────────────────────────────────────────────────────────
+  // ── State filter + data ──────────────────────────────────────────────────────────
   const [keyword,          setKeyword       ] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
-  const [afirmasiId,       setAfirmasiId    ] = useState('');
-  const [tiga_tId,         setTigaTId       ] = useState('');
+  const [provinsiId,       setProvinsiId    ] = useState('');
+  const [wilayahId,        setWilayahId     ] = useState('');
 
-  const [beasiswaList, setBeasiswaList] = useState([]);
-  const [wilayahAfirmasi, setWilayahAfirmasi] = useState([]);
-  const [wilayah3T,       setWilayah3T      ] = useState([]);
+  const [beasiswaList,  setBeasiswaList ] = useState([]);
+  const [provinsiList,  setProvinsiList ] = useState([]);  // semua provinsi
+  const [wilayahList,   setWilayahList  ] = useState([]);  // kab/kota sesuai provinsi dipilih
 
   const [loading, setLoading] = useState(true);
   const [error,   setError  ] = useState('');
@@ -294,9 +294,9 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
     if (!router.isReady) return;
     const q = router.query.q || '';
     setKeyword(q);
-    setDebouncedKeyword(q); // Init tanpa delay agar tidak delayed saat pertama load
-    if (router.query.afirmasi)   setAfirmasiId(router.query.afirmasi);
-    if (router.query.tiga_t)     setTigaTId(router.query.tiga_t);
+    setDebouncedKeyword(q);
+    if (router.query.provinsi) setProvinsiId(router.query.provinsi);
+    if (router.query.wilayah)  setWilayahId(router.query.wilayah);
   }, [router.isReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Debounce keyword: update debouncedKeyword 400ms setelah user berhenti ketik ─
@@ -307,32 +307,43 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
     return () => clearTimeout(timer); // Batalkan timer jika keyword berubah lagi
   }, [keyword]);
 
-  // ── Fetch dropdown wilayah (sekali saat mount) ───────────────────────────────
+  // ── Fetch semua provinsi (sekali saat mount) ─────────────────────────────────
   useEffect(() => {
+    async function loadProvinsi() {
+      try {
+        const data = await fetchAllProvinsi();
+        setProvinsiList(data);
+      } catch (err) {
+        console.error('Gagal fetch provinsi:', err);
+      }
+    }
+    loadProvinsi();
+  }, []);
+
+  // ── Fetch kab/kota saat provinsi berubah ───────────────────────────────────
+  useEffect(() => {
+    if (!provinsiId) { setWilayahList([]); setWilayahId(''); return; }
     async function loadWilayah() {
       try {
-        const [afirmasi, tigaT] = await Promise.all([
-          fetchWilayahAfirmasi(),
-          fetchWilayah3T(),
-        ]);
-        setWilayahAfirmasi(afirmasi);
-        setWilayah3T(tigaT);
+        const data = await fetchWilayahByProvinsi(provinsiId);
+        setWilayahList(data);
+        setWilayahId(''); // reset pilihan kab/kota saat provinsi ganti
       } catch (err) {
-        console.error('Gagal fetch wilayah dropdown:', err);
+        console.error('Gagal fetch wilayah by provinsi:', err);
       }
     }
     loadWilayah();
-  }, []);
+  }, [provinsiId]);
 
-  // ── Fetch beasiswa (dipanggil ulang setiap debouncedKeyword atau filter berubah) ─
+  // ── Fetch beasiswa (dipanggil ulang setiap filter berubah) ────────────────────
   const loadBeasiswa = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchBeasiswa({
-        keyword   : debouncedKeyword, // pakai debouncedKeyword, bukan keyword mentah
-        afirmasiId: afirmasiId ? Number(afirmasiId) : null,
-        tiga_tId  : tiga_tId   ? Number(tiga_tId)   : null,
+      const data = await fetchBeasiswaWithFilter({
+        keyword   : debouncedKeyword,
+        provinsiId: provinsiId ? Number(provinsiId) : null,
+        wilayahId : wilayahId  ? Number(wilayahId)  : null,
       });
       setBeasiswaList(data);
     } catch (err) {
@@ -340,7 +351,7 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
     } finally {
       setLoading(false);
     }
-  }, [debouncedKeyword, afirmasiId, tiga_tId]);
+  }, [debouncedKeyword, provinsiId, wilayahId]);
 
   useEffect(() => {
     loadBeasiswa();
@@ -351,18 +362,19 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
     if (!router.isReady) return;
     const q = {};
     if (keyword)    q.q        = keyword;
-    if (afirmasiId) q.afirmasi = afirmasiId;
-    if (tiga_tId)   q.tiga_t   = tiga_tId;
+    if (provinsiId) q.provinsi = provinsiId;
+    if (wilayahId)  q.wilayah  = wilayahId;
     router.replace({ pathname: router.pathname, query: q }, undefined, { shallow: true });
-  }, [keyword, afirmasiId, tiga_tId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [keyword, provinsiId, wilayahId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleReset() {
     setKeyword('');
-    setAfirmasiId('');
-    setTigaTId('');
+    setProvinsiId('');
+    setWilayahId('');
+    setWilayahList([]);
   }
 
-  const isFilterActive = keyword || afirmasiId || tiga_tId;
+  const isFilterActive = keyword || provinsiId || wilayahId;
 
   return (
     <>
@@ -415,42 +427,46 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
             />
           </div>
 
-          {/* Dropdown Provinsi Afirmasi */}
+          {/* Dropdown Provinsi (semua provinsi) */}
           <select
-            id="filter-afirmasi"
-            value={afirmasiId}
-            onChange={(e) => setAfirmasiId(e.target.value)}
+            id="filter-provinsi"
+            value={provinsiId}
+            onChange={(e) => setProvinsiId(e.target.value)}
             className="py-2.5 px-3 text-sm rounded-lg border outline-none transition-all sm:w-52"
             style={{
-              borderColor    : afirmasiId ? C.blue : '#e5e7eb',
-              backgroundColor: afirmasiId ? '#eff6ff' : C.white,
+              borderColor    : provinsiId ? C.blue : '#e5e7eb',
+              backgroundColor: provinsiId ? '#eff6ff' : C.white,
               color          : C.dark,
             }}
           >
-            <option value="">Provinsi Afirmasi</option>
-            {wilayahAfirmasi.map((w) => (
-              <option key={w.provinsiId} value={w.provinsiId}>
-                {w.nama}
+            <option value="">Semua Provinsi</option>
+            {provinsiList.map((p) => (
+              <option key={p.provinsiId} value={p.provinsiId}>
+                {p.nama}{p.isAfirmasi ? ' ★' : ''}
               </option>
             ))}
           </select>
 
-          {/* Dropdown Kabupaten 3T */}
+          {/* Dropdown Kabupaten/Kota (cascading dari provinsi) */}
           <select
-            id="filter-3t"
-            value={tiga_tId}
-            onChange={(e) => setTigaTId(e.target.value)}
+            id="filter-wilayah"
+            value={wilayahId}
+            onChange={(e) => setWilayahId(e.target.value)}
+            disabled={!provinsiId || wilayahList.length === 0}
             className="py-2.5 px-3 text-sm rounded-lg border outline-none transition-all sm:w-52"
             style={{
-              borderColor    : tiga_tId ? C.blue : '#e5e7eb',
-              backgroundColor: tiga_tId ? '#eff6ff' : C.white,
-              color          : C.dark,
+              borderColor    : wilayahId ? C.blue : '#e5e7eb',
+              backgroundColor: wilayahId ? '#eff6ff' : (!provinsiId ? '#f9fafb' : C.white),
+              color          : !provinsiId ? C.gray : C.dark,
+              cursor         : !provinsiId ? 'not-allowed' : 'pointer',
             }}
           >
-            <option value="">Kabupaten / Kota 3T</option>
-            {wilayah3T.map((w) => (
+            <option value="">
+              {!provinsiId ? '— Pilih Provinsi dahulu —' : 'Semua Kabupaten/Kota'}
+            </option>
+            {wilayahList.map((w) => (
               <option key={w.wilayahId} value={w.wilayahId}>
-                {w.nama}{w.jenis_3t ? ` (${w.jenis_3t})` : ''}
+                {w.nama}{w.is3T ? ' (3T)' : ''}
               </option>
             ))}
           </select>

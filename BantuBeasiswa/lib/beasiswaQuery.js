@@ -97,6 +97,80 @@ export async function fetchWilayah3T() {
   return data ?? [];
 }
 
+// ─── Ambil semua provinsi (untuk dropdown filter di halaman cari) ─────────────────────
+export async function fetchAllProvinsi() {
+  const { data, error } = await supabase
+    .from('provinsi')
+    .select('provinsiId, nama, isAfirmasi')
+    .order('nama', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// ─── Ambil kab/kota berdasarkan provinsi (untuk dropdown cascading) ───────────────
+export async function fetchWilayahByProvinsi(provinsiId) {
+  const { data, error } = await supabase
+    .from('wilayah')
+    .select('wilayahId, nama, tipe, isAfirmasi, is3T, jenis_3t')
+    .eq('provinsiId', provinsiId)
+    .order('nama', { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+// ─── Fetch beasiswa dengan filter provinsi / kabupaten-kota ──────────────────────
+// Jika wilayahId ada, filter langsung ke kab/kota itu.
+// Jika hanya provinsiId, ambil semua kab/kota di provinsi tersebut dulu.
+export async function fetchBeasiswaWithFilter({ keyword = '', provinsiId = null, wilayahId = null } = {}) {
+  let filteredBeasiswaIds = null;
+
+  if (wilayahId) {
+    // Filter ketat: hanya beasiswa yang mencakup wilayah spesifik ini
+    const { data: bwData, error: bwError } = await supabase
+      .from('beasiswa_wilayah')
+      .select('beasiswaId')
+      .eq('wilayahId', wilayahId);
+
+    if (bwError) throw new Error(bwError.message);
+    filteredBeasiswaIds = new Set((bwData ?? []).map((r) => r.beasiswaId));
+
+  } else if (provinsiId) {
+    // Filter provinsi: ambil semua wilayah di provinsi ini
+    const wilayahIds = await fetchWilayahIdsByProvinsi(provinsiId);
+    if (wilayahIds.length === 0) return [];
+
+    const { data: bwData, error: bwError } = await supabase
+      .from('beasiswa_wilayah')
+      .select('beasiswaId')
+      .in('wilayahId', wilayahIds);
+
+    if (bwError) throw new Error(bwError.message);
+    filteredBeasiswaIds = new Set((bwData ?? []).map((r) => r.beasiswaId));
+  }
+
+  let query = supabase
+    .from('beasiswa')
+    .select(BEASISWA_LIST_SELECT)
+    .eq('status', 'aktif')
+    .order('deadline', { ascending: true });
+
+  if (keyword.trim()) {
+    query = query.ilike('judul', `%${keyword.trim()}%`);
+  }
+
+  if (filteredBeasiswaIds !== null) {
+    const idsArr = [...filteredBeasiswaIds];
+    if (idsArr.length === 0) return [];
+    query = query.in('beasiswaId', idsArr);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Gagal fetch beasiswa: ${error.message}`);
+  return data ?? [];
+}
+
 export async function fetchBeasiswaById(id) {
   const { data, error } = await supabase
     .from('beasiswa')
