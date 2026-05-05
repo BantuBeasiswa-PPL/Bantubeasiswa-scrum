@@ -290,7 +290,7 @@ export default function BeasiswaForm({ initialData = null, onSubmit, onCancel })
           value={formData.deskripsi}
           onChange={(e) => handleChange('deskripsi', e.target.value)}
           onBlur={() => handleBlur('deskripsi')}
-          placeholder="Jelaskan tujuan beasiswa, benefit yang diberikan, dan profil penerima ideal..."
+          placeholder="Jelaskan tujuan beasiswa, benefit yang diberikan, dan profil penerima ideal. Contoh: Program ini untuk mahasiswa dengan IPK minimal 3.5 yang aktif di kampus."
           rows={4}
           className="w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 transition resize-none"
           style={{
@@ -325,7 +325,7 @@ export default function BeasiswaForm({ initialData = null, onSubmit, onCancel })
           value={formData.syarat}
           onChange={(e) => handleChange('syarat', e.target.value)}
           onBlur={() => handleBlur('syarat')}
-          placeholder="Satu syarat per baris. Contoh:&#10;- IPK minimal 3.0&#10;- Aktif di organisasi kampus&#10;- Surat rekomendasi dari dosen"
+          placeholder="Satu syarat per baris. Contoh: IPK minimal 3.0 / Aktif di organisasi kampus / Surat rekomendasi dari dosen / Tidak sedang menerima beasiswa lain"
           rows={4}
           className="w-full px-4 py-2.5 border rounded-lg text-sm focus:outline-none focus:ring-2 transition resize-none"
           style={{
