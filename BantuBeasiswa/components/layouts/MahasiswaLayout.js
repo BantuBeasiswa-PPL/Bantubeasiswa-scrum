@@ -27,9 +27,9 @@ const menuItems = [
     icon : '⭐',
   },
   {
-    label: 'Bantuan',
-    href : '/mahasiswa/bantuan',
-    icon : '💬',
+    label: 'Laporan Kendala',
+    href : '/mahasiswa/laporan-kendala',
+    icon : '📝',
   },
 ];
 
