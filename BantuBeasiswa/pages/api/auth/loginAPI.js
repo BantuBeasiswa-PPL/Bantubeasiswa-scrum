@@ -1,5 +1,5 @@
 import { supabase } from '../../../lib/db'; 
-// import bcrypt from 'bcryptjs'; // dinonaktifkan sementara untuk testing
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 
@@ -36,8 +36,20 @@ export default async function handler(req, res) {
   const nama   = profil?.nama   ?? '';
   const userId = profil?.userId ?? null;
 
-  // 3. Verifikasi password (plain text — hanya untuk testing, ganti ke bcrypt di production)
-  const valid = password === user.kataKunci;
+  // 3. Verifikasi password (bcrypt dengan fallback plain text)
+  let valid = false;
+  try {
+    // Cek apakah password di DB adalah hash bcrypt (biasanya dimulai dengan $2)
+    if (user.kataKunci && user.kataKunci.startsWith('$2')) {
+      valid = await bcrypt.compare(password, user.kataKunci);
+    } else {
+      // Jika bukan hash, bandingkan langsung
+      valid = password === user.kataKunci;
+    }
+  } catch (err) {
+    // Fallback jika terjadi error pada bcrypt
+    valid = password === user.kataKunci;
+  }
 
   if (!valid) {
     return res.status(401).json({ message: 'Email atau password salah' });

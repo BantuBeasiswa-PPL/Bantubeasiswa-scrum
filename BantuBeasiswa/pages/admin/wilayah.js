@@ -4,9 +4,10 @@ import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const TIPE_OPTIONS = ['Terdepan', 'Terluar', 'Tertinggal'];
+const JENIS_3T_OPTIONS   = ['Terdepan', 'Terluar', 'Tertinggal'];
+const TIPE_WILAYAH_OPTIONS = ['kabupaten', 'kota'];
 
-const TIPE_STYLE = {
+const JENIS_3T_STYLE = {
   Terdepan   : { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' },
   Terluar    : { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' },
   Tertinggal : { bg: '#fdf2f8', color: '#9d174d', border: '#f9a8d4' },
@@ -21,8 +22,8 @@ const C = {
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function tipeBadge(tipe) {
-  const s = TIPE_STYLE[tipe] || { bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' };
+function jenis3tBadge(jenis_3t) {
+  const s = JENIS_3T_STYLE[jenis_3t] || { bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' };
   return (
     <span
       style={{
@@ -36,7 +37,7 @@ function tipeBadge(tipe) {
         whiteSpace   : 'nowrap',
       }}
     >
-      {tipe}
+      {jenis_3t || '—'}
     </span>
   );
 }
@@ -79,13 +80,15 @@ function StatCard({ label, count, icon, accentColor }) {
 }
 
 // ─── Modal Add/Edit ──────────────────────────────────────────────────────────
-function WilayahModal({ mode, initial, onClose, onSubmit, loading }) {
+function WilayahModal({ mode, initial, onClose, onSubmit, loading, provinsiList }) {
   const [form, setForm] = useState({
-    nama       : initial?.nama       || '',
-    tipe       : initial?.tipe       || 'Terdepan',
-    mode       : initial?.mode       || '3T',
-    isAfirmasi : initial?.isAfirmasi ?? false,
-    is3T       : initial?.is3T       ?? true,
+    nama       : initial?.nama        || '',
+    tipe       : initial?.tipe        || 'kabupaten',
+    jenis_3t   : initial?.jenis_3t    || 'Terdepan',
+    mode       : initial?.mode        || '3T',
+    provinsiId : initial?.provinsiId  || '',
+    isAfirmasi : initial?.isAfirmasi  ?? false,
+    is3T       : initial?.is3T        ?? true,
   });
   const [err, setErr] = useState('');
 
@@ -96,7 +99,8 @@ function WilayahModal({ mode, initial, onClose, onSubmit, loading }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!form.nama.trim()) { setErr('Nama wilayah wajib diisi.'); return; }
+    if (!form.nama.trim())   { setErr('Nama wilayah wajib diisi.'); return; }
+    if (!form.provinsiId)    { setErr('Provinsi wajib dipilih.'); return; }
     setErr('');
     onSubmit(form);
   }
@@ -141,13 +145,34 @@ function WilayahModal({ mode, initial, onClose, onSubmit, loading }) {
             />
           </div>
 
-          {/* Tipe */}
+          {/* Provinsi */}
           <div>
-            <label style={labelStyle}>Kategori 3T *</label>
-            <select name="tipe" value={form.tipe} onChange={handleChange} style={inputStyle}>
-              {TIPE_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+            <label style={labelStyle}>Provinsi *</label>
+            <select name="provinsiId" value={form.provinsiId} onChange={handleChange} style={inputStyle} required>
+              <option value="">-- Pilih Provinsi --</option>
+              {provinsiList.map((p) => (
+                <option key={p.provinsiId} value={p.provinsiId}>{p.nama}</option>
+              ))}
             </select>
           </div>
+
+          {/* Tipe Wilayah (kab/kota) */}
+          <div>
+            <label style={labelStyle}>Tipe Wilayah *</label>
+            <select name="tipe" value={form.tipe} onChange={handleChange} style={inputStyle}>
+              {TIPE_WILAYAH_OPTIONS.map((t) => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+            </select>
+          </div>
+
+          {/* Kategori 3T (jenis_3t) — tampil hanya jika is3T checked */}
+          {form.is3T && (
+            <div>
+              <label style={labelStyle}>Kategori 3T *</label>
+              <select name="jenis_3t" value={form.jenis_3t} onChange={handleChange} style={inputStyle}>
+                {JENIS_3T_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Mode */}
           <div>
@@ -156,7 +181,7 @@ function WilayahModal({ mode, initial, onClose, onSubmit, loading }) {
               name="mode"
               value={form.mode}
               onChange={handleChange}
-              placeholder="3T"
+              placeholder="reguler / afirmasi / 3T"
               style={inputStyle}
             />
           </div>
@@ -205,9 +230,9 @@ const btnSecondaryStyle = {
 
 // ─── CSV Export ──────────────────────────────────────────────────────────────
 function exportCSV(rows) {
-  const header = ['wilayahId', 'Nama Wilayah', 'Tipe', 'Mode', 'is3T', 'isAfirmasi'];
+  const header = ['wilayahId', 'Nama Wilayah', 'Provinsi', 'Tipe', 'Kategori 3T', 'Mode', 'is3T', 'isAfirmasi'];
   const lines  = rows.map((r) =>
-    [r.wilayahId, `"${r.nama}"`, r.tipe, r.mode, r.is3T, r.isAfirmasi].join(',')
+    [r.wilayahId, `"${r.nama}"`, r.provinsi?.nama || '', r.tipe, r.jenis_3t || '', r.mode, r.is3T, r.isAfirmasi].join(',')
   );
   const csv  = [header.join(','), ...lines].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -223,22 +248,29 @@ function exportCSV(rows) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function WilayahPage({ user }) {
   const [list,       setList      ] = useState([]);
+  const [provinsiList, setProvinsiList] = useState([]);
   const [loading,    setLoading   ] = useState(true);
   const [saving,     setSaving    ] = useState(false);
   const [error,      setError     ] = useState('');
   const [toast,      setToast     ] = useState('');
-  const [modal,      setModal     ] = useState(null); // null | { mode:'add' } | { mode:'edit', row }
-  const [deleting,   setDeleting  ] = useState(null); // wilayahId yang sedang dihapus
+  const [modal,      setModal     ] = useState(null);
+  const [deleting,   setDeleting  ] = useState(null);
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const res  = await fetch('/api/admin/wilayah');
-      const data = await res.json();
-      if (!res.ok) { setError(data.message || 'Gagal memuat data.'); return; }
-      setList(data);
+      const [wilayahRes, provinsiRes] = await Promise.all([
+        fetch('/api/admin/wilayah'),
+        fetch('/api/provinsi'),
+      ]);
+      const wilayahData  = await wilayahRes.json();
+      const provinsiData = await provinsiRes.json();
+      if (!wilayahRes.ok)  { setError(wilayahData.message  || 'Gagal memuat data wilayah.'); return; }
+      if (!provinsiRes.ok) { setError(provinsiData.message || 'Gagal memuat data provinsi.'); return; }
+      setList(wilayahData);
+      setProvinsiList(provinsiData);
     } catch {
       setError('Terjadi kesalahan jaringan.');
     } finally {
@@ -319,9 +351,9 @@ export default function WilayahPage({ user }) {
 
   // ── stat counts ──────────────────────────────────────────────────────────
   const stats = {
-    Terdepan   : list.filter((r) => r.tipe === 'Terdepan').length,
-    Terluar    : list.filter((r) => r.tipe === 'Terluar').length,
-    Tertinggal : list.filter((r) => r.tipe === 'Tertinggal').length,
+    Terdepan   : list.filter((r) => r.jenis_3t === 'Terdepan').length,
+    Terluar    : list.filter((r) => r.jenis_3t === 'Terluar').length,
+    Tertinggal : list.filter((r) => r.jenis_3t === 'Tertinggal').length,
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -445,7 +477,7 @@ export default function WilayahPage({ user }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                    {['#', 'Nama Wilayah', 'Kategori 3T', 'Mode', 'Afirmasi', 'Aksi'].map((h) => (
+                    {['#', 'Nama Wilayah', 'Provinsi', 'Tipe', 'Kategori 3T', 'Mode', 'Afirmasi', 'Aksi'].map((h) => (
                       <th
                         key={h}
                         style={{
@@ -471,7 +503,11 @@ export default function WilayahPage({ user }) {
                     >
                       <td style={{ padding: '10px 14px', color: '#9ca3af', width: 36 }}>{idx + 1}</td>
                       <td style={{ padding: '10px 14px', fontWeight: 600, color: C.dark }}>{row.nama}</td>
-                      <td style={{ padding: '10px 14px' }}>{tipeBadge(row.tipe)}</td>
+                      <td style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>{row.provinsi?.nama || '—'}</td>
+                      <td style={{ padding: '10px 14px' }}>
+                        <span style={{ fontSize: 12, color: '#6b7280' }}>{row.tipe}</span>
+                      </td>
+                      <td style={{ padding: '10px 14px' }}>{jenis3tBadge(row.jenis_3t)}</td>
                       <td style={{ padding: '10px 14px', color: '#6b7280' }}>{row.mode || '—'}</td>
                       <td style={{ padding: '10px 14px' }}>
                         <span style={{
@@ -527,6 +563,7 @@ export default function WilayahPage({ user }) {
           onClose={() => setModal(null)}
           onSubmit={modal.mode === 'add' ? handleAdd : handleEdit}
           loading={saving}
+          provinsiList={provinsiList}
         />
       )}
     </>

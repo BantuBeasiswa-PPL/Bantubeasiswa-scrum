@@ -429,7 +429,7 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
           >
             <option value="">Provinsi Afirmasi</option>
             {wilayahAfirmasi.map((w) => (
-              <option key={w.wilayahId} value={w.wilayahId}>
+              <option key={w.provinsiId} value={w.provinsiId}>
                 {w.nama}
               </option>
             ))}
@@ -450,7 +450,7 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
             <option value="">Kabupaten / Kota 3T</option>
             {wilayah3T.map((w) => (
               <option key={w.wilayahId} value={w.wilayahId}>
-                {w.nama}
+                {w.nama}{w.jenis_3t ? ` (${w.jenis_3t})` : ''}
               </option>
             ))}
           </select>

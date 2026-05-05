@@ -168,28 +168,28 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
     nominal: '',
     kuota: '',
     deadline: '',
-    wilayahIds: [],
+    provinsiIds: [],
   });
-  const [wilayahList, setWilayahList] = useState([]);
+  const [provinsiList, setProvinsiList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch wilayah options
+  // Fetch provinsi options
   useEffect(() => {
     if (!isOpen) return;
 
-    const fetchWilayah = async () => {
+    const fetchProvinsi = async () => {
       try {
-        const res = await fetch('/api/wilayah');
+        const res = await fetch('/api/provinsi');
         if (res.ok) {
           const data = await res.json();
-          setWilayahList(data);
+          setProvinsiList(data);
         }
       } catch (err) {
-        console.error('Gagal fetch wilayah:', err);
+        console.error('Gagal fetch provinsi:', err);
       }
     };
-    fetchWilayah();
+    fetchProvinsi();
   }, [isOpen]);
 
   const handleSubmit = async (e) => {
@@ -213,8 +213,8 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
       setError('Deadline wajib diisi');
       return;
     }
-    if (formData.wilayahIds.length === 0) {
-      setError('Minimal satu wilayah target harus dipilih');
+    if (formData.provinsiIds.length === 0) {
+      setError('Minimal satu provinsi target harus dipilih');
       return;
     }
 
@@ -232,7 +232,7 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
       onSuccess();
       onClose();
       setFormData({
-        judul: '', deskripsi: '', syarat: '', nominal: '', kuota: '', deadline: '', wilayahIds: []
+        judul: '', deskripsi: '', syarat: '', nominal: '', kuota: '', deadline: '', provinsiIds: []
       });
     } catch (err) {
       setError(err.message);
@@ -241,12 +241,12 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
     }
   };
 
-  const handleWilayahChange = (wilayahId, checked) => {
+  const handleProvinsiChange = (provinsiId, checked) => {
     setFormData(prev => ({
       ...prev,
-      wilayahIds: checked
-        ? [...prev.wilayahIds, wilayahId]
-        : prev.wilayahIds.filter(id => id !== wilayahId)
+      provinsiIds: checked
+        ? [...prev.provinsiIds, provinsiId]
+        : prev.provinsiIds.filter(id => id !== provinsiId)
     }));
   };
 
@@ -364,27 +364,33 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
             />
           </div>
 
-          {/* Wilayah Target */}
+          {/* Provinsi Target */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: C.dark }}>
-              Wilayah Target *
+              Provinsi Target *
             </label>
             <div className="max-h-40 overflow-y-auto border rounded-lg p-3"
               style={{ borderColor: '#e5e7eb' }}>
-              {wilayahList.length === 0 ? (
-                <p className="text-sm" style={{ color: C.gray }}>Memuat wilayah...</p>
+              {provinsiList.length === 0 ? (
+                <p className="text-sm" style={{ color: C.gray }}>Memuat provinsi...</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {wilayahList.map((w) => (
-                    <label key={w.wilayahId} className="flex items-center gap-2 text-sm">
+                  {provinsiList.map((p) => (
+                    <label key={p.provinsiId} className="flex items-center gap-2 text-sm">
                       <input
                         type="checkbox"
-                        checked={formData.wilayahIds.includes(w.wilayahId)}
-                        onChange={(e) => handleWilayahChange(w.wilayahId, e.target.checked)}
+                        checked={formData.provinsiIds.includes(p.provinsiId)}
+                        onChange={(e) => handleProvinsiChange(p.provinsiId, e.target.checked)}
                         className="rounded"
                         style={{ accentColor: C.blue }}
                       />
-                      <span style={{ color: C.dark }}>{w.nama}</span>
+                      <span style={{ color: C.dark }}>{p.nama}</span>
+                      {p.isAfirmasi && (
+                        <span className="text-xs px-1.5 py-0.5 rounded"
+                          style={{ backgroundColor: '#eff6ff', color: C.blue, fontWeight: 600 }}>
+                          Afirmasi
+                        </span>
+                      )}
                     </label>
                   ))}
                 </div>
