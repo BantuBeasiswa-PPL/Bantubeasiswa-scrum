@@ -176,14 +176,16 @@ export default function DashboardAnalitikPage({ user }) {
       ) || 0;
 
       // 4. Fetch wilayah untuk distribusi
-      const wilayahRes = await supabase.from('wilayah').select('*');
+      const wilayahRes = await supabase
+        .from('wilayah')
+        .select('wilayahId, nama, tipe, jenis_3t, isAfirmasi, is3T, provinsiId, provinsi ( nama )');
 
       // 5. Fetch beasiswa_wilayah untuk mapping
       const beasiswaWilayahRes = await supabase
         .from('beasiswa_wilayah')
-        .select('wilayah_id, beasiswa(id)');
+        .select('wilayahId, beasiswaId');
 
-      // Build distribution chart
+      // Build distribution chart berdasarkan jenis_3t
       const distribution = {
         Terdepan: 0,
         Terluar: 0,
@@ -191,24 +193,25 @@ export default function DashboardAnalitikPage({ user }) {
       };
 
       wilayahRes.data?.forEach((w) => {
-        if (w.tipe === 'Terdepan') distribution.Terdepan += 1;
-        else if (w.tipe === 'Terluar') distribution.Terluar += 1;
-        else if (w.tipe === 'Tertinggal') distribution.Tertinggal += 1;
+        if (w.jenis_3t === 'Terdepan') distribution.Terdepan += 1;
+        else if (w.jenis_3t === 'Terluar') distribution.Terluar += 1;
+        else if (w.jenis_3t === 'Tertinggal') distribution.Tertinggal += 1;
       });
 
       // 6. Fetch detailed metrics per region
       const regionMetrics = wilayahRes.data?.map((w) => {
         const beasiswaCount = beasiswaWilayahRes.data?.filter(
-          (bw) => bw.wilayah_id === w.id
+          (bw) => bw.wilayahId === w.wilayahId
         ).length || 0;
 
         return {
-          id: w.id,
+          id: w.wilayahId,
           nama: w.nama,
           tipe: w.tipe,
-          provinsi: w.provinsi,
-          is3T: w.is_3t,
-          isAfirmasi: w.is_afirmasi,
+          jenis_3t: w.jenis_3t,
+          provinsi: w.provinsi?.nama || null,
+          is3T: w.is3T,
+          isAfirmasi: w.isAfirmasi,
           totalBeasiswa: beasiswaCount,
           totalPendaftar: Math.floor(Math.random() * 500), // Dummy for now
           alokasiFunds: Math.floor(Math.random() * 500000000),
@@ -222,7 +225,7 @@ export default function DashboardAnalitikPage({ user }) {
         .slice(0, 3);
 
       // Calculate 3T fulfillment rate
-      const total3TProvinces = wilayahRes.data?.filter((w) => w.is_3t).length || 0;
+      const total3TProvinces = wilayahRes.data?.filter((w) => w.is3T).length || 0;
       const fulfilled3TProvinces = regionMetrics.filter((m) => m.is3T).length;
       const fulfillmentRate =
         total3TProvinces > 0
