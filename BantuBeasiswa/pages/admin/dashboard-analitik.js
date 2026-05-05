@@ -3,722 +3,488 @@ import Head from 'next/head';
 import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
 import { supabase } from '../../lib/db';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 const C = {
   blue      : '#0056b3',
   blue_light: '#3b82f6',
   green     : '#059669',
-  gold      : '#ffc107',
-  dark      : '#333333',
+  gold      : '#d97706',
+  dark      : '#1e293b',
   white     : '#ffffff',
   red       : '#dc2626',
+  gray      : '#6b7280',
   gray_light: '#f3f4f6',
+  purple    : '#7c3aed',
 };
 
-// ─── Stat Card Component ──────────────────────────────────────────────────────
-function StatCard({ label, count, icon, accentColor, subtext }) {
+// ─── 16 provinsi afirmasi resmi ───────────────────────────────────────────────
+const PROVINSI_AFIRMASI_RESMI = [
+  'Papua','Papua Barat','Papua Pegunungan','Papua Selatan','Papua Tengah','Papua Barat Daya',
+  'Maluku','Maluku Utara','Nusa Tenggara Timur','Nusa Tenggara Barat',
+  'Sulawesi Tengah','Sulawesi Tenggara','Sulawesi Barat',
+  'Kalimantan Utara','Kalimantan Barat','Kalimantan Tengah',
+];
+
+// ─── Peta visual provinsi (grid bubble) ──────────────────────────────────────
+function AfirmasiMap({ provinsiList, onToggle, saving }) {
+  // Kelompokkan per pulau
+  const groups = [
+    {
+      label: 'Papua & Maluku',
+      icon: '🌴',
+      names: ['Papua','Papua Barat','Papua Pegunungan','Papua Selatan','Papua Tengah',
+              'Papua Barat Daya','Maluku','Maluku Utara'],
+    },
+    {
+      label: 'Nusa Tenggara & Sulawesi',
+      icon: '🌊',
+      names: ['Nusa Tenggara Timur','Nusa Tenggara Barat','Sulawesi Tengah',
+              'Sulawesi Tenggara','Sulawesi Barat'],
+    },
+    {
+      label: 'Kalimantan',
+      icon: '🌿',
+      names: ['Kalimantan Utara','Kalimantan Barat','Kalimantan Tengah'],
+    },
+  ];
+
+  const getProvinsi = (nama) => provinsiList.find(
+    (p) => p.nama.toLowerCase() === nama.toLowerCase()
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {groups.map((group) => (
+        <div key={group.label}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: C.gray, marginBottom: 10,
+            textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            {group.icon} {group.label}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {group.names.map((nama) => {
+              const prov = getProvinsi(nama);
+              const isAfirmasi = prov?.isAfirmasi ?? false;
+              const isSaving = saving === prov?.provinsiId;
+              return (
+                <button
+                  key={nama}
+                  disabled={isSaving || !prov}
+                  onClick={() => prov && onToggle(prov.provinsiId, !isAfirmasi)}
+                  title={prov ? `Klik untuk ${isAfirmasi ? 'nonaktifkan' : 'aktifkan'} afirmasi` : 'Belum ada di database'}
+                  style={{
+                    padding      : '6px 14px',
+                    borderRadius : 20,
+                    fontSize     : 12,
+                    fontWeight   : 600,
+                    cursor       : prov ? 'pointer' : 'not-allowed',
+                    border       : `2px solid ${isAfirmasi ? C.blue : '#d1d5db'}`,
+                    background   : isAfirmasi ? `${C.blue}18` : C.gray_light,
+                    color        : isAfirmasi ? C.blue : C.gray,
+                    opacity      : isSaving ? 0.5 : 1,
+                    transition   : 'all 0.2s',
+                    display      : 'flex',
+                    alignItems   : 'center',
+                    gap          : 5,
+                  }}
+                >
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: isAfirmasi ? C.blue : '#d1d5db',
+                    flexShrink: 0,
+                  }} />
+                  {nama}
+                  {isSaving && ' ⏳'}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Toggle switch ────────────────────────────────────────────────────────────
+function Toggle({ checked, onChange, disabled }) {
   return (
     <div
+      onClick={() => !disabled && onChange(!checked)}
       style={{
-        background    : C.white,
-        border        : '1px solid #e5e7eb',
-        borderTop     : `4px solid ${accentColor}`,
-        borderRadius  : 12,
-        padding       : '18px 20px',
-        display       : 'flex',
-        flexDirection : 'column',
-        gap           : 6,
+        width: 44, height: 24, borderRadius: 12,
+        background: checked ? C.blue : '#d1d5db',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        position: 'relative', transition: 'background 0.2s',
+        opacity: disabled ? 0.5 : 1, flexShrink: 0,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>{label}</span>
-        <span
-          style={{
-            fontSize        : 20,
-            background      : `${accentColor}18`,
-            borderRadius    : 8,
-            width           : 38,
-            height          : 38,
-            display         : 'flex',
-            alignItems      : 'center',
-            justifyContent  : 'center',
-          }}
-        >
+      <div style={{
+        position: 'absolute', top: 2,
+        left: checked ? 22 : 2,
+        width: 20, height: 20, borderRadius: '50%',
+        background: C.white,
+        transition: 'left 0.2s',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+      }} />
+    </div>
+  );
+}
+
+// ─── Stat card ────────────────────────────────────────────────────────────────
+function StatCard({ label, value, icon, color, sub }) {
+  return (
+    <div style={{
+      background: C.white, border: '1px solid #e5e7eb',
+      borderTop: `4px solid ${color}`, borderRadius: 12,
+      padding: '16px 18px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ fontSize: 12, color: C.gray, fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 18, background: `${color}18`, borderRadius: 8,
+          width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {icon}
         </span>
       </div>
-      <p style={{ fontSize: 36, fontWeight: 800, color: accentColor, lineHeight: 1 }}>
-        {typeof count === 'number' ? count.toLocaleString('id-ID') : count}
-      </p>
-      {subtext && <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{subtext}</p>}
+      <p style={{ fontSize: 32, fontWeight: 800, color, lineHeight: 1 }}>{value}</p>
+      {sub && <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{sub}</p>}
     </div>
   );
 }
 
-// ─── Skeleton Loading ──────────────────────────────────────────────────────────
-function SkeletonStatCard() {
-  return (
-    <div
-      style={{
-        background: C.white,
-        border: '1px solid #e5e7eb',
-        borderRadius: 12,
-        padding: '18px 20px',
-        animation: 'pulse 2s infinite',
-      }}
-    >
-      <div style={{ height: 16, background: '#e5e7eb', borderRadius: 4, marginBottom: 12 }} />
-      <div style={{ height: 32, background: '#e5e7eb', borderRadius: 4, width: '60%' }} />
-    </div>
-  );
-}
-
-// ─── Reusable styles ─────────────────────────────────────────────────────────
-const btnPrimaryStyle = {
-  background: C.blue,
-  color: C.white,
-  border: 'none',
-  padding: '8px 22px',
-  borderRadius: 8,
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: 6,
-};
-
-const btnSecondaryStyle = {
-  background: C.gray_light,
-  color: '#374151',
-  border: '1px solid #d1d5db',
-  padding: '8px 18px',
-  borderRadius: 8,
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: 'pointer',
-};
-
-// ─── CSV Export Function ──────────────────────────────────────────────────────
-function exportToCSV(data, filename) {
-  if (!data || data.length === 0) {
-    alert('Tidak ada data untuk diexport');
-    return;
-  }
-
-  const headers = Object.keys(data[0]);
-  const csvContent = [
-    headers.join(','),
-    ...data.map((row) =>
-      headers
-        .map((header) => {
-          let value = row[header];
-          if (value === null || value === undefined) return '';
-          if (typeof value === 'string' && value.includes(',')) {
-            return `"${value}"`;
-          }
-          return value;
-        })
-        .join(',')
-    ),
-  ].join('\n');
-
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-// ─── Main Dashboard Page ──────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 export default function DashboardAnalitikPage({ user }) {
-  const [stats, setStats] = useState({
-    totalBeasiswaAktif: 0,
-    totalPendaftar: 0,
-    fulfillmentRate: 0,
-    totalKontribusi: 0,
-  });
-  const [chartData, setChartData] = useState([]);
-  const [topProvinces, setTopProvinces] = useState([]);
-  const [regionalMetrics, setRegionalMetrics] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [provinsiList, setProvinsiList] = useState([]);
+  const [stats3T, setStats3T]           = useState({ total: 0, terdepan: 0, terluar: 0, tertinggal: 0 });
+  const [loading, setLoading]           = useState(true);
+  const [saving, setSaving]             = useState(null); // provinsiId yang sedang disimpan
+  const [toast, setToast]               = useState('');
+  const [error, setError]               = useState('');
+  const [search, setSearch]             = useState('');
 
-  // ─── Fetch all data ───────────────────────────────────────────────────────
-  const fetchAllData = useCallback(async () => {
+  // ── fetch ──────────────────────────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      // 1. Total beasiswa aktif
-      const beasiswaRes = await supabase
-        .from('beasiswa')
-        .select('*', { count: 'exact' })
-        .eq('status', 'aktif');
-
-      // 2. Total pendaftar
-      const pendaftarRes = await supabase
-        .from('pendaftaran')
-        .select('*', { count: 'exact' });
-
-      // 3. Total kontribusi donor (confirmed)
-      const kontribusiRes = await supabase
-        .from('penyaluran_dana')
-        .select('jumlah_dana')
-        .eq('status', 'confirmed');
-
-      const totalKontribusi = kontribusiRes.data?.reduce(
-        (sum, row) => sum + (row.jumlah_dana || 0),
-        0
-      ) || 0;
-
-      // 4. Fetch wilayah untuk distribusi
-      const wilayahRes = await supabase
-        .from('wilayah')
-        .select('wilayahId, nama, tipe, jenis_3t, isAfirmasi, is3T, provinsiId, provinsi ( nama )');
-
-      // 5. Fetch beasiswa_wilayah untuk mapping
-      const beasiswaWilayahRes = await supabase
-        .from('beasiswa_wilayah')
-        .select('wilayahId, beasiswaId');
-
-      // Build distribution chart berdasarkan jenis_3t
-      const distribution = {
-        Terdepan: 0,
-        Terluar: 0,
-        Tertinggal: 0,
-      };
-
-      wilayahRes.data?.forEach((w) => {
-        if (w.jenis_3t === 'Terdepan') distribution.Terdepan += 1;
-        else if (w.jenis_3t === 'Terluar') distribution.Terluar += 1;
-        else if (w.jenis_3t === 'Tertinggal') distribution.Tertinggal += 1;
-      });
-
-      // 6. Fetch detailed metrics per region
-      const regionMetrics = wilayahRes.data?.map((w) => {
-        const beasiswaCount = beasiswaWilayahRes.data?.filter(
-          (bw) => bw.wilayahId === w.wilayahId
-        ).length || 0;
-
-        return {
-          id: w.wilayahId,
-          nama: w.nama,
-          tipe: w.tipe,
-          jenis_3t: w.jenis_3t,
-          provinsi: w.provinsi?.nama || null,
-          is3T: w.is3T,
-          isAfirmasi: w.isAfirmasi,
-          totalBeasiswa: beasiswaCount,
-          totalPendaftar: Math.floor(Math.random() * 500), // Dummy for now
-          alokasiFunds: Math.floor(Math.random() * 500000000),
-          successRate: Math.floor(Math.random() * 100),
-        };
-      }) || [];
-
-      // 7. Get top 3 growth provinces (using dummy data for now)
-      const topGrowth = regionMetrics
-        .sort((a, b) => b.totalPendaftar - a.totalPendaftar)
-        .slice(0, 3);
-
-      // Calculate 3T fulfillment rate
-      const total3TProvinces = wilayahRes.data?.filter((w) => w.is3T).length || 0;
-      const fulfilled3TProvinces = regionMetrics.filter((m) => m.is3T).length;
-      const fulfillmentRate =
-        total3TProvinces > 0
-          ? Math.round((fulfilled3TProvinces / total3TProvinces) * 100)
-          : 0;
-
-      setStats({
-        totalBeasiswaAktif: beasiswaRes.count || 0,
-        totalPendaftar: pendaftarRes.count || 0,
-        fulfillmentRate: fulfillmentRate,
-        totalKontribusi: totalKontribusi,
-      });
-
-      setChartData([
-        { kategori: 'Terdepan', jumlah: distribution.Terdepan },
-        { kategori: 'Terluar', jumlah: distribution.Terluar },
-        { kategori: 'Tertinggal', jumlah: distribution.Tertinggal },
+      const [provRes, wilRes] = await Promise.all([
+        fetch('/api/provinsi'),
+        supabase.from('wilayah').select('jenis_3t, is3T').eq('is3T', true),
       ]);
 
-      setTopProvinces(topGrowth);
-      setRegionalMetrics(regionMetrics);
+      const provData = await provRes.json();
+      if (!provRes.ok) throw new Error(provData.message || 'Gagal memuat provinsi');
+
+      setProvinsiList(provData);
+
+      const wil = wilRes.data || [];
+      setStats3T({
+        total      : wil.length,
+        terdepan   : wil.filter((w) => w.jenis_3t === 'Terdepan').length,
+        terluar    : wil.filter((w) => w.jenis_3t === 'Terluar').length,
+        tertinggal : wil.filter((w) => w.jenis_3t === 'Tertinggal').length,
+      });
     } catch (err) {
-      console.error('Error fetching data:', err);
-      setError('Gagal memuat data analytics. Silakan refresh halaman.');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ─── Format currency ──────────────────────────────────────────────────────
-  function formatRupiah(value) {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value);
+  // ── toggle afirmasi ────────────────────────────────────────────────────────
+  async function handleToggle(provinsiId, newVal) {
+    setSaving(provinsiId);
+    try {
+      const res  = await fetch('/api/admin/provinsi', {
+        method  : 'PATCH',
+        headers : { 'Content-Type': 'application/json' },
+        body    : JSON.stringify({ provinsiId, isAfirmasi: newVal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Gagal update');
+
+      setProvinsiList((prev) =>
+        prev.map((p) => p.provinsiId === provinsiId ? { ...p, isAfirmasi: newVal } : p)
+      );
+      showToast(`✅ ${data.nama} — status afirmasi ${newVal ? 'diaktifkan' : 'dinonaktifkan'}`);
+    } catch (err) {
+      showToast(`❌ ${err.message}`);
+    } finally {
+      setSaving(null);
+    }
   }
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3500);
+  }
+
+  // ── derived ────────────────────────────────────────────────────────────────
+  const totalAfirmasi  = provinsiList.filter((p) => p.isAfirmasi).length;
+  const filteredProv   = provinsiList.filter((p) =>
+    p.nama.toLowerCase().includes(search.toLowerCase())
+  );
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       <Head>
         <title>Dashboard Analitik Wilayah · BantuBeasiswa Admin</title>
-        <meta
-          name="description"
-          content="Analitik komprehensif distribusi beasiswa berdasarkan kategori wilayah 3T"
-        />
+        <meta name="description" content="Analitik distribusi beasiswa dan manajemen provinsi afirmasi" />
       </Head>
 
       <AdminLayout user={user}>
-        {/* ── Page Header ───────────────────────────────────────────────── */}
+        {/* Toast */}
+        {toast && (
+          <div style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 200,
+            background: '#1e293b', color: '#f8fafc',
+            padding: '12px 20px', borderRadius: 10,
+            fontSize: 13, fontWeight: 600,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          }}>
+            {toast}
+          </div>
+        )}
+
+        {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-            <div
-              style={{ width: 4, height: 28, borderRadius: 4, background: C.gold }}
-            />
-            <h1
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: C.dark,
-              }}
-            >
+            <div style={{ width: 4, height: 28, borderRadius: 4, background: C.gold }} />
+            <h1 style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>
               Dashboard Analitik Wilayah
             </h1>
           </div>
-          <p style={{ fontSize: 13, color: '#6b7280', marginLeft: 14 }}>
-            Analisis komprehensif distribusi beasiswa per kategori wilayah, donor, dan provinsi
+          <p style={{ fontSize: 13, color: C.gray, marginLeft: 14 }}>
+            Kelola status prioritas provinsi afirmasi dan pantau distribusi wilayah 3T
           </p>
         </div>
 
-        {/* ── Error ─────────────────────────────────────────────────────── */}
+        {/* Error */}
         {error && (
-          <div
-            style={{
-              background: '#fff1f2',
-              border: '1px solid #fecdd3',
-              borderRadius: 8,
-              padding: '10px 14px',
-              color: C.red,
-              fontSize: 13,
-              marginBottom: 20,
-            }}
-          >
+          <div style={{
+            background: '#fff1f2', border: '1px solid #fecdd3',
+            borderRadius: 8, padding: '10px 14px', color: C.red,
+            fontSize: 13, marginBottom: 20,
+          }}>
             {error}
           </div>
         )}
 
-        {/* ── Stat Cards ────────────────────────────────────────────────── */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          {loading ? (
-            <>
-              <SkeletonStatCard />
-              <SkeletonStatCard />
-              <SkeletonStatCard />
-              <SkeletonStatCard />
-            </>
-          ) : (
-            <>
-              <StatCard
-                label="Total Beasiswa Aktif"
-                count={stats.totalBeasiswaAktif}
-                icon="🎓"
-                accentColor={C.blue}
-                subtext="Program beasiswa sedang berjalan"
-              />
-              <StatCard
-                label="Total Pendaftar"
-                count={stats.totalPendaftar}
-                icon="👥"
-                accentColor="#7c3aed"
-                subtext="Semua pendaftaran beasiswa"
-              />
-              <StatCard
-                label="3T Priority Fulfillment"
-                count={`${stats.fulfillmentRate}%`}
-                icon="🎯"
-                accentColor={C.green}
-                subtext="Tingkat pemenuhan wilayah 3T"
-              />
-              <StatCard
-                label="Total Kontribusi Donor"
-                count={formatRupiah(stats.totalKontribusi)}
-                icon="💰"
-                accentColor={C.gold}
-                subtext="Dana yang disalurkan"
-              />
-            </>
-          )}
+        {/* Stat Cards */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 16, marginBottom: 28,
+        }}>
+          <StatCard label="Provinsi Afirmasi Aktif" value={loading ? '…' : totalAfirmasi}
+            icon="🏛️" color={C.blue} sub="Toggle aktif di panel bawah" />
+          <StatCard label="Total Wilayah 3T" value={loading ? '…' : stats3T.total}
+            icon="🗺️" color={C.green} sub="Terdepan + Terluar + Tertinggal" />
+          <StatCard label="Terdepan" value={loading ? '…' : stats3T.terdepan}
+            icon="🏅" color="#1d4ed8" sub="Wilayah perbatasan terdepan" />
+          <StatCard label="Terluar" value={loading ? '…' : stats3T.terluar}
+            icon="🌊" color="#b45309" sub="Pulau/wilayah terluar" />
+          <StatCard label="Tertinggal" value={loading ? '…' : stats3T.tertinggal}
+            icon="🏔️" color="#9d174d" sub="Wilayah tertinggal pembangunan" />
         </div>
 
-        {/* ── Bar Chart Section ─────────────────────────────────────────── */}
-        {!loading && chartData.length > 0 && (
-          <div
-            style={{
-              background: C.white,
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-              padding: '20px',
-              marginBottom: 24,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: C.dark,
-                marginBottom: 16,
-              }}
-            >
-              📊 Distribusi Pendaftar per Kategori Wilayah
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="kategori" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip
-                  contentStyle={{
-                    background: C.white,
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 8,
-                  }}
-                />
-                <Legend />
-                <Bar
-                  dataKey="jumlah"
-                  fill={C.blue_light}
-                  radius={[8, 8, 0, 0]}
-                  name="Jumlah Wilayah"
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* ── Top Growth Provinces ──────────────────────────────────────── */}
-        {!loading && topProvinces.length > 0 && (
-          <div
-            style={{
-              background: C.white,
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-              padding: '20px',
-              marginBottom: 24,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: C.dark,
-                marginBottom: 16,
-              }}
-            >
-              📈 Top 3 Provinsi dengan Pertumbuhan Terbesar
-            </h2>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 12,
-              }}
-            >
-              {topProvinces.map((prov, idx) => (
-                <div
-                  key={prov.id}
-                  style={{
-                    background: C.gray_light,
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 8,
-                    padding: '14px',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      marginBottom: 8,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 20,
-                        fontWeight: 800,
-                        color: C.blue,
-                      }}
-                    >
-                      #{idx + 1}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: C.dark,
-                      }}
-                    >
-                      {prov.nama}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: '#6b7280',
-                      marginBottom: 4,
-                    }}
-                  >
-                    Pendaftar: <strong>{prov.totalPendaftar}</strong>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: '#6b7280',
-                    }}
-                  >
-                    Kategori: <strong>{prov.tipe}</strong>
-                  </div>
-                </div>
-              ))}
+        {/* ── Peta Distribusi Afirmasi ─────────────────────────────────────── */}
+        <div style={{
+          background: C.white, border: '1px solid #e5e7eb',
+          borderRadius: 12, overflow: 'hidden', marginBottom: 24,
+        }}>
+          <div style={{
+            padding: '16px 20px', borderBottom: '1px solid #e5e7eb',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <div>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: C.dark }}>
+                🗺️ Peta Distribusi Wilayah Afirmasi
+              </h2>
+              <p style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>
+                Klik tombol provinsi untuk mengubah status prioritas afirmasi
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: C.blue, display: 'inline-block' }} />
+                Prioritas Aktif
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#d1d5db', display: 'inline-block' }} />
+                Non-Afirmasi
+              </span>
             </div>
           </div>
-        )}
-
-        {/* ── Detailed Regional Metrics Table ───────────────────────────── */}
-        {!loading && (
-          <div
-            style={{
-              background: C.white,
-              border: '1px solid #e5e7eb',
-              borderRadius: 12,
-              overflow: 'hidden',
-              marginBottom: 24,
-            }}
-          >
-            <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb' }}>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: C.dark,
-                  }}
-                >
-                  📋 Detail Metrik Regional
-                </h2>
-                <button
-                  onClick={() =>
-                    exportToCSV(regionalMetrics, 'regional-metrics')
-                  }
-                  style={btnSecondaryStyle}
-                >
-                  ⬇ Export CSV
-                </button>
-              </div>
-            </div>
-
-            {regionalMetrics.length === 0 ? (
-              <div
-                style={{
-                  padding: 40,
-                  textAlign: 'center',
-                  color: '#9ca3af',
-                }}
-              >
-                <p style={{ fontSize: 14, fontWeight: 600 }}>
-                  Belum ada data regional.
-                </p>
+          <div style={{ padding: 20 }}>
+            {loading ? (
+              <div style={{ textAlign: 'center', color: C.gray, padding: 40, fontSize: 14 }}>
+                Memuat data provinsi…
               </div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table
-                  style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    fontSize: 13,
-                  }}
-                >
-                  <thead>
-                    <tr
-                      style={{
-                        background: '#f9fafb',
-                        borderBottom: '1px solid #e5e7eb',
-                      }}
-                    >
-                      {[
-                        'Nama Wilayah',
-                        'Kategori',
-                        'Total Pendaftar',
-                        'Alokasi Dana',
-                        'Success Rate',
-                        'Status',
-                      ].map((h) => (
-                        <th
-                          key={h}
-                          style={{
-                            padding: '10px 14px',
-                            textAlign: 'left',
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: '#6b7280',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {regionalMetrics.map((row, idx) => (
-                      <tr
-                        key={row.id}
-                        style={{
-                          borderBottom:
-                            idx < regionalMetrics.length - 1
-                              ? '1px solid #f3f4f6'
-                              : 'none',
-                          background: idx % 2 === 0 ? C.white : '#fafafa',
-                        }}
-                      >
-                        <td
-                          style={{
-                            padding: '10px 14px',
-                            fontWeight: 600,
-                            color: C.dark,
-                          }}
-                        >
-                          {row.nama}
-                        </td>
-                        <td style={{ padding: '10px 14px' }}>
-                          <span
-                            style={{
-                              background:
-                                row.tipe === 'Terdepan'
-                                  ? '#eff6ff'
-                                  : row.tipe === 'Terluar'
-                                  ? '#fef3c7'
-                                  : '#fdf2f8',
-                              color:
-                                row.tipe === 'Terdepan'
-                                  ? '#1d4ed8'
-                                  : row.tipe === 'Terluar'
-                                  ? '#b45309'
-                                  : '#9d174d',
-                              border:
-                                row.tipe === 'Terdepan'
-                                  ? '1px solid #93c5fd'
-                                  : row.tipe === 'Terluar'
-                                  ? '1px solid #fcd34d'
-                                  : '1px solid #f9a8d4',
-                              borderRadius: 6,
-                              padding: '2px 10px',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {row.tipe}
-                          </span>
-                        </td>
-                        <td style={{ padding: '10px 14px', color: C.dark }}>
-                          {row.totalPendaftar}
-                        </td>
-                        <td style={{ padding: '10px 14px', color: '#6b7280' }}>
-                          {formatRupiah(row.alokasiFunds)}
-                        </td>
-                        <td style={{ padding: '10px 14px' }}>
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 8,
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: 60,
-                                height: 6,
-                                background: '#e5e7eb',
-                                borderRadius: 3,
-                                overflow: 'hidden',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  height: '100%',
-                                  width: `${row.successRate}%`,
-                                  background: C.green,
-                                }}
-                              />
-                            </div>
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color: C.dark,
-                              }}
-                            >
-                              {row.successRate}%
-                            </span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '10px 14px' }}>
-                          <span
-                            style={{
-                              background: row.is3T
-                                ? 'rgba(34,197,94,0.1)'
-                                : 'rgba(107,114,128,0.1)',
-                              color: row.is3T ? '#059669' : '#6b7280',
-                              borderRadius: 6,
-                              padding: '2px 8px',
-                              fontSize: 11,
-                              fontWeight: 600,
-                            }}
-                          >
-                            {row.is3T ? '✓ Aktif' : 'Standar'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <AfirmasiMap
+                provinsiList={provinsiList}
+                onToggle={handleToggle}
+                saving={saving}
+              />
             )}
           </div>
-        )}
+        </div>
+
+        {/* ── Panel Manajemen Provinsi Afirmasi ─────────────────────────────── */}
+        <div style={{
+          background: C.white, border: '1px solid #e5e7eb',
+          borderRadius: 12, overflow: 'hidden', marginBottom: 24,
+        }}>
+          {/* Header panel */}
+          <div style={{
+            padding: '16px 20px', borderBottom: '1px solid #e5e7eb',
+            display: 'flex', justifyContent: 'space-between',
+            alignItems: 'center', flexWrap: 'wrap', gap: 12,
+          }}>
+            <div>
+              <h2 style={{ fontSize: 15, fontWeight: 700, color: C.dark }}>
+                ⚙️ Manajemen Status Prioritas Provinsi
+              </h2>
+              <p style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>
+                Aktifkan toggle untuk menjadikan provinsi sebagai prioritas afirmasi
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input
+                type="text"
+                placeholder="🔍 Cari provinsi…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  padding: '7px 12px', borderRadius: 8,
+                  border: '1px solid #d1d5db', fontSize: 13,
+                  outline: 'none', width: 200,
+                }}
+              />
+              <span style={{
+                background: `${C.blue}15`, color: C.blue,
+                borderRadius: 20, padding: '4px 12px', fontSize: 12, fontWeight: 700,
+              }}>
+                {totalAfirmasi} Aktif
+              </span>
+            </div>
+          </div>
+
+          {/* Tabel provinsi */}
+          {loading ? (
+            <div style={{ padding: 40, textAlign: 'center', color: C.gray }}>
+              Memuat…
+            </div>
+          ) : filteredProv.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: C.gray }}>
+              Tidak ada provinsi yang cocok dengan pencarian.
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e2e8f0' }}>
+                    {['#', 'Nama Provinsi', 'Referensi Resmi', 'Status Afirmasi', 'Aksi'].map((h) => (
+                      <th key={h} style={{
+                        padding: '10px 16px', textAlign: 'left',
+                        fontSize: 11, fontWeight: 700, color: '#374151',
+                        textTransform: 'uppercase', letterSpacing: '0.05em',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProv.map((prov, idx) => {
+                    const isResmi   = PROVINSI_AFIRMASI_RESMI.some(
+                      (n) => n.toLowerCase() === prov.nama.toLowerCase()
+                    );
+                    const isSaving  = saving === prov.provinsiId;
+                    return (
+                      <tr
+                        key={prov.provinsiId}
+                        style={{
+                          borderBottom: '1px solid #f3f4f6',
+                          background: prov.isAfirmasi ? `${C.blue}06` : C.white,
+                          transition: 'background 0.15s',
+                        }}
+                      >
+                        <td style={{ padding: '10px 16px', color: '#9ca3af', width: 36 }}>
+                          {idx + 1}
+                        </td>
+                        <td style={{ padding: '10px 16px', fontWeight: 600, color: C.dark }}>
+                          {prov.nama}
+                        </td>
+                        <td style={{ padding: '10px 16px' }}>
+                          {isResmi ? (
+                            <span style={{
+                              background: '#eff6ff', color: '#1d4ed8',
+                              border: '1px solid #bfdbfe',
+                              borderRadius: 6, padding: '2px 10px',
+                              fontSize: 11, fontWeight: 600,
+                            }}>
+                              ✓ 16 Provinsi Resmi
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 11, color: '#9ca3af' }}>—</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            background: prov.isAfirmasi ? '#d1fae5' : C.gray_light,
+                            color: prov.isAfirmasi ? '#065f46' : C.gray,
+                            border: `1px solid ${prov.isAfirmasi ? '#6ee7b7' : '#e5e7eb'}`,
+                            borderRadius: 20, padding: '3px 10px',
+                            fontSize: 11, fontWeight: 700,
+                          }}>
+                            <span style={{
+                              width: 6, height: 6, borderRadius: '50%',
+                              background: prov.isAfirmasi ? '#059669' : '#d1d5db',
+                            }} />
+                            {prov.isAfirmasi ? 'Aktif' : 'Tidak Aktif'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <Toggle
+                              checked={prov.isAfirmasi}
+                              onChange={(val) => handleToggle(prov.provinsiId, val)}
+                              disabled={isSaving}
+                            />
+                            {isSaving && (
+                              <span style={{ fontSize: 11, color: C.gray }}>Menyimpan…</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Footer info */}
+          <div style={{
+            padding: '12px 20px', borderTop: '1px solid #f3f4f6',
+            background: '#fafafa', fontSize: 12, color: C.gray,
+          }}>
+            💡 Status ini digunakan sebagai filter pencarian beasiswa untuk mahasiswa dari provinsi afirmasi.
+            Total provinsi: <strong>{provinsiList.length}</strong> | Aktif afirmasi: <strong>{totalAfirmasi}</strong>
+          </div>
+        </div>
+
       </AdminLayout>
     </>
   );
 }
 
-export function getServerSideProps(context) {
-  const result = withAuth(context, 'admin');
-  if (result.redirect) return result;
-  return result;
+export async function getServerSideProps(context) {
+  return withAuth(context, 'admin');
 }
