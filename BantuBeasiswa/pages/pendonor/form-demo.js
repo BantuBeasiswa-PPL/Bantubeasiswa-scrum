@@ -1,3 +1,14 @@
+/**
+ * BeasiswaForm Demo & Testing Page
+ * 
+ * Interactive demo page for testing BeasiswaForm component in both:
+ * - Create mode: Empty form for new scholarship
+ * - Edit mode: Pre-filled form for editing existing scholarship
+ * 
+ * URL: /pendonor/form-demo
+ * 
+ * @page
+ */
 import { useState } from 'react';
 import BeasiswaForm from '@/components/BeasiswaForm';
 

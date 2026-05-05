@@ -1,3 +1,16 @@
+/**
+ * BeasiswaForm Component
+ * 
+ * Reusable form component for creating and editing scholarship programs (Beasiswa).
+ * Supports two modes: create (empty form) and edit (pre-filled form).
+ * 
+ * Props:
+ * - initialData: {object|null} - null for create mode, object for edit mode
+ * - onSubmit: {function} - async callback(formData) called on valid submission
+ * - onCancel: {function} - callback() called when user clicks "Batal"
+ * 
+ * @component
+ */
 import { useState, useEffect } from 'react';
 
 // ─── Color Constants ─────────────────────────────────────────────────────────
