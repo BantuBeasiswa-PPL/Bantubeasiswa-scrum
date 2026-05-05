@@ -26,8 +26,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-<<<<<<< HEAD
-  // 2b. Ambil nama + userId dari tabel user (profil) — untuk mahasiswa
+  // 2b. Ambil nama + userId dari tabel user (profil) — untuk mahasiswa dan pendonor
   let nama   = '';
   let userId = null;
 
@@ -70,24 +69,10 @@ export default async function handler(req, res) {
 
     nama = pendonor?.nama_organisasi ?? '';
     userId = pendonor?.id ?? null;
-=======
-  // 2b. Ambil profil berdasarkan role
-  let nama = '';
-  let userId = null;
-
-  if (user.role === 'admin') {
+  } else if (role === 'admin') {
     const { data } = await supabase.from('admin').select('nama, adminId').eq('accountId', user.accountId).single();
     nama = data?.nama ?? 'Admin';
     userId = data?.adminId ?? null;
-  } else if (user.role === 'pendonor') {
-    const { data } = await supabase.from('pendonor').select('statusOrganisasi, pendonorId').eq('accountId', user.accountId).single();
-    nama = data?.statusOrganisasi ?? 'Pendonor';
-    userId = data?.pendonorId ?? null;
-  } else {
-    const { data } = await supabase.from('user').select('nama, userId').eq('accountId', user.accountId).single();
-    nama = data?.nama ?? '';
-    userId = data?.userId ?? null;
->>>>>>> f31f5a7acc3555f9542f9cc8fe7febd68bea84c6
   }
 
   // 3. Verifikasi password (bcrypt dengan fallback plain text)
