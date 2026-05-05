@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '../../components/layouts/MahasiswaLayout';
-import LaporLinkRusakModal from '../../components/LaporLinkRusakModal';
+import LaporKendalaModal from '../../components/LaporKendalaModal';
 import { withAuth } from '../../lib/auth';
 import { fetchBeasiswaById } from '../../lib/beasiswaQuery';
 
@@ -321,9 +321,9 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
               )}
 
 
-              {/* Tombol Laporkan Link Rusak */}
+              {/* Tombol Laporkan Kendala */}
               <button
-                id="btn-lapor-link-rusak"
+                id="btn-lapor-kendala"
                 type="button"
                 onClick={handleLaporClick}
                 disabled={laporDisabled}
@@ -338,7 +338,7 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
                 onMouseEnter={(e) => { if (!laporDisabled) e.currentTarget.style.backgroundColor = '#fee2e2'; }}
                 onMouseLeave={(e) => { if (!laporDisabled) e.currentTarget.style.backgroundColor = '#fff1f2'; }}
               >
-                {laporDisabled ? `Terkirim (${laporCountdown}s)` : 'Laporkan Link Rusak'}
+                {laporDisabled ? `Terkirim (${laporCountdown}s)` : 'Laporkan Kendala'}
               </button>
 
               <Link href="/mahasiswa/cari"
@@ -357,7 +357,7 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
       </MahasiswaLayout>
 
       {/* ── Modal Laporan ── */}
-      <LaporLinkRusakModal
+      <LaporKendalaModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         beasiswaId={beasiswa.beasiswaId}
