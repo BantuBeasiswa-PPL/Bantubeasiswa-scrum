@@ -16,9 +16,10 @@ const JENIS_3T_STYLE = {
 const C = {
   blue  : '#0056b3',
   gold  : '#ffc107',
-  dark  : '#333333',
+  dark  : '#1f2937', // Darker gray for better contrast
   white : '#ffffff',
   red   : '#dc2626',
+  gray  : '#4b5563', // Darker gray for auxiliary text
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ function StatCard({ label, count, icon, accentColor }) {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>{label}</span>
+        <span style={{ fontSize: 12, color: C.gray, fontWeight: 700 }}>{label}</span>
         <span
           style={{
             fontSize        : 20,
@@ -188,11 +189,11 @@ function WilayahModal({ mode, initial, onClose, onSubmit, loading, provinsiList 
 
           {/* Checkboxes */}
           <div style={{ display: 'flex', gap: 20 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#1f2937' }}>
               <input type="checkbox" name="is3T" checked={form.is3T} onChange={handleChange} />
               <span>Wilayah 3T</span>
             </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#1f2937' }}>
               <input type="checkbox" name="isAfirmasi" checked={form.isAfirmasi} onChange={handleChange} />
               <span>Afirmasi</span>
             </label>
@@ -216,16 +217,18 @@ const inputStyle = {
   width: '100%', padding: '8px 12px', borderRadius: 8,
   border: '1px solid #d1d5db', fontSize: 13, outline: 'none',
   fontFamily: 'inherit', boxSizing: 'border-box',
+  color: '#1f2937', backgroundColor: '#ffffff', // Ensures text is visible regardless of parent theme
 };
-const labelStyle = { fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 };
+const labelStyle = { fontSize: 12, fontWeight: 700, color: '#1f2937', display: 'block', marginBottom: 6 };
 const btnPrimaryStyle = {
   background: C.blue, color: C.white, border: 'none',
   padding: '8px 22px', borderRadius: 8, fontSize: 13, fontWeight: 600,
   cursor: 'pointer', opacity: 1,
 };
 const btnSecondaryStyle = {
-  background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db',
-  padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+  background: C.white, color: '#374151', border: '1px solid #d1d5db',
+  padding: '8px 18px', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  transition: 'all 0.2s',
 };
 
 // ─── CSV Export ──────────────────────────────────────────────────────────────
@@ -247,14 +250,16 @@ function exportCSV(rows) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function WilayahPage({ user }) {
-  const [list,       setList      ] = useState([]);
-  const [provinsiList, setProvinsiList] = useState([]);
-  const [loading,    setLoading   ] = useState(true);
-  const [saving,     setSaving    ] = useState(false);
-  const [error,      setError     ] = useState('');
-  const [toast,      setToast     ] = useState('');
-  const [modal,      setModal     ] = useState(null);
-  const [deleting,   setDeleting  ] = useState(null);
+  const [list,         setList        ] = useState([]);
+  const [provinsiList, setProvinsiList ] = useState([]);
+  const [loading,      setLoading     ] = useState(true);
+  const [saving,       setSaving      ] = useState(false);
+  const [error,        setError       ] = useState('');
+  const [toast,        setToast       ] = useState('');
+  const [modal,        setModal       ] = useState(null);
+  const [deleting,     setDeleting    ] = useState(null);
+  const [filterProvinsi, setFilterProvinsi] = useState('');
+  const [filterTipe,     setFilterTipe    ] = useState('');
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -356,6 +361,16 @@ export default function WilayahPage({ user }) {
     Tertinggal : list.filter((r) => r.jenis_3t === 'Tertinggal').length,
   };
 
+  // ── filtered list (client-side) ──────────────────────────────────────────
+  const filteredList = list.filter((r) => {
+    const matchProvinsi = !filterProvinsi || String(r.provinsiId) === filterProvinsi;
+    const matchTipe     = !filterTipe     || r.tipe === filterTipe;
+    return matchProvinsi && matchTipe;
+  });
+
+  // Daftar tipe yang ada di data (kabupaten / kota)
+  const tipeOptions = [...new Set(list.map((r) => r.tipe))].filter(Boolean).sort();
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
@@ -390,7 +405,7 @@ export default function WilayahPage({ user }) {
               Kelola Data Wilayah 3T
             </h1>
           </div>
-          <p style={{ fontSize: 13, color: '#6b7280', marginLeft: 14 }}>
+          <p style={{ fontSize: 13, color: C.gray, marginLeft: 14 }}>
             Manajemen daftar kabupaten/kota kategori Terdepan, Terluar, dan Tertinggal
           </p>
         </div>
@@ -427,19 +442,84 @@ export default function WilayahPage({ user }) {
           style={{
             display        : 'flex',
             justifyContent : 'space-between',
-            alignItems     : 'center',
+            alignItems     : 'flex-start',
             marginBottom   : 14,
             flexWrap       : 'wrap',
-            gap            : 10,
+            gap            : 12,
           }}
         >
-          <p style={{ fontSize: 13, color: '#6b7280' }}>
-            Menampilkan <strong>{list.length}</strong> wilayah
-          </p>
-          <div style={{ display: 'flex', gap: 10 }}>
+          {/* Filter Section */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* Filter Provinsi */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                Provinsi
+              </label>
+              <select
+                value={filterProvinsi}
+                onChange={(e) => { setFilterProvinsi(e.target.value); setFilterTipe(''); }}
+                style={{
+                  padding: '7px 12px', borderRadius: 8, border: '1px solid #d1d5db',
+                  fontSize: 13, color: '#1f2937', backgroundColor: '#ffffff',
+                  outline: 'none', cursor: 'pointer', minWidth: 180,
+                }}
+              >
+                <option value="">Semua Provinsi</option>
+                {provinsiList.map((p) => (
+                  <option key={p.provinsiId} value={String(p.provinsiId)}>{p.nama}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filter Tipe Kabupaten/Kota */}
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 4 }}>
+                Kabupaten / Kota
+              </label>
+              <select
+                value={filterTipe}
+                onChange={(e) => setFilterTipe(e.target.value)}
+                style={{
+                  padding: '7px 12px', borderRadius: 8, border: '1px solid #d1d5db',
+                  fontSize: 13, color: '#1f2937', backgroundColor: '#ffffff',
+                  outline: 'none', cursor: 'pointer', minWidth: 160,
+                }}
+              >
+                <option value="">Semua Kabupaten/Kota</option>
+                {tipeOptions.map((t) => (
+                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Reset filter */}
+            {(filterProvinsi || filterTipe) && (
+              <div style={{ paddingTop: 18 }}>
+                <button
+                  onClick={() => { setFilterProvinsi(''); setFilterTipe(''); }}
+                  style={{
+                    padding: '7px 12px', borderRadius: 8,
+                    border: '1px solid #fca5a5', background: '#fff1f2',
+                    color: C.red, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  }}
+                >
+                  ✕ Reset Filter
+                </button>
+              </div>
+            )}
+
+            <div style={{ paddingTop: 18 }}>
+              <p style={{ fontSize: 13, color: C.gray }}>
+                Menampilkan <strong>{filteredList.length}</strong> dari <strong>{list.length}</strong> wilayah
+              </p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: 10, paddingTop: 22 }}>
             <button
-              onClick={() => exportCSV(list)}
-              disabled={list.length === 0}
+              onClick={() => exportCSV(filteredList)}
+              disabled={filteredList.length === 0}
               style={{ ...btnSecondaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
             >
               ⬇ Export CSV
@@ -472,6 +552,12 @@ export default function WilayahPage({ user }) {
                 Jalankan seed SQL atau klik <strong>+ Tambah Wilayah</strong>.
               </p>
             </div>
+          ) : filteredList.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>
+              <div style={{ fontSize: 40, marginBottom: 10 }}>🔍</div>
+              <p style={{ fontSize: 14, fontWeight: 600 }}>Tidak ada wilayah sesuai filter.</p>
+              <p style={{ fontSize: 12, marginTop: 4 }}>Coba ubah atau reset filter di atas.</p>
+            </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -481,10 +567,12 @@ export default function WilayahPage({ user }) {
                       <th
                         key={h}
                         style={{
-                          padding: '10px 14px', textAlign: 'left',
-                          fontSize: 11, fontWeight: 700, color: '#6b7280',
+                          padding: '12px 14px', textAlign: 'left',
+                          fontSize: 11, fontWeight: 800, color: '#374151', // Darker and bolder headers
+                          background: '#f1f5f9', // Slightly darker background for header
                           textTransform: 'uppercase', letterSpacing: '0.05em',
                           whiteSpace: 'nowrap',
+                          borderBottom: '2px solid #e2e8f0',
                         }}
                       >
                         {h}
@@ -493,28 +581,29 @@ export default function WilayahPage({ user }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((row, idx) => (
+                  {filteredList.map((row, idx) => (
                     <tr
                       key={row.wilayahId}
                       style={{
-                        borderBottom : idx < list.length - 1 ? '1px solid #f3f4f6' : 'none',
+                        borderBottom : idx < filteredList.length - 1 ? '1px solid #f3f4f6' : 'none',
                         background   : idx % 2 === 0 ? C.white : '#fafafa',
                       }}
                     >
                       <td style={{ padding: '10px 14px', color: '#9ca3af', width: 36 }}>{idx + 1}</td>
                       <td style={{ padding: '10px 14px', fontWeight: 600, color: C.dark }}>{row.nama}</td>
-                      <td style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>{row.provinsi?.nama || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: C.gray, fontSize: 12, fontWeight: 500 }}>{row.provinsi?.nama || '—'}</td>
                       <td style={{ padding: '10px 14px' }}>
-                        <span style={{ fontSize: 12, color: '#6b7280' }}>{row.tipe}</span>
+                        <span style={{ fontSize: 12, color: C.gray, fontWeight: 500 }}>{row.tipe}</span>
                       </td>
                       <td style={{ padding: '10px 14px' }}>{jenis3tBadge(row.jenis_3t)}</td>
-                      <td style={{ padding: '10px 14px', color: '#6b7280' }}>{row.mode || '—'}</td>
+                      <td style={{ padding: '10px 14px', color: C.gray, fontWeight: 500 }}>{row.mode || '—'}</td>
                       <td style={{ padding: '10px 14px' }}>
                         <span style={{
-                          fontSize: 11, fontWeight: 600,
-                          color: row.isAfirmasi ? '#065f46' : '#6b7280',
-                          background: row.isAfirmasi ? '#d1fae5' : '#f3f4f6',
-                          padding: '2px 8px', borderRadius: 6,
+                          fontSize: 11, fontWeight: 700,
+                          color: row.isAfirmasi ? '#064e3b' : '#374151',
+                          background: row.isAfirmasi ? '#d1fae5' : '#e5e7eb',
+                          border: `1px solid ${row.isAfirmasi ? '#6ee7b7' : '#d1d5db'}`,
+                          padding: '2px 10px', borderRadius: 6,
                         }}>
                           {row.isAfirmasi ? 'Ya' : 'Tidak'}
                         </span>
@@ -523,7 +612,7 @@ export default function WilayahPage({ user }) {
                         <button
                           onClick={() => setModal({ mode: 'edit', row })}
                           style={{
-                            background: '#eff6ff', color: C.blue, border: 'none',
+                            background: '#eff6ff', color: C.blue, border: '1px solid #bfdbfe',
                             borderRadius: 6, padding: '5px 10px', fontSize: 13,
                             cursor: 'pointer', marginRight: 6,
                           }}
@@ -535,7 +624,7 @@ export default function WilayahPage({ user }) {
                           onClick={() => handleDelete(row.wilayahId)}
                           disabled={deleting === row.wilayahId}
                           style={{
-                            background: '#fff1f2', color: C.red, border: 'none',
+                            background: '#fff1f2', color: C.red, border: '1px solid #fecad3',
                             borderRadius: 6, padding: '5px 10px', fontSize: 13,
                             cursor: deleting === row.wilayahId ? 'not-allowed' : 'pointer',
                             opacity: deleting === row.wilayahId ? 0.5 : 1,

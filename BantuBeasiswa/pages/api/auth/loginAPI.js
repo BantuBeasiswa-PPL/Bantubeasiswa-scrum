@@ -26,15 +26,23 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-  // 2b. Ambil nama + userId dari tabel user (profil)
-  const { data: profil } = await supabase
-    .from('user')
-    .select('nama, userId')
-    .eq('accountId', user.accountId)
-    .single();
+  // 2b. Ambil profil berdasarkan role
+  let nama = '';
+  let userId = null;
 
-  const nama   = profil?.nama   ?? '';
-  const userId = profil?.userId ?? null;
+  if (user.role === 'admin') {
+    const { data } = await supabase.from('admin').select('nama, adminId').eq('accountId', user.accountId).single();
+    nama = data?.nama ?? 'Admin';
+    userId = data?.adminId ?? null;
+  } else if (user.role === 'pendonor') {
+    const { data } = await supabase.from('pendonor').select('statusOrganisasi, pendonorId').eq('accountId', user.accountId).single();
+    nama = data?.statusOrganisasi ?? 'Pendonor';
+    userId = data?.pendonorId ?? null;
+  } else {
+    const { data } = await supabase.from('user').select('nama, userId').eq('accountId', user.accountId).single();
+    nama = data?.nama ?? '';
+    userId = data?.userId ?? null;
+  }
 
   // 3. Verifikasi password (bcrypt dengan fallback plain text)
   let valid = false;
