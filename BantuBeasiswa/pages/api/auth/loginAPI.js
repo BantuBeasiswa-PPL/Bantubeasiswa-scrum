@@ -26,53 +26,22 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-  // 2b. Ambil nama + userId dari tabel user (profil) — untuk mahasiswa dan pendonor
-  let nama   = '';
+  // 2b. Ambil profil berdasarkan role
+  let nama = '';
   let userId = null;
 
-  if (role === 'mahasiswa') {
-    const { data: profil } = await supabase
-      .from('user')
-      .select('nama, userId')
-      .eq('accountId', user.accountId)
-      .single();
-
-    nama   = profil?.nama   ?? '';
-    userId = profil?.userId ?? null;
-  } else if (role === 'pendonor') {
-    // Cek apakah pendonor profile sudah ada
-    let { data: pendonor } = await supabase
-      .from('pendonor')
-      .select('id, nama_organisasi')
-      .eq('accountId', user.accountId)
-      .single();
-
-    // Jika belum ada, buat profile pendonor default
-    if (!pendonor) {
-      const { data: newPendonor, error: createError } = await supabase
-        .from('pendonor')
-        .insert({
-          accountId: user.accountId,
-          nama_organisasi: email.split('@')[0] || 'Organisasi Baru',
-          status_verifikasi: 'pending'
-        })
-        .select('id, nama_organisasi')
-        .single();
-
-      if (createError) {
-        console.error('[loginAPI] Error creating pendonor profile:', createError);
-        return res.status(500).json({ message: 'Gagal membuat profil pendonor' });
-      }
-
-      pendonor = newPendonor;
-    }
-
-    nama = pendonor?.nama_organisasi ?? '';
-    userId = pendonor?.id ?? null;
-  } else if (role === 'admin') {
+  if (user.role === 'admin') {
     const { data } = await supabase.from('admin').select('nama, adminId').eq('accountId', user.accountId).single();
     nama = data?.nama ?? 'Admin';
     userId = data?.adminId ?? null;
+  } else if (user.role === 'pendonor') {
+    const { data } = await supabase.from('pendonor').select('statusOrganisasi, pendonorId').eq('accountId', user.accountId).single();
+    nama = data?.statusOrganisasi ?? 'Pendonor';
+    userId = data?.pendonorId ?? null;
+  } else {
+    const { data } = await supabase.from('user').select('nama, userId').eq('accountId', user.accountId).single();
+    nama = data?.nama ?? '';
+    userId = data?.userId ?? null;
   }
 
   // 3. Verifikasi password (bcrypt dengan fallback plain text)
