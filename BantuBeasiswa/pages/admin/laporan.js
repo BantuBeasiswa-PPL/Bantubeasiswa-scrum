@@ -117,7 +117,7 @@ export default function LaporanKendalaPage({ user }) {
     <>
       <Head>
         <title>Laporan Kendala · BantuBeasiswa Admin</title>
-        <meta name="description" content="Halaman admin untuk mengelola laporan link rusak dari mahasiswa." />
+        <meta name="description" content="Halaman admin untuk mengelola laporan kendala dari mahasiswa." />
       </Head>
 
       <AdminLayout user={user}>
@@ -129,7 +129,7 @@ export default function LaporanKendalaPage({ user }) {
             <h1 className="text-2xl font-extrabold" style={{ color: C.dark }}>Laporan Kendala</h1>
           </div>
           <p className="text-sm ml-4" style={{ color: '#6b7280' }}>
-            Kelola tiket laporan link rusak yang dikirimkan oleh mahasiswa
+            Kelola tiket laporan kendala yang dikirimkan oleh mahasiswa
           </p>
         </div>
 

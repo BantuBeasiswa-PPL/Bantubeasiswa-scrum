@@ -405,15 +405,15 @@ export default function LoginPage() {
                   Daftar sebagai Mahasiswa
                 </Link>
               ) : selectedRole === 'pendonor' ? (
-                <a
-                  href="#"
+                <Link
+                  href="/register/pendonor"
                   className="font-semibold transition-colors"
                   style={{ color: COLORS.primaryBlue }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = COLORS.accentGold)}
                   onMouseLeave={(e) => (e.currentTarget.style.color = COLORS.primaryBlue)}
                 >
                   Daftar sebagai Pendonor
-                </a>
+                </Link>
               ) : (
                 <span className="font-semibold text-gray-400">
                   Hubungi Super Admin

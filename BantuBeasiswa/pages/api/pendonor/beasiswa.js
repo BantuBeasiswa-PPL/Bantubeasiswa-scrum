@@ -34,18 +34,17 @@ export default async function handler(req, res) {
     const { data: beasiswaList, error: beasiswaError } = await supabase
       .from('beasiswa')
       .select(`
-        beasiswaId: id,
+        beasiswaId,
         judul,
+        jalur,
         deskripsi,
-        nominal,
-        kuota,
+        syarat,
+        linkPendaftaran,
         deadline,
-        status,
-        createdAt: created_at,
-        updatedAt: updated_at
+        status
       `)
       .eq('pendonorId', pendonor.pendonorId)
-      .order('created_at', { ascending: false });
+      .order('beasiswaId', { ascending: false });
 
     if (beasiswaError) {
       console.error('[pendonor/beasiswa] fetch error:', beasiswaError);
