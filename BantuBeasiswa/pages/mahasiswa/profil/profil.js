@@ -102,32 +102,23 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <nav className="space-y-2">
               <Link
-                href="/mahasiswa/profil"
+                href="/mahasiswa/profil/profil"
                 className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-xs">
-                  ID
-                </span>
                 Data Pribadi
               </Link>
               <Link
                 href="/mahasiswa/daftar-ulang-rekening"
                 className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-xs">
-                  Rp
-                </span>
                 Rekening Pencairan
               </Link>
-              <button
-                type="button"
+              <Link
+                href="/mahasiswa/laporan-kendala"
                 className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-xs">
-                  LK
-                </span>
                 Laporan Kendala
-              </button>
+              </Link>
             </nav>
           </section>
         </aside>
@@ -137,15 +128,6 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
             <div className="flex flex-wrap gap-2">
               <button className="border-b-2 border-blue-600 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
                 Data Pribadi
-              </button>
-              <button className="px-4 py-3 text-sm font-semibold text-gray-500">
-                Data Akademik
-              </button>
-              <button className="px-4 py-3 text-sm font-semibold text-gray-500">
-                Data Keluarga
-              </button>
-              <button className="px-4 py-3 text-sm font-semibold text-gray-500">
-                Dokumen
               </button>
             </div>
           </div>

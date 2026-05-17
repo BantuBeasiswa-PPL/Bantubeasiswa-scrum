@@ -8,7 +8,7 @@ const menuItems = [
   },
   {
     label: 'Profil Saya',
-    href: '/mahasiswa/profil',
+    href: '/mahasiswa/profil/profil',
     icon: '👤',
   },
   {
@@ -35,11 +35,6 @@ const menuItems = [
     label: 'Beasiswa Favorit',
     href: '/mahasiswa/favorit',
     icon: '⭐',
-  },
-  {
-    label: 'Laporan Kendala',
-    href: '/mahasiswa/laporan-kendala',
-    icon: '📝',
   },
 ];
 

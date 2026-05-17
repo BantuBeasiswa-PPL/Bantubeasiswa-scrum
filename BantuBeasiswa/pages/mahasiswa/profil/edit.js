@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
 import { getServerSupabase } from '@/lib/supabaseServer';
@@ -69,9 +70,8 @@ function TextInput({
         onChange={onChange}
         onBlur={onBlur}
         placeholder={placeholder}
-        className={`w-full rounded-lg border px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
-          error ? 'border-red-300' : 'border-gray-200'
-        }`}
+        className={`w-full rounded-lg border px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${error ? 'border-red-300' : 'border-gray-200'
+          }`}
       />
       <FieldError>{error}</FieldError>
     </div>
@@ -120,11 +120,21 @@ export default function EditProfilMahasiswaPage({
   provinsiOptions,
   wilayahOptions,
 }) {
+  const router = useRouter();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [serverErrors, setServerErrors] = useState({});
   const [touched, setTouched] = useState({});
+
+  // Banner profil tidak lengkap (diredirect dari halaman pendaftaran)
+  const [incompleteFields, setIncompleteFields] = useState('');
+  useEffect(() => {
+    if (router.query.incomplete === '1' && router.query.fields) {
+      setIncompleteFields(decodeURIComponent(router.query.fields));
+    }
+  }, [router.query]);
+
   const [values, setValues] = useState({
     tentangSaya: profile.tentangSaya || '',
     nama: profile.nama || user.nama || '',
@@ -238,6 +248,18 @@ export default function EditProfilMahasiswaPage({
         <meta name="description" content="Edit profil mahasiswa BantuBeasiswa." />
       </Head>
 
+      {/* Banner: profil belum lengkap */}
+      {incompleteFields && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-5 py-4 flex gap-3 items-start shadow-sm">
+          <span className="text-amber-500 mt-0.5 text-lg shrink-0">⚠️</span>
+          <div>
+            <p className="text-sm font-bold text-amber-800">Profil belum lengkap — Lengkapi data berikut untuk mendaftar beasiswa:</p>
+            <p className="text-sm text-amber-700 mt-1">{incompleteFields}</p>
+            <p className="text-xs text-amber-600 mt-2">Setelah disimpan, kamu bisa kembali mendaftar beasiswa.</p>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[360px_1fr]">
         <aside className="space-y-5">
           <section className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
@@ -260,31 +282,22 @@ export default function EditProfilMahasiswaPage({
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <nav className="space-y-2">
               <Link
-                href="/mahasiswa/profil"
+                href="/mahasiswa/profil/profil"
                 className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-base">
-                  👤
-                </span>
-                Lihat Profil
+                Data Pribadi
               </Link>
               <Link
                 href="/mahasiswa/profil/edit"
                 className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-base">
-                  ✏️
-                </span>
-                Edit Data Pribadi
+                Rekening Pencairan
               </Link>
               <Link
                 href="/mahasiswa/daftar-ulang-rekening"
                 className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               >
-                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 text-base">
-                  💳
-                </span>
-                Rekening Pencairan
+                Laporan Kendala
               </Link>
             </nav>
           </section>
@@ -474,7 +487,7 @@ export default function EditProfilMahasiswaPage({
 
           {saved && (
             <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-              Profil berhasil disimpan ke Supabase.
+              Profil berhasil disimpan !
             </div>
           )}
           {submitError && (
@@ -495,13 +508,13 @@ export default function EditProfilMahasiswaPage({
               Batalkan
             </Link>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="submit"
+              <Link
+                href="/mahasiswa/profil/profil"
                 disabled={saving}
                 className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
                 {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </button>
+              </Link>
               <Link
                 href="/mahasiswa/daftar-ulang-rekening"
                 className="rounded-lg bg-blue-950 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-900"
