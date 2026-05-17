@@ -114,7 +114,7 @@ export default async function handler(req, res) {
     if (wilayahError) {
       console.error('[pendonor/beasiswa/create] wilayah insert error:', wilayahError);
       // Hapus beasiswa yang sudah dibuat jika gagal insert wilayah
-      await supabase.from('beasiswa').delete().eq('beasiswaId', beasiswa.beasiswaId);
+      await supabase.from('beasiswa').delete().eq('id', beasiswa.id);
       return res.status(500).json({ message: 'Gagal menambahkan wilayah target' });
     }
 

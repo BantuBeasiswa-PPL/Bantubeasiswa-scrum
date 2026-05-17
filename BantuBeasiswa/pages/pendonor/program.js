@@ -159,15 +159,16 @@ function EmptyState({ onCreate }) {
   );
 }
 
-// ─── Create Beasiswa Modal ──────────────────────────────────────────────────
-function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
+// ─── Create/Edit Beasiswa Modal ──────────────────────────────────────────────
+function BeasiswaFormModal({ isOpen, onClose, onSuccess, initialData = null }) {
+  const isEditMode = !!initialData;
   const [formData, setFormData] = useState({
-    judul: '',
-    deskripsi: '',
-    syarat: '',
-    nominal: '',
-    kuota: '',
-    deadline: '',
+    judul: initialData?.judul || '',
+    deskripsi: initialData?.deskripsi || '',
+    syarat: initialData?.syarat || '',
+    nominal: initialData?.nominal || '',
+    kuota: initialData?.kuota || '',
+    deadline: initialData?.deadline || '',
     provinsiIds: [],
   });
   const [provinsiList, setProvinsiList] = useState([]);
@@ -201,6 +202,14 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
       setError('Judul beasiswa wajib diisi');
       return;
     }
+    if (!formData.deskripsi?.trim()) {
+      setError('Deskripsi beasiswa wajib diisi');
+      return;
+    }
+    if (formData.deskripsi.trim().length < 50) {
+      setError('Deskripsi minimal 50 karakter');
+      return;
+    }
     if (!formData.nominal || formData.nominal <= 0) {
       setError('Nominal harus lebih dari 0');
       return;
@@ -213,15 +222,21 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
       setError('Deadline wajib diisi');
       return;
     }
-    if (formData.provinsiIds.length === 0) {
+    if (!isEditMode && formData.provinsiIds.length === 0) {
       setError('Minimal satu provinsi target harus dipilih');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch('/api/pendonor/beasiswa/create', {
-        method: 'POST',
+      const endpoint = isEditMode 
+        ? `/api/pendonor/beasiswa/${initialData.beasiswaId}`
+        : '/api/pendonor/beasiswa/create';
+      
+      const method = isEditMode ? 'PUT' : 'POST';
+      
+      const res = await fetch(endpoint, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
@@ -257,7 +272,7 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
       <div className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-xl font-semibold" style={{ color: C.dark }}>
-            Buat Program Beasiswa Baru
+            {isEditMode ? 'Edit Program Beasiswa' : 'Buat Program Beasiswa Baru'}
           </h3>
           <button
             onClick={onClose}
@@ -280,7 +295,11 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
               onChange={(e) => setFormData(prev => ({ ...prev, judul: e.target.value }))}
               placeholder="Contoh: Beasiswa Prestasi Akademik 2026"
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{ borderColor: '#e5e7eb' }}
+              style={{
+                borderColor: '#e5e7eb',
+                color: C.dark,
+                backgroundColor: C.white
+              }}
               required
             />
           </div>
@@ -295,8 +314,12 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
               onChange={(e) => setFormData(prev => ({ ...prev, deskripsi: e.target.value }))}
               placeholder="Jelaskan program beasiswa ini secara detail..."
               rows={3}
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{ borderColor: '#e5e7eb' }}
+              className="w-full px-3 py-2 border rounded-lg text-sm resize-vertical"
+              style={{
+                borderColor: '#e5e7eb',
+                color: C.dark,
+                backgroundColor: C.white
+              }}
             />
           </div>
 
@@ -310,8 +333,12 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
               onChange={(e) => setFormData(prev => ({ ...prev, syarat: e.target.value }))}
               placeholder="Syarat-syarat yang harus dipenuhi pendaftar..."
               rows={3}
-              className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{ borderColor: '#e5e7eb' }}
+              className="w-full px-3 py-2 border rounded-lg text-sm resize-vertical"
+              style={{
+                borderColor: '#e5e7eb',
+                color: C.dark,
+                backgroundColor: C.white
+              }}
             />
           </div>
 
@@ -328,7 +355,11 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
                 placeholder="5000000"
                 min="1"
                 className="w-full px-3 py-2 border rounded-lg text-sm"
-                style={{ borderColor: '#e5e7eb' }}
+                style={{
+                  borderColor: '#e5e7eb',
+                  color: C.dark,
+                  backgroundColor: C.white
+                }}
                 required
               />
             </div>
@@ -359,7 +390,11 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
               value={formData.deadline}
               onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg text-sm"
-              style={{ borderColor: '#e5e7eb' }}
+              style={{
+                borderColor: '#e5e7eb',
+                color: C.dark,
+                backgroundColor: C.white
+              }}
               required
             />
           </div>
@@ -411,7 +446,10 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
               type="button"
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-sm font-semibold border transition-colors"
-              style={{ borderColor: '#e5e7eb', color: C.gray }}
+              style={{
+                borderColor: '#e5e7eb',
+                color: C.gray
+              }}
               disabled={loading}
             >
               Batal
@@ -426,7 +464,7 @@ function CreateBeasiswaModal({ isOpen, onClose, onSuccess }) {
                 cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              {loading ? 'Menyimpan...' : 'Buat Program'}
+              {loading ? 'Menyimpan...' : isEditMode ? 'Simpan Perubahan' : 'Buat Program'}
             </button>
           </div>
         </form>
@@ -441,6 +479,8 @@ export default function KelolaProgramPage({ user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingBeasiswa, setEditingBeasiswa] = useState(null);
 
   // ── Fetch beasiswa list ────────────────────────────────────────────────────
   const fetchBeasiswa = async () => {
@@ -448,8 +488,8 @@ export default function KelolaProgramPage({ user }) {
       setLoading(true);
       const res = await fetch('/api/pendonor/beasiswa');
       if (!res.ok) throw new Error('Gagal memuat data');
-      const data = await res.json();
-      setBeasiswaList(data);
+      const response = await res.json();
+      setBeasiswaList(response.data || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -467,8 +507,8 @@ export default function KelolaProgramPage({ user }) {
   };
 
   const handleEdit = (beasiswa) => {
-    // TODO: Implement edit modal
-    alert('Fitur edit akan segera hadir!');
+    setEditingBeasiswa(beasiswa);
+    setShowEditModal(true);
   };
 
   const handleDelete = async (beasiswa) => {
@@ -559,11 +599,22 @@ export default function KelolaProgramPage({ user }) {
           </div>
         )}
 
-        {/* ── Create Beasiswa Modal ─────────────────────────────────────────── */}
-        <CreateBeasiswaModal
+        {/* ── Create/Edit Beasiswa Modal ────────────────────────────────────── */}
+        <BeasiswaFormModal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
           onSuccess={fetchBeasiswa}
+        />
+        
+        {/* ── Edit Beasiswa Modal ───────────────────────────────────────────── */}
+        <BeasiswaFormModal
+          isOpen={showEditModal}
+          onClose={() => {
+            setShowEditModal(false);
+            setEditingBeasiswa(null);
+          }}
+          onSuccess={fetchBeasiswa}
+          initialData={editingBeasiswa}
         />
       </PendonorLayout>
     </>
