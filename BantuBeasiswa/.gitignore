@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local agent / PBI notes
+AGENT.md
+AGENTS.md
+agent.md
+agents.md
+*_PBI*_NOTES.md
+PBI*_NOTES.md

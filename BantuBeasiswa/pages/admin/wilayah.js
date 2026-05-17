@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
@@ -248,15 +248,147 @@ function exportCSV(rows) {
   URL.revokeObjectURL(url);
 }
 
+// ─── CSV Import Modal ────────────────────────────────────────────────────────
+function ImportCSVModal({ onClose, onSubmit, loading }) {
+  const [file, setFile] = useState(null);
+  const [err, setErr] = useState('');
+  const fileInputRef = useRef(null);
+
+  function handleFileChange(e) {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    
+    if (!selectedFile.name.endsWith('.csv')) {
+      setErr('File harus berformat CSV');
+      return;
+    }
+    
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      setErr('Ukuran file terlalu besar (maksimal 5MB)');
+      return;
+    }
+
+    setFile(selectedFile);
+    setErr('');
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!file) {
+      setErr('Pilih file CSV terlebih dahulu');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const csvData = event.target?.result;
+        await onSubmit(csvData);
+        onClose();
+      } catch (error) {
+        setErr(error.message || 'Gagal mengupload file');
+      }
+    };
+    reader.onerror = () => setErr('Gagal membaca file');
+    reader.readAsText(file);
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: C.white, borderRadius: 12, padding: 28,
+          width: '90%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2 style={{ fontWeight: 700, fontSize: 17, color: C.dark, marginBottom: 18 }}>
+          📤 Import Wilayah dari CSV
+        </h2>
+
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16, lineHeight: 1.6 }}>
+          Format CSV: <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>
+            provinsi, nama, tipe, mode, isAfirmasi, is3T, jenis_3t
+          </code>
+        </p>
+
+        {err && (
+          <p style={{ background: '#fff1f2', color: C.red, borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 14 }}>
+            {err}
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* File Input */}
+          <div
+            style={{
+              border: '2px dashed #d1d5db', borderRadius: 8,
+              padding: 20, textAlign: 'center', cursor: 'pointer',
+              background: file ? '#f0fdf4' : '#f9fafb',
+              transition: 'all 0.2s',
+            }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+            />
+            <div style={{ fontSize: 28, marginBottom: 8 }}>
+              {file ? '✅' : '📁'}
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 4 }}>
+              {file ? file.name : 'Klik untuk pilih file CSV'}
+            </p>
+            <p style={{ fontSize: 12, color: '#6b7280' }}>
+              atau drag & drop file CSV di sini
+            </p>
+          </div>
+
+          {/* Help text */}
+          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 12px' }}>
+            <p style={{ fontSize: 12, color: C.blue, margin: 0 }}>
+              💡 Download data wilayah 3T (62 kabupaten): <a href="/api/admin/wilayah/template" download="wilayah_3t_data.csv" style={{ color: C.blue, textDecoration: 'underline', cursor: 'pointer' }}>
+                wilayah_3t_data.csv
+              </a>
+            </p>
+          </div>
+
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 4, justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} style={btnSecondaryStyle}>
+              Batal
+            </button>
+            <button type="submit" disabled={loading || !file} style={{...btnPrimaryStyle, opacity: loading || !file ? 0.6 : 1}}>
+              {loading ? 'Mengupload...' : 'Import'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function WilayahPage({ user }) {
   const [list,         setList        ] = useState([]);
   const [provinsiList, setProvinsiList ] = useState([]);
   const [loading,      setLoading     ] = useState(true);
   const [saving,       setSaving      ] = useState(false);
+  const [importing,    setImporting   ] = useState(false);
   const [error,        setError       ] = useState('');
   const [toast,        setToast       ] = useState('');
   const [modal,        setModal       ] = useState(null);
+  const [importModal,  setImportModal ] = useState(false);
   const [deleting,     setDeleting    ] = useState(null);
   const [filterProvinsi, setFilterProvinsi] = useState('');
   const [filterTipe,     setFilterTipe    ] = useState('');
@@ -351,6 +483,37 @@ export default function WilayahPage({ user }) {
       showToast('❌ Gagal menghubungi server.');
     } finally {
       setDeleting(null);
+    }
+  }
+
+  // ── import CSV ───────────────────────────────────────────────────────────
+  async function handleImportCSV(csvData) {
+    setImporting(true);
+    try {
+      const res = await fetch('/api/admin/wilayah/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csvData }),
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        showToast(`❌ ${data.message}`);
+        if (data.errors) {
+          console.error('Import errors:', data.errors);
+        }
+        return;
+      }
+
+      // Reload data
+      await fetchData();
+      setImportModal(false);
+      showToast(`✅ Berhasil import ${data.imported} wilayah!`);
+      
+    } catch (err) {
+      showToast('❌ Gagal mengupload file: ' + err.message);
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -525,6 +688,12 @@ export default function WilayahPage({ user }) {
               ⬇ Export CSV
             </button>
             <button
+              onClick={() => setImportModal(true)}
+              style={{ ...btnSecondaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              📤 Import CSV
+            </button>
+            <button
               onClick={() => setModal({ mode: 'add' })}
               style={{ ...btnPrimaryStyle, display: 'flex', alignItems: 'center', gap: 6 }}
             >
@@ -653,6 +822,15 @@ export default function WilayahPage({ user }) {
           onSubmit={modal.mode === 'add' ? handleAdd : handleEdit}
           loading={saving}
           provinsiList={provinsiList}
+        />
+      )}
+
+      {/* ── Import CSV Modal ───────────────────────────────────────────── */}
+      {importModal && (
+        <ImportCSVModal
+          onClose={() => setImportModal(false)}
+          onSubmit={handleImportCSV}
+          loading={importing}
         />
       )}
     </>

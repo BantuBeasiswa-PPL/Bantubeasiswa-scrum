@@ -38,6 +38,12 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Jenis dokumen tidak valid' });
   }
 
+  // Pastikan pendaftaranId bertipe integer agar cocok dengan kolom BIGSERIAL di DB
+  const pendaftaranIdInt = parseInt(pendaftaranId, 10);
+  if (isNaN(pendaftaranIdInt) || pendaftaranIdInt <= 0) {
+    return res.status(400).json({ message: 'pendaftaranId tidak valid' });
+  }
+
   const supabase = getServerSupabase();
   const usingServiceRole = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -54,20 +60,22 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Profil mahasiswa tidak ditemukan.' });
   }
 
+  // Cek kepemilikan pendaftaran
   const { data: pendaftaran, error: pendaftaranError } = await supabase
     .from('pendaftaran')
     .select('userId')
-    .eq('pendaftaranId', pendaftaranId)
+    .eq('pendaftaranId', pendaftaranIdInt)
     .single();
 
   if (pendaftaranError || !pendaftaran) {
     console.error('[dokumen/upload] lookup pendaftaran:', pendaftaranError);
     return res.status(404).json({ message: 'Pendaftaran tidak ditemukan' });
   }
-  if (pendaftaran.userId !== userId) {
+  if (String(pendaftaran.userId) !== String(userId)) {
     return res.status(403).json({ message: 'Pendaftaran tidak milik Anda' });
   }
 
+  // Decode base64 → Buffer
   let buffer;
   try {
     buffer = Buffer.from(String(fileBase64), 'base64');
@@ -82,7 +90,8 @@ export default async function handler(req, res) {
     ? fileName.split('.').pop()
     : 'bin';
   const safeExt = /^[a-z0-9]+$/i.test(rawExt) ? rawExt.toLowerCase() : 'bin';
-  const storagePath = `${pendaftaranId}/${jenis}_${Date.now()}.${safeExt}`;
+  // Gunakan timestamp unik per file; upsert: true agar retry tidak conflict
+  const storagePath = `${pendaftaranIdInt}/${jenis}_${Date.now()}.${safeExt}`;
   const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || 'dokumen-pendaftaran';
   const contentType = typeof mimeType === 'string' && mimeType ? mimeType : 'application/octet-stream';
 
@@ -90,7 +99,7 @@ export default async function handler(req, res) {
     .from(bucket)
     .upload(storagePath, buffer, {
       contentType,
-      upsert: false,
+      upsert: true,   // ← true agar retry tidak conflict jika path sama
     });
 
   if (uploadError) {
@@ -111,9 +120,13 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'Gagal mendapatkan URL publik file' });
   }
 
+  // Insert metadata dokumen ke tabel `dokumen`
+  const insertPayload = buildDokumenInsertPayload({ pendaftaranId: pendaftaranIdInt, jenis, fileUrl });
+  console.log('[dokumen/upload] insert payload:', JSON.stringify(insertPayload));
+
   const { data: newDokumen, error: insertError } = await supabase
     .from('dokumen')
-    .insert(buildDokumenInsertPayload({ pendaftaranId, jenis, fileUrl }))
+    .insert(insertPayload)
     .select('dokumenId, statusDokumen')
     .single();
 
