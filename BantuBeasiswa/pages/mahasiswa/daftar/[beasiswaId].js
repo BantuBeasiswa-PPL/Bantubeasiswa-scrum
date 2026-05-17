@@ -2,9 +2,10 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '../../../components/layouts/MahasiswaLayout';
 import { withAuth } from '../../../lib/auth';
+import { getMahasiswaProfile } from '../../../lib/mahasiswaProfile';
 
 /* ── Step definitions ─────────────────────────────────────────── */
-const STEPS = ['Personal', 'Academic', 'Documents', 'Review'];
+const STEPS = ['Academic', 'Documents', 'Review'];
 
 /* ─────────────────────────────────────────────────────────────────
    INLINE SVG ICONS (no extra deps)
@@ -202,64 +203,48 @@ function TextInput({ id, value, onChange, placeholder, type = 'text', disabled }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   STEP 1 – PERSONAL
+   PROFIL CARD (read-only, tampil di atas form)
    ═══════════════════════════════════════════════════════════════ */
-function StepPersonal({ data, onChange, errors }) {
-  const field = (key) => ({
-    value: data[key],
-    onChange: (e) => onChange(key, e.target.value),
-  });
-
+function ProfileCard({ profile, onEdit }) {
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-800">Informasi Personal</h2>
-        <p className="text-sm text-gray-500 mt-0.5">
-          Data ini akan diverifikasi dengan dokumen identitas Anda.
-        </p>
+    <div className="bg-gradient-to-br from-[#f0f5ff] to-[#e8f0fe] rounded-2xl border border-[#0056b3]/15 p-5 mb-2">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-[#0056b3] text-white flex items-center justify-center text-sm font-bold shrink-0">
+            {(profile.nama || 'M').slice(0, 1).toUpperCase()}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">Data dari Profil Anda</h3>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="text-xs text-[#0056b3] font-medium border border-[#0056b3]/30 px-3 py-1.5 rounded-lg
+            hover:bg-[#0056b3] hover:text-white transition-all duration-150 shrink-0"
+        >
+          Edit Profil
+        </button>
       </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Nama Lengkap" required error={errors.nama_lengkap}>
-          <TextInput
-            id="nama_lengkap"
-            placeholder="Sesuai KTP"
-            {...field('nama_lengkap')}
-          />
-        </Field>
-
-        <Field label="NIM (Nomor Induk Mahasiswa)" required error={errors.nim}>
-          <TextInput
-            id="nim"
-            placeholder="Contoh: 2021012345"
-            {...field('nim')}
-          />
-        </Field>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[
+          { label: 'Nama Lengkap', value: profile.nama },
+          { label: 'Email', value: profile.email },
+          { label: 'Alamat', value: profile.alamat || profile.alamatKtp, span: true },
+          { label: 'No. Handphone', value: profile.noHandphone },
+        ].map(({ label, value, span }) => (
+          <div
+            key={label}
+            className={[
+              'bg-white/70 rounded-xl px-4 py-3 border border-white/80',
+              span ? 'sm:col-span-2' : '',
+            ].join(' ')}
+          >
+            <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+            <p className="text-sm font-medium text-gray-800 break-words">{value || <span className="text-gray-400 italic">—</span>}</p>
+          </div>
+        ))}
       </div>
-
-      <Field label="Alamat Email" required error={errors.email}
-        hint="Gunakan email institusi jika tersedia">
-        <TextInput
-          id="email"
-          type="email"
-          placeholder="nama@email.com"
-          {...field('email')}
-        />
-      </Field>
-
-      <Field label="Alamat Tempat Tinggal" required error={errors.alamat}
-        hint="Alamat lengkap sesuai domisili saat ini">
-        <textarea
-          id="alamat"
-          value={data.alamat}
-          onChange={(e) => onChange('alamat', e.target.value)}
-          placeholder="Jl. Contoh No. 1, Kota, Provinsi"
-          rows={3}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-800
-            focus:outline-none focus:ring-2 focus:ring-[#0056b3]/30 focus:border-[#0056b3]
-            transition-colors duration-150 placeholder-gray-400 resize-none hover:border-gray-300"
-        />
-      </Field>
     </div>
   );
 }
@@ -508,14 +493,6 @@ function StepDocuments({ data, onChange, errors }) {
 
       <div className="space-y-4">
         <FileUploadSlot
-          label="KTP (Kartu Tanda Penduduk)"
-          required
-          file={data.ktp}
-          onFile={(f) => onChange('ktp', f)}
-          onClear={() => onChange('ktp', null)}
-          error={errors.ktp}
-        />
-        <FileUploadSlot
           label="Transkrip Nilai"
           required
           file={data.transkrip}
@@ -563,7 +540,6 @@ function StepReview({ personal, academic, dokumen }) {
   const ipkFloat = parseFloat(academic.ipk);
 
   const docList = [
-    { label: 'KTP', file: dokumen.ktp, required: true },
     { label: 'Transkrip Nilai', file: dokumen.transkrip, required: true },
     { label: 'Motivation Letter', file: dokumen.motivation_letter, required: false },
   ];
@@ -702,19 +678,11 @@ function Sidebar({ beasiswaId }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   VALIDATION
+   VALIDATION (Personal step dihapus – kini 3 step: 0=Academic, 1=Documents, 2=Review)
    ═══════════════════════════════════════════════════════════════ */
-function validateStep(step, personal, academic, dokumen) {
+function validateStep(step, academic, dokumen) {
   const errors = {};
   if (step === 0) {
-    if (!personal.nama_lengkap.trim()) errors.nama_lengkap = 'Nama lengkap wajib diisi';
-    if (!personal.nim.trim()) errors.nim = 'NIM wajib diisi';
-    if (!personal.email.trim()) errors.email = 'Email wajib diisi';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personal.email))
-      errors.email = 'Format email tidak valid';
-    if (!personal.alamat.trim()) errors.alamat = 'Alamat wajib diisi';
-  }
-  if (step === 1) {
     if (!academic.nama_universitas.trim()) errors.nama_universitas = 'Nama universitas wajib diisi';
     if (!academic.semester_aktif) errors.semester_aktif = 'Semester aktif wajib dipilih';
     if (!academic.ipk) errors.ipk = 'IPK wajib diisi';
@@ -723,12 +691,7 @@ function validateStep(step, personal, academic, dokumen) {
       if (isNaN(v) || v < 0 || v > 4) errors.ipk = 'IPK harus antara 0.00 – 4.00';
     }
   }
-  if (step === 2) {
-    if (!dokumen.ktp) errors.ktp = 'File KTP wajib diupload';
-    else {
-      const msg = validateFile(dokumen.ktp);
-      if (msg) errors.ktp = msg;
-    }
+  if (step === 1) {
     if (!dokumen.transkrip) errors.transkrip = 'File transkrip wajib diupload';
     else {
       const msg = validateFile(dokumen.transkrip);
@@ -745,18 +708,18 @@ function validateStep(step, personal, academic, dokumen) {
 /* ═══════════════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════════════ */
-export default function DaftarBeasiswa({ user }) {
+export default function DaftarBeasiswa({ user, profile }) {
   const router = useRouter();
   const { beasiswaId } = router.query;
 
-  /* ── Step state ── */
+  /* ── Step state (0=Academic, 1=Documents, 2=Review) ── */
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
 
   /* ── Submit state ── */
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [pendaftaranId, setPendaftaranId] = useState(null); // dipakai untuk PBI-13 (upload dokumen)
+  const [pendaftaranId, setPendaftaranId] = useState(null);
   const [isUploadPhase, setIsUploadPhase] = useState(false);
   const [uploadMessage, setUploadMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -768,19 +731,17 @@ export default function DaftarBeasiswa({ user }) {
    * - error: pesan error (kalau gagal)
    */
   const [docStatus, setDocStatus] = useState({
-    ktp: { status: 'pending', url: '', error: '' },
     transkrip: { status: 'pending', url: '', error: '' },
     motivation_letter: { status: 'pending', url: '', error: '' },
   });
 
-
-  /* ── Form state ── */
-  const [personal, setPersonal] = useState({
-    nama_lengkap: user?.nama || '',  // pre-fill dari profil
-    nim: '',
-    email: user?.email || '',
-    alamat: '',
-  });
+  /* ── Form state (Personal diambil dari profil, bukan diinput user) ── */
+  const personal = {
+    nama_lengkap: profile?.nama || user?.nama || '',
+    email: profile?.email || user?.email || '',
+    alamat: profile?.alamat || profile?.alamatKtp || '',
+    noHandphone: profile?.noHandphone || '',
+  };
 
   const [academic, setAcademic] = useState({
     nama_universitas: '',
@@ -789,13 +750,11 @@ export default function DaftarBeasiswa({ user }) {
   });
 
   const [dokumen, setDokumen] = useState({
-    ktp: null,
     transkrip: null,
     motivation_letter: null,
   });
 
   /* ── Handlers ── */
-  const handlePersonalChange = (k, v) => setPersonal(p => ({ ...p, [k]: v }));
   const handleAcademicChange = (k, v) => setAcademic(a => ({ ...a, [k]: v }));
   const handleDocumenChange = (k, v) => {
     if (!v) {
@@ -825,10 +784,10 @@ export default function DaftarBeasiswa({ user }) {
   };
 
   const goNext = () => {
-    const errs = validateStep(step, personal, academic, dokumen);
+    const errs = validateStep(step, academic, dokumen);
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
-    setStep(s => Math.min(s + 1, 3));
+    setStep(s => Math.min(s + 1, 2));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -848,10 +807,10 @@ export default function DaftarBeasiswa({ user }) {
     setErrors({});
     setIsSuccess(false);
 
-    const finalErrs = validateStep(2, personal, academic, dokumen);
+    const finalErrs = validateStep(1, academic, dokumen);
     if (Object.keys(finalErrs).length) {
       setErrors(finalErrs);
-      setStep(2);
+      setStep(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -905,7 +864,6 @@ export default function DaftarBeasiswa({ user }) {
   };
 
   const buildDocEntries = () => ([
-    { jenis: 'ktp', file: dokumen.ktp, required: true, label: 'KTP' },
     { jenis: 'transkrip', file: dokumen.transkrip, required: true, label: 'Transkrip Nilai' },
     { jenis: 'motivation_letter', file: dokumen.motivation_letter, required: false, label: 'Motivation Letter' },
   ].filter(e => e.file));
@@ -1010,18 +968,15 @@ export default function DaftarBeasiswa({ user }) {
     await uploadRemainingDocs(pendaftaranId);
   };
 
-  /* ── Step content resolver ── */
+  /* ── Step content resolver (0=Academic, 1=Documents, 2=Review) ── */
   const stepContent = [
-    <StepPersonal key="p" data={personal} onChange={handlePersonalChange} errors={errors} />,
     <StepAcademic key="a" data={academic} onChange={handleAcademicChange} errors={errors} />,
     <StepDocuments key="d" data={dokumen} onChange={handleDocumenChange} errors={errors} />,
     <StepReview key="r" personal={personal} academic={academic} dokumen={dokumen} />,
   ];
 
   const canProceedDocuments =
-    !!dokumen.ktp &&
     !!dokumen.transkrip &&
-    !validateFile(dokumen.ktp) &&
     !validateFile(dokumen.transkrip);
 
   if (isSuccess && pendaftaranId) {
@@ -1060,8 +1015,16 @@ export default function DaftarBeasiswa({ user }) {
           {/* ── Main form card ── */}
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
+            {/* Profile card (read-only, selalu tampil) */}
+            <div className="px-6 pt-6">
+              <ProfileCard
+                profile={personal}
+                onEdit={() => router.push('/mahasiswa/profil/edit')}
+              />
+            </div>
+
             {/* Progress bar */}
-            <div className="px-6 pt-6 pb-2">
+            <div className="px-6 pt-4 pb-2">
               <StepBar current={step} />
             </div>
 
@@ -1106,11 +1069,11 @@ export default function DaftarBeasiswa({ user }) {
                 ))}
               </div>
 
-              {step < 3 ? (
+              {step < 2 ? (
                 <button
                   type="button"
                   onClick={goNext}
-                  disabled={isSubmitting || isUploadPhase || (step === 2 && !canProceedDocuments)}
+                  disabled={isSubmitting || isUploadPhase || (step === 1 && !canProceedDocuments)}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
                     bg-[#0056b3] text-white hover:bg-[#004494] active:scale-95 transition-all duration-150 shadow-sm
                     disabled:opacity-60 disabled:cursor-not-allowed"
@@ -1143,7 +1106,7 @@ export default function DaftarBeasiswa({ user }) {
                 {submitError && (
                   <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                     {submitError}
-                    {(docStatus.ktp.status === 'error' || docStatus.transkrip.status === 'error' || docStatus.motivation_letter.status === 'error') && (
+                    {(docStatus.transkrip.status === 'error' || docStatus.motivation_letter.status === 'error') && (
                       <div className="mt-3">
                         <button
                           type="button"
@@ -1177,7 +1140,51 @@ export default function DaftarBeasiswa({ user }) {
   );
 }
 
-// ─── SSR Auth Guard ───────────────────────────────────────────────────────────
+// ─── SSR Auth Guard + Profile Check ──────────────────────────────────────────
 export async function getServerSideProps(context) {
-  return withAuth(context, 'mahasiswa');
+  const auth = withAuth(context, 'mahasiswa');
+  if (auth.redirect) return auth;
+
+  const { user } = auth.props;
+
+  // Ambil profil mahasiswa
+  const profile = await getMahasiswaProfile(user);
+
+  // Field wajib yang harus terisi di profil sebelum bisa daftar beasiswa
+  const requiredFields = [
+    { key: 'nama', label: 'Nama Lengkap' },
+    { key: 'email', label: 'Email' },
+    { key: 'alamatKtp', label: 'Alamat KTP' },
+    { key: 'noHandphone', label: 'No. Handphone' },
+    { key: 'tanggalLahir', label: 'Tanggal Lahir' },
+    { key: 'provinsiKtpId', label: 'Provinsi KTP' },
+    { key: 'kabupatenKtpId', label: 'Kabupaten/Kota KTP' },
+  ];
+
+  const missingFields = requiredFields
+    .filter(({ key }) => !profile[key])
+    .map(({ label }) => label);
+
+  if (missingFields.length > 0) {
+    const missing = missingFields.join(', ');
+    return {
+      redirect: {
+        destination: `/mahasiswa/profil/edit?incomplete=1&fields=${encodeURIComponent(missing)}`,
+        permanent: false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      ...auth.props,
+      profile: {
+        nama: profile.nama || '',
+        email: profile.email || '',
+        alamat: profile.alamat || profile.alamatKtp || '',
+        noHandphone: profile.noHandphone || '',
+        tanggalLahir: profile.tanggalLahir || '',
+      },
+    },
+  };
 }
