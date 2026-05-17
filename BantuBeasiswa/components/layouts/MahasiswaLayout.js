@@ -3,33 +3,43 @@ import BaseLayout from './BaseLayout';
 const menuItems = [
   {
     label: 'Dashboard',
-    href : '/mahasiswa/dashboard',
-    icon : '🏠',
+    href: '/mahasiswa/dashboard',
+    icon: '🏠',
+  },
+  {
+    label: 'Profil Saya',
+    href: '/mahasiswa/profil',
+    icon: '👤',
   },
   {
     label: 'Cari Beasiswa',
-    href : '/mahasiswa/cari',
-    icon : '🔍',
+    href: '/mahasiswa/cari',
+    icon: '🔍',
   },
   {
     label: 'Status Pendaftaran',
-    href : '/mahasiswa/pendaftaran',
-    icon : '📋',
+    href: '/mahasiswa/pendaftaran',
+    icon: '📋',
+  },
+  {
+    label: 'Daftar Ulang Rekening',
+    href: '/mahasiswa/daftar-ulang-rekening',
+    icon: '💳',
   },
   {
     label: 'Tutorial Administrasi',
-    href : '/mahasiswa/tutorial',
-    icon : '📚',
+    href: '/mahasiswa/tutorial',
+    icon: '📚',
   },
   {
     label: 'Beasiswa Favorit',
-    href : '/mahasiswa/favorit',
-    icon : '⭐',
+    href: '/mahasiswa/favorit',
+    icon: '⭐',
   },
   {
     label: 'Laporan Kendala',
-    href : '/mahasiswa/laporan-kendala',
-    icon : '📝',
+    href: '/mahasiswa/laporan-kendala',
+    icon: '📝',
   },
 ];
 
