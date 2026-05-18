@@ -1,62 +1,80 @@
 /**
- * PBI-37: API Endpoint untuk READ Beasiswa
- * 
  * GET /api/pendonor/beasiswa
- * Query: ?status=draft (optional), ?limit=10 (optional)
+ * Mengambil semua beasiswa yang dibuat oleh pendonor yang sedang login.
+ *
+ * Response: { message, count, data: [] }
  */
-
-import { getBeasiswaByPendonor } from '../../../../lib/beasiswa';
-import jwt from 'jsonwebtoken';
+import { getServerSupabase } from '../../../../lib/supabaseServer';
+import { verifyToken } from '../../../../lib/auth';
 
 export default async function handler(req, res) {
-  // Only accept GET
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    // 1. Get JWT from cookies
-    const token = req.cookies.token;
-    if (!token) {
+    // 1. Auth: cek JWT & role
+    const decoded = verifyToken(req);
+    if (!decoded || decoded.role !== 'pendonor') {
       return res.status(401).json({ message: 'Tidak ada session. Silakan login terlebih dahulu.' });
     }
 
-    // 2. Verify JWT
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return res.status(401).json({ message: 'Session invalid atau sudah expired' });
-    }
+    const supabase = getServerSupabase();
 
-    // 3. Pastikan user adalah pendonor
-    if (decoded.role !== 'pendonor') {
-      return res.status(403).json({ message: 'Hanya pendonor yang bisa akses data beasiswa mereka' });
-    }
+    // 2. Resolve pendonorId dari accountId (fallback ke userId di JWT jika tersedia)
+    let pendonorId = decoded.userId ?? null;
 
-    const pendonorId = decoded.userId;
     if (!pendonorId) {
-      return res.status(400).json({ message: 'Pendonor ID tidak ditemukan di session' });
+      const { data: pendonor, error: pendonorError } = await supabase
+        .from('pendonor')
+        .select('pendonorId')
+        .eq('accountId', decoded.accountId)
+        .single();
+
+      if (pendonorError || !pendonor) {
+        return res.status(404).json({ message: 'Profil pendonor tidak ditemukan' });
+      }
+      pendonorId = pendonor.pendonorId;
     }
 
-    // 4. Parse query parameters
+    // 3. Parse query parameters
     const { status, limit } = req.query;
-    const options = {};
-    if (status) options.status = status;
-    if (limit) options.limit = parseInt(limit, 10);
 
-    // 5. Panggil helper function
-    const result = await getBeasiswaByPendonor(pendonorId, options);
+    // 4. Fetch beasiswa milik pendonor ini
+    let query = supabase
+      .from('beasiswa')
+      .select(`
+        beasiswaId,
+        judul,
+        jalur,
+        deskripsi,
+        syarat,
+        nominal,
+        kuota,
+        linkPendaftaran,
+        deadline,
+        status,
+        createdAt
+      `)
+      .eq('pendonorId', pendonorId)
+      .order('beasiswaId', { ascending: false });
 
-    // 6. Return response
-    if (!result.success) {
-      return res.status(400).json({ message: result.error });
+    // Filter opsional berdasarkan status
+    if (status) query = query.eq('status', status);
+    // Limit opsional
+    if (limit) query = query.limit(parseInt(limit, 10));
+
+    const { data: beasiswaList, error: beasiswaError } = await query;
+
+    if (beasiswaError) {
+      console.error('[api/pendonor/beasiswa] fetch error:', beasiswaError);
+      return res.status(500).json({ message: 'Gagal mengambil data beasiswa' });
     }
 
     return res.status(200).json({
       message: 'Daftar program beasiswa berhasil diambil',
-      count: result.data.length,
-      data: result.data,
+      count: (beasiswaList ?? []).length,
+      data: beasiswaList ?? [],
     });
   } catch (error) {
     console.error('[api/pendonor/beasiswa] Error:', error);

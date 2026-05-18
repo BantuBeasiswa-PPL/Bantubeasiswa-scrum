@@ -84,10 +84,19 @@ export default function AfirmasiMapLeaflet({ provinsiList, onToggle, saving }) {
   // Inisialisasi peta (sekali saja)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    let mounted = true;
+
+    // Jika sudah ada instance, tidak perlu init ulang
     if (mapInstance.current) return;
 
     // Dynamic import Leaflet (hanya client-side)
     import('leaflet').then((L) => {
+      // Jangan lanjut jika komponen sudah unmount
+      if (!mounted) return;
+      // Jangan lanjut jika container sudah diinisialisasi oleh Leaflet sebelumnya
+      if (!mapRef.current || mapRef.current._leaflet_id) return;
+
       // Fix icon path Leaflet di Next.js
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
@@ -112,9 +121,14 @@ export default function AfirmasiMapLeaflet({ provinsiList, onToggle, saving }) {
     });
 
     return () => {
+      mounted = false;
       if (mapInstance.current) {
         mapInstance.current.remove();
         mapInstance.current = null;
+      }
+      // Bersihkan _leaflet_id dari DOM agar tidak error saat re-mount
+      if (mapRef.current) {
+        delete mapRef.current._leaflet_id;
       }
     };
   }, []);
