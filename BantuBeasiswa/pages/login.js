@@ -80,7 +80,7 @@ export default function LoginPage() {
   const [error,        setError        ] = useState('');
   const [loading,      setLoading      ] = useState(false);
 
-  const { registered } = router.query;
+  const { registered, redirect: redirectAfterLogin } = router.query;
 
   // ── Handle Login ────────────────────────────────────────────────────────────
   async function handleLogin(e) {
@@ -102,7 +102,14 @@ export default function LoginPage() {
         return;
       }
 
-      router.push(data.redirect || '/');
+      // Prioritaskan ?redirect= dari URL (misal dari halaman detail beasiswa)
+      // Pastikan redirect hanya ke path internal (dimulai dengan /) untuk keamanan
+      const safeRedirect =
+        redirectAfterLogin && redirectAfterLogin.startsWith('/')
+          ? redirectAfterLogin
+          : null;
+
+      router.push(safeRedirect || data.redirect || '/');
     } catch {
       setError('Terjadi kesalahan jaringan. Silakan coba lagi.');
     } finally {
