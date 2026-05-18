@@ -4,8 +4,42 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '../../components/layouts/MahasiswaLayout';
 import LaporKendalaModal from '../../components/LaporKendalaModal';
-import { withAuth } from '../../lib/auth';
+import { verifyToken } from '../../lib/auth';
 import { fetchBeasiswaById } from '../../lib/beasiswaQuery';
+
+// ─── Public layout untuk tamu (belum login) ────────────────────────────────
+function PublicLayout({ children }) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm"
+              style={{ backgroundColor: '#ffc107', color: '#0056b3' }}>BB</div>
+            <span className="text-lg font-bold" style={{ color: '#0056b3' }}>BantuBeasiswa</span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="rounded-lg border border-blue-500 bg-white px-4 py-2 text-sm font-semibold text-blue-600 transition hover:bg-blue-50"
+            >
+              Masuk
+            </Link>
+            <Link
+              href="/register/mahasiswa"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              Daftar
+            </Link>
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        {children}
+      </main>
+    </div>
+  );
+}
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -72,6 +106,9 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
   const [laporDisabled,  setLaporDisabled ] = useState(false);
   const [laporCountdown, setLaporCountdown] = useState(0);
 
+  // Pilih layout sesuai status login
+  const Layout = user ? MahasiswaLayout : PublicLayout;
+
   // Anti-spam setelah laporan berhasil
   const handleLaporSuccess = () => {
     setLaporDisabled(true);
@@ -95,7 +132,11 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
 
   // ─ Handler tombol Daftar Sekarang ────────────────────────────────────────
   async function handleDaftar() {
-    if (!user) { router.push('/login'); return; }
+    if (!user) {
+      // Simpan halaman asal agar bisa redirect balik setelah login
+      router.push(`/login?redirect=/beasiswa/${beasiswa.beasiswaId}`);
+      return;
+    }
     // Redirect ke halaman formulir pendaftaran lengkap
     router.push(`/mahasiswa/daftar/${beasiswa.beasiswaId}`);
   }
@@ -105,19 +146,19 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
     return (
       <>
         <Head><title>Beasiswa Tidak Ditemukan · BantuBeasiswa</title></Head>
-        <MahasiswaLayout user={user}>
+        <Layout user={user}>
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <h1 className="text-xl font-bold mb-2" style={{ color: C.dark }}>
               Beasiswa Tidak Ditemukan
             </h1>
             <p className="text-sm mb-6" style={{ color: C.gray }}>{errorMsg}</p>
-            <Link href="/mahasiswa/cari"
+            <Link href="/"
               className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white"
               style={{ backgroundColor: C.blue }}>
-              ← Kembali ke Pencarian
+              ← Kembali ke Beranda
             </Link>
           </div>
-        </MahasiswaLayout>
+        </Layout>
       </>
     );
   }
@@ -137,14 +178,43 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
           content={`Detail beasiswa ${beasiswa.judul} dari ${beasiswa.pendonor?.statusOrganisasi ?? ''}. Deadline: ${formatTanggal(beasiswa.deadline)}.`} />
       </Head>
 
-      <MahasiswaLayout user={user}>
+      <Layout user={user}>
+
+        {/* ── Banner login untuk tamu ──────────────────────────────────── */}
+        {!user && (
+          <div
+            className="rounded-xl border px-5 py-4 mb-5 flex items-center justify-between gap-4 flex-wrap"
+            style={{ backgroundColor: '#eff6ff', borderColor: '#bfdbfe' }}
+          >
+            <div>
+              <p className="text-sm font-semibold" style={{ color: C.blue }}>Masuk untuk mendaftar beasiswa ini</p>
+              <p className="text-xs mt-0.5" style={{ color: '#6b7280' }}>Kamu perlu login atau daftar akun mahasiswa terlebih dahulu.</p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Link
+                href={`/login?redirect=/beasiswa/${beasiswa.beasiswaId}`}
+                className="px-4 py-2 rounded-lg text-sm font-semibold border transition-colors"
+                style={{ borderColor: C.blue, color: C.blue, backgroundColor: '#ffffff' }}
+              >
+                Masuk
+              </Link>
+              <Link
+                href="/register/mahasiswa"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors"
+                style={{ backgroundColor: C.blue }}
+              >
+                Daftar Akun
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
         <nav className="flex items-center gap-2 text-sm mb-5" style={{ color: C.gray }}>
-          <Link href="/mahasiswa/cari"
+          <Link href={user ? '/mahasiswa/cari' : '/'}
             className="hover:underline transition-colors"
             style={{ color: C.blue }}>
-            Cari Beasiswa
+            {user ? 'Cari Beasiswa' : 'Beranda'}
           </Link>
           <span>›</span>
           <span className="truncate max-w-xs" style={{ color: C.dark }}>
@@ -295,7 +365,9 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
               ) : (
                 <>
                   <p className="text-xs mb-3 text-center" style={{ color: C.gray }}>
-                    Pastikan Anda telah membaca semua syarat sebelum mendaftar.
+                    {user
+                      ? 'Pastikan Anda telah membaca semua syarat sebelum mendaftar.'
+                      : 'Login terlebih dahulu untuk mendaftar beasiswa ini.'}
                   </p>
 
                   <button
@@ -315,7 +387,7 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
                     onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#004494'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = C.blue; }}
                   >
-                    Daftar Sekarang
+                    {user ? 'Daftar Sekarang' : '🔒 Login untuk Daftar'}
                   </button>
                 </>
               )}
@@ -341,20 +413,20 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
                 {laporDisabled ? `Terkirim (${laporCountdown}s)` : 'Laporkan Kendala'}
               </button>
 
-              <Link href="/mahasiswa/cari"
+              <Link href={user ? '/mahasiswa/cari' : '/'}
                 className="block text-center text-sm mt-3 py-2.5 rounded-lg border transition-colors"
                 style={{ borderColor: '#e5e7eb', color: C.gray, textDecoration: 'none' }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = C.blue)}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
               >
-                ← Kembali ke Pencarian
+                {user ? '← Kembali ke Pencarian' : '← Kembali ke Beranda'}
               </Link>
             </div>
 
           </div>
         </div>
 
-      </MahasiswaLayout>
+      </Layout>
 
       {/* ── Modal Laporan ── */}
       <LaporKendalaModal
@@ -369,11 +441,19 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
   );
 }
 
-// ─── SSR: Fetch data + Auth guard ─────────────────────────────────────────────
+// ─── SSR: Fetch data (public access, auth optional) ───────────────────────────
 export async function getServerSideProps(context) {
-  // 1. Cek auth
-  const authResult = withAuth(context, 'mahasiswa');
-  if (authResult.redirect) return authResult;
+  // 1. Cek auth secara opsional — tidak redirect jika belum login
+  const decoded = verifyToken(context.req);
+  const user = decoded && decoded.role === 'mahasiswa'
+    ? {
+        accountId: decoded.accountId,
+        userId   : decoded.userId   ?? null,
+        email    : decoded.email,
+        role     : decoded.role,
+        nama     : decoded.nama     ?? '',
+      }
+    : null;
 
   const { id } = context.params;
 
@@ -384,7 +464,7 @@ export async function getServerSideProps(context) {
     if (!beasiswa) {
       return {
         props: {
-          ...authResult.props,
+          user,
           beasiswa: null,
           errorMsg: 'Beasiswa tidak ditemukan atau telah dihapus.',
         },
@@ -393,7 +473,7 @@ export async function getServerSideProps(context) {
 
     return {
       props: {
-        ...authResult.props,
+        user,
         beasiswa,
         errorMsg: null,
       },
@@ -401,7 +481,7 @@ export async function getServerSideProps(context) {
   } catch (err) {
     return {
       props: {
-        ...authResult.props,
+        user,
         beasiswa: null,
         errorMsg: err.message || 'Gagal memuat data beasiswa.',
       },
