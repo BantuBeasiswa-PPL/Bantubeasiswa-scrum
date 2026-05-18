@@ -390,7 +390,7 @@ export default function DaftarUlangRekeningPage({
 
             <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
               <Link
-                href="/mahasiswa/profil"
+                href="/mahasiswa/profil/profil"
                 className="text-sm font-semibold text-gray-500 transition hover:text-gray-800"
               >
                 Kembali ke Profil

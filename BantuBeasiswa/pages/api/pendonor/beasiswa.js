@@ -39,9 +39,12 @@ export default async function handler(req, res) {
         jalur,
         deskripsi,
         syarat,
+        nominal,
+        kuota,
         linkPendaftaran,
         deadline,
-        status
+        status,
+        createdAt
       `)
       .eq('pendonorId', pendonor.pendonorId)
       .order('beasiswaId', { ascending: false });
@@ -51,7 +54,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: 'Gagal mengambil data beasiswa' });
     }
 
-    return res.status(200).json(beasiswaList || []);
+    return res.status(200).json({ data: beasiswaList ?? [] });
   } catch (err) {
     console.error('[pendonor/beasiswa]', err);
     return res.status(500).json({ message: 'Terjadi kesalahan server' });
