@@ -11,7 +11,7 @@ const menuItems = [
   },
   {
     label: 'Seleksi Pendaftar',
-    href: '/pendonor/seleksi',
+    href: '/pendonor/seleksi-pendaftar',
   },
   {
     label: 'Dashboard Laporan',
