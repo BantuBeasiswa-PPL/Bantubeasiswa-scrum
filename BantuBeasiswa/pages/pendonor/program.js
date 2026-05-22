@@ -54,6 +54,19 @@ function formatTanggal(iso) {
   });
 }
 
+// ─── Format DateTime untuk input datetime-local ──────────────────────────────
+function formatDatetimeLocal(iso) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+
 // ─── Beasiswa Card ───────────────────────────────────────────────────────────
 function BeasiswaCard({ beasiswa, onEdit, onDelete }) {
   const [showActions, setShowActions] = useState(false);
@@ -163,17 +176,43 @@ function EmptyState({ onCreate }) {
 function BeasiswaFormModal({ isOpen, onClose, onSuccess, initialData = null }) {
   const isEditMode = !!initialData;
   const [formData, setFormData] = useState({
-    judul: initialData?.judul || '',
-    deskripsi: initialData?.deskripsi || '',
-    syarat: initialData?.syarat || '',
-    nominal: initialData?.nominal || '',
-    kuota: initialData?.kuota || '',
-    deadline: initialData?.deadline || '',
+    judul: '',
+    deskripsi: '',
+    syarat: '',
+    nominal: '',
+    kuota: '',
+    deadline: '',
     provinsiIds: [],
   });
   const [provinsiList, setProvinsiList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Update form data ketika initialData berubah (modal dibuka dengan data baru)
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setFormData({
+        judul: initialData?.judul || '',
+        deskripsi: initialData?.deskripsi || '',
+        syarat: initialData?.syarat || '',
+        nominal: initialData?.nominal || '',
+        kuota: initialData?.kuota || '',
+        deadline: formatDatetimeLocal(initialData?.deadline) || '',
+        provinsiIds: initialData?.provinsiIds || [],
+      });
+    } else if (isOpen && !initialData) {
+      // Reset form untuk create mode
+      setFormData({
+        judul: '',
+        deskripsi: '',
+        syarat: '',
+        nominal: '',
+        kuota: '',
+        deadline: '',
+        provinsiIds: [],
+      });
+    }
+  }, [isOpen, initialData]);
 
   // Fetch provinsi options
   useEffect(() => {
@@ -235,21 +274,36 @@ function BeasiswaFormModal({ isOpen, onClose, onSuccess, initialData = null }) {
       
       const method = isEditMode ? 'PUT' : 'POST';
       
+      // Convert nominal to number if string
+      const bodyData = {
+        ...formData,
+        nominal: parseInt(formData.nominal) || 0,
+        kuota: parseInt(formData.kuota) || 0,
+      };
+      
+      console.log(`[${method}] Mengirim ke ${endpoint}:`, bodyData);
+      
       const res = await fetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(bodyData),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      console.log(`[${method}] Response:`, data);
+      
+      if (!res.ok) {
+        throw new Error(data.message || 'Gagal menyimpan beasiswa');
+      }
 
+      console.log('✅ Berhasil menyimpan, memanggil onSuccess...');
       onSuccess();
       onClose();
       setFormData({
         judul: '', deskripsi: '', syarat: '', nominal: '', kuota: '', deadline: '', provinsiIds: []
       });
     } catch (err) {
+      console.error('❌ Error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -374,7 +428,11 @@ function BeasiswaFormModal({ isOpen, onClose, onSuccess, initialData = null }) {
                 placeholder="50"
                 min="1"
                 className="w-full px-3 py-2 border rounded-lg text-sm"
-                style={{ borderColor: '#e5e7eb' }}
+                style={{
+                  borderColor: '#e5e7eb',
+                  color: C.dark,
+                  backgroundColor: C.white
+                }}
                 required
               />
             </div>
@@ -486,11 +544,18 @@ export default function KelolaProgramPage({ user }) {
   const fetchBeasiswa = async () => {
     try {
       setLoading(true);
+      setError('');
+      console.log('📥 Fetching beasiswa list...');
       const res = await fetch('/api/pendonor/beasiswa');
-      if (!res.ok) throw new Error('Gagal memuat data');
+      if (!res.ok) {
+        console.error('❌ API error:', res.status, res.statusText);
+        throw new Error('Gagal memuat data');
+      }
       const response = await res.json();
+      console.log('✅ Daftar beasiswa:', response);
       setBeasiswaList(response.data || []);
     } catch (err) {
+      console.error('❌ Fetch error:', err);
       setError(err.message);
     } finally {
       setLoading(false);

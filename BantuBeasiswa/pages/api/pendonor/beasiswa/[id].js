@@ -93,8 +93,13 @@ export default async function handler(req, res) {
       if (kuota !== undefined && kuota <= 0) {
         return res.status(400).json({ message: 'Kuota penerima harus lebih dari 0' });
       }
-      if (deadline !== undefined && new Date(deadline) <= new Date()) {
-        return res.status(400).json({ message: 'Deadline harus di masa depan' });
+      if (deadline !== undefined) {
+        const deadlineTime = new Date(deadline).getTime();
+        const nowTime = new Date().getTime();
+        const ONE_HOUR = 60 * 60 * 1000;  // 1 hour in milliseconds
+        if (deadlineTime <= nowTime + ONE_HOUR) {  // Allow 1 hour tolerance
+          return res.status(400).json({ message: 'Deadline harus di masa depan minimal 1 jam' });
+        }
       }
 
       // Build update object (hanya field yang dikirim)

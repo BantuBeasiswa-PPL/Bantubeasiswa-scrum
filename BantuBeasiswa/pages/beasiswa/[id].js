@@ -106,6 +106,9 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
   const [laporDisabled,  setLaporDisabled ] = useState(false);
   const [laporCountdown, setLaporCountdown] = useState(0);
 
+  // Check if user is pendonor owner of this beasiswa
+  const isPendonorOwner = user?.role === 'pendonor' && user?.accountId === beasiswa?.pendonor?.pendonorId;
+
   // Pilih layout sesuai status login
   const Layout = user ? MahasiswaLayout : PublicLayout;
 
@@ -140,6 +143,11 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
     // Redirect ke halaman formulir pendaftaran lengkap
     router.push(`/mahasiswa/daftar/${beasiswa.beasiswaId}`);
   }
+
+  // ─ Handler untuk pendonor: kembali ke dashboard ──────────────────────────
+  const handleBackToDashboard = () => {
+    router.push('/pendonor/program');
+  };
 
   // ─ Fallback error ─────────────────────────────────────────────────────────
   if (errorMsg) {
@@ -353,7 +361,30 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
             <div className="rounded-xl border p-5 sticky top-5"
               style={{ backgroundColor: C.white, borderColor: '#e5e7eb' }}>
 
-              {sudahBerakhir ? (
+              {isPendonorOwner ? (
+                // Untuk pendonor pemilik: tampilkan info + tombol dashboard
+                <div className="space-y-3">
+                  <p className="text-sm font-semibold" style={{ color: C.green }}>
+                    ✓ Ini adalah program beasiswa Anda
+                  </p>
+                  <p className="text-xs" style={{ color: C.gray }}>
+                    Anda dapat mengelola program ini di dashboard pendonor.
+                  </p>
+                  <button
+                    onClick={handleBackToDashboard}
+                    className="w-full text-center py-3 rounded-lg text-sm font-bold text-white transition-all duration-200"
+                    style={{
+                      backgroundColor: C.green,
+                      cursor: 'pointer',
+                      border: 'none',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#047857'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = C.green; }}
+                  >
+                    ← Kembali ke Dashboard Pendonor
+                  </button>
+                </div>
+              ) : sudahBerakhir ? (
                 <div className="text-center py-4">
                   <p className="text-sm font-semibold mb-1" style={{ color: '#6b7280' }}>
                     Pendaftaran Ditutup
@@ -445,7 +476,7 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
 export async function getServerSideProps(context) {
   // 1. Cek auth secara opsional — tidak redirect jika belum login
   const decoded = verifyToken(context.req);
-  const user = decoded && decoded.role === 'mahasiswa'
+  const user = decoded
     ? {
         accountId: decoded.accountId,
         userId   : decoded.userId   ?? null,
