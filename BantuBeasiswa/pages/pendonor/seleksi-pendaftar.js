@@ -223,15 +223,20 @@ export default function SeleksiPendaftarPage({ user }) {
     setApplicants(updatedApplicants);
   };
 
-  // ── Handle Registration Action (Verify, Request Revision, Reject) ──────────
+  // ── Handle Registration Action (Verify, Request Revision, Reject, Batch Verify) ──
   const handleRegistrationAction = async (action) => {
     const actionLabel = {
-      reject: 'menolak pendaftaran',
+      reject: 'menolak pendaftaran ini',
       revision: 'meminta revisi berkas pendaftaran',
-      verify: 'memverifikasi pendaftaran (lanjut ke seleksi/ujian)'
+      verify: 'meloloskan pendaftaran ini (LULUS)',
+      batch_verify: 'menyetujui semua dokumen dan meloloskan pendaftaran ini (LULUS)'
     }[action];
 
-    if (!confirm(`Apakah Anda yakin ingin ${actionLabel} ini?`)) {
+    const confirmMsg = action === 'batch_verify'
+      ? 'Apakah Anda yakin ingin menyetujui semua dokumen dan meloloskan pendaftaran ini?'
+      : `Apakah Anda yakin ingin ${actionLabel}?`;
+
+    if (!confirm(confirmMsg)) {
       return;
     }
 
@@ -252,7 +257,15 @@ export default function SeleksiPendaftarPage({ user }) {
         // Update local applicants list
         const updatedApplicants = applicants.map(app => {
           if (app.pendaftaranId === selectedApplicant.pendaftaranId) {
-            const updatedApp = { ...app, status: newStatus };
+            let updatedDocs = app.dokumen;
+            if (action === 'batch_verify') {
+              updatedDocs = app.dokumen.map(d => ({
+                ...d,
+                statusDokumen: 'TRUE',
+                rejectionReason: null
+              }));
+            }
+            const updatedApp = { ...app, status: newStatus, dokumen: updatedDocs };
             if (selectedApplicant.pendaftaranId === app.pendaftaranId) {
               setSelectedApplicant(updatedApp);
             }
@@ -262,7 +275,10 @@ export default function SeleksiPendaftarPage({ user }) {
         });
         
         setApplicants(updatedApplicants);
-        alert(`Berhasil: Status pendaftaran diubah menjadi ${newStatus}`);
+        alert(action === 'batch_verify'
+          ? 'Berhasil: Semua dokumen disetujui dan status pendaftaran diubah menjadi LULUS'
+          : `Berhasil: Status pendaftaran diubah menjadi ${newStatus}`
+        );
       } else {
         alert(json.message || 'Gagal mengubah status pendaftaran');
       }
@@ -559,7 +575,7 @@ export default function SeleksiPendaftarPage({ user }) {
                         id="reject-registration-btn"
                         onClick={() => handleRegistrationAction('reject')}
                         className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-red-700 transition active:scale-95 disabled:opacity-50"
-                        disabled={selectedApplicant.status === 'DITOLAK'}
+                        disabled={selectedApplicant.status === 'DITOLAK' || selectedApplicant.status === 'LULUS'}
                       >
                         Reject
                       </button>
@@ -568,7 +584,8 @@ export default function SeleksiPendaftarPage({ user }) {
                       <button
                         id="request-revision-btn"
                         onClick={() => handleRegistrationAction('revision')}
-                        className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-bold shadow-md hover:bg-yellow-600 transition active:scale-95"
+                        className="px-4 py-2 bg-yellow-500 text-white rounded-lg text-sm font-bold shadow-md hover:bg-yellow-600 transition active:scale-95 disabled:opacity-50"
+                        disabled={selectedApplicant.status === 'DITOLAK' || selectedApplicant.status === 'LULUS'}
                       >
                         Request Revision
                       </button>
@@ -578,9 +595,19 @@ export default function SeleksiPendaftarPage({ user }) {
                         id="verify-registration-btn"
                         onClick={() => handleRegistrationAction('verify')}
                         className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-emerald-700 transition active:scale-95 disabled:opacity-50"
-                        disabled={selectedApplicant.status === 'EXAM'}
+                        disabled={selectedApplicant.status === 'LULUS' || selectedApplicant.status === 'DITOLAK'}
                       >
                         Verify Pendaftaran
+                      </button>
+
+                      {/* Batch Verify Button (PBI-24) */}
+                      <button
+                        id="batch-verify-registration-btn"
+                        onClick={() => handleRegistrationAction('batch_verify')}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-md hover:bg-indigo-700 transition active:scale-95 disabled:opacity-50"
+                        disabled={selectedApplicant.status === 'LULUS' || selectedApplicant.status === 'DITOLAK'}
+                      >
+                        Batch Verify
                       </button>
                     </div>
                   </div>
