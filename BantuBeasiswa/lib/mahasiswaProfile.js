@@ -48,9 +48,20 @@ export function normalizeMahasiswaProfile(row, fallback = {}) {
 export function normalizeRekening(row) {
   const source = row || {};
 
+  // "namRekening" adalah nama kolom aktual di Supabase (format: "NamaBank - NamaPemilik")
+  const namRekening = source.namRekening ?? '';
+
   return {
-    namaBank: source.namaBank ?? source.nama_bank ?? '',
-    namaPemilik: source.namaPemilik ?? source.nama_pemilik ?? '',
+    namaBank:
+      source.namaBank ??
+      source.nama_bank ??
+      (namRekening.includes(' - ') ? namRekening.split(' - ')[0] : namRekening) ??
+      '',
+    namaPemilik:
+      source.namaPemilik ??
+      source.nama_pemilik ??
+      (namRekening.includes(' - ') ? namRekening.split(' - ').slice(1).join(' - ') : namRekening) ??
+      '',
     nomorRekening: source.nomorRekening ?? source.nomor_rekening ?? '',
     fotoBukuUrl: source.fotoBukuUrl ?? source.foto_buku_url ?? '',
     status: source.status ?? '',
@@ -95,7 +106,7 @@ export async function getLatestRekening(userId) {
       .from('rekening')
       .select('*')
       .eq(column, value)
-      .order('id', { ascending: false })
+      .order('rekeningId', { ascending: false })  // PK aktual adalah rekeningId
       .limit(1)
       .maybeSingle();
 

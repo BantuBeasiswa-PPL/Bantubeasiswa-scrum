@@ -504,17 +504,17 @@ export default function EditProfilMahasiswaPage({
           )}
 
           <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <Link href="/mahasiswa/profil" className="text-sm font-semibold text-rose-600 transition hover:text-rose-700">
+            <Link href="/mahasiswa/profil/profil" className="text-sm font-semibold text-rose-600 transition hover:text-rose-700">
               Batalkan
             </Link>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/mahasiswa/profil/profil"
+              <button
+                type="submit"
                 disabled={saving}
                 className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
                 {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
-              </Link>
+              </button>
               <Link
                 href="/mahasiswa/daftar-ulang-rekening"
                 className="rounded-lg bg-blue-950 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-900"

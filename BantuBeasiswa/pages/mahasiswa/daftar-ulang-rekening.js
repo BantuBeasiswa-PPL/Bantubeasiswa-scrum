@@ -1,8 +1,10 @@
 import { useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
+import { supabase } from '@/lib/db';
 import {
   getLatestLulusPendaftaran,
   getMahasiswaProfile,
@@ -131,8 +133,11 @@ export default function DaftarUlangRekeningPage({
   batchYear,
 }) {
   const fileInputRef = useRef(null);
+  const router = useRouter();
   const [dragActive, setDragActive] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [touched, setTouched] = useState({});
   const [values, setValues] = useState({
     bankName: '',
@@ -182,7 +187,7 @@ export default function DaftarUlangRekeningPage({
     handleFile(event.dataTransfer.files?.[0] || null);
   }
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
     setTouched({
       bankName: true,
@@ -191,9 +196,47 @@ export default function DaftarUlangRekeningPage({
       proofFile: true,
       certified: true,
     });
-
     if (!isFormValid) return;
-    setSubmitted(true);
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      // Upload foto buku tabungan ke Storage (opsional — tidak memblokir submit)
+      let fotoBukuUrl = null;
+      if (values.proofFile) {
+        const ext = values.proofFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('rekening')
+          .upload(fileName, values.proofFile, { upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('rekening').getPublicUrl(uploadData.path);
+          fotoBukuUrl = urlData?.publicUrl ?? null;
+        }
+      }
+      // Simpan data rekening ke database
+      const res = await fetch('/api/mahasiswa/rekening', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          namaBank:      values.bankName,
+          namaPemilik:   values.accountHolderName,
+          nomorRekening: values.accountNumber,
+          fotoBukuUrl,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        const detail = json.detail ? ` (${json.detail})` : '';
+        setSubmitError((json.message || 'Gagal menyimpan data rekening.') + detail);
+        return;
+      }
+      setSubmitted(true);
+      setTimeout(() => router.push('/mahasiswa/profil/profil'), 1500);
+    } catch {
+      setSubmitError('Terjadi kesalahan jaringan. Coba lagi.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function getError(name) {
@@ -384,7 +427,12 @@ export default function DaftarUlangRekeningPage({
 
             {submitted && (
               <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                Validasi UI berhasil. Data belum dikirim ke database karena PBI ini masih tahap tampilan.
+                ✅ Data rekening berhasil disimpan! Mengalihkan ke halaman profil...
+              </div>
+            )}
+            {submitError && (
+              <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {submitError}
               </div>
             )}
 
@@ -397,14 +445,14 @@ export default function DaftarUlangRekeningPage({
               </Link>
               <button
                 type="submit"
-                disabled={!isFormValid}
+                disabled={!isFormValid || submitting}
                 className={`rounded-lg px-6 py-3 text-sm font-bold text-white transition ${
-                  isFormValid
+                  isFormValid && !submitting
                     ? 'bg-blue-700 hover:bg-blue-800'
                     : 'cursor-not-allowed bg-gray-300'
                 }`}
               >
-                Confirm & Submit Data
+                {submitting ? 'Menyimpan...' : 'Confirm & Submit Data'}
               </button>
             </div>
           </form>
