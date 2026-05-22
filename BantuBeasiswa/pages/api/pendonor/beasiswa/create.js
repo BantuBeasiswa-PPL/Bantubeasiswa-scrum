@@ -60,9 +60,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Minimal satu provinsi target harus dipilih' });
     }
 
-    // Validasi deadline tidak di masa lalu
-    if (new Date(deadline) <= new Date()) {
-      return res.status(400).json({ message: 'Deadline harus di masa depan' });
+    // Validasi deadline tidak di masa lalu (with 1 hour tolerance untuk timezone differences)
+    const deadlineTime = new Date(deadline).getTime();
+    const nowTime = new Date().getTime();
+    const ONE_HOUR = 60 * 60 * 1000;  // 1 hour in milliseconds
+    if (deadlineTime <= nowTime + ONE_HOUR) {  // Allow 1 hour tolerance
+      return res.status(400).json({ message: 'Deadline harus di masa depan minimal 1 jam' });
     }
 
     // Resolve: provinsiIds → wilayahIds (semua kab/kota dalam provinsi yang dipilih)

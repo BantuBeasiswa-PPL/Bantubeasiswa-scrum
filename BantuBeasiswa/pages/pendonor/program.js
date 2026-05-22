@@ -428,7 +428,11 @@ function BeasiswaFormModal({ isOpen, onClose, onSuccess, initialData = null }) {
                 placeholder="50"
                 min="1"
                 className="w-full px-3 py-2 border rounded-lg text-sm"
-                style={{ borderColor: '#e5e7eb' }}
+                style={{
+                  borderColor: '#e5e7eb',
+                  color: C.dark,
+                  backgroundColor: C.white
+                }}
                 required
               />
             </div>
