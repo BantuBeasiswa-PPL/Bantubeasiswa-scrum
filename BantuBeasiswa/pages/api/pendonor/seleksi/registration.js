@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     }
 
     // Validasi aksi
-    const validActions = ['reject', 'revision', 'verify'];
+    const validActions = ['reject', 'revision', 'verify', 'batch_verify'];
     if (!validActions.includes(action)) {
       return res.status(400).json({ message: 'action tidak valid' });
     }
@@ -58,8 +58,10 @@ export default async function handler(req, res) {
       .select(`
         pendaftaranId,
         status,
+        userId,
         beasiswa:beasiswaId (
           beasiswaId,
+          judul,
           pendonorId
         )
       `)
@@ -75,17 +77,34 @@ export default async function handler(req, res) {
       return res.status(403).json({ message: 'Anda tidak memiliki akses ke pendaftaran ini' });
     }
 
-    // 5. Tentukan status baru di database berdasarkan aksi
+    // 5. Jika aksi batch_verify, update semua dokumen terlebih dahulu
+    if (action === 'batch_verify') {
+      const { error: docUpdateError } = await supabase
+        .from('dokumen')
+        .update({
+          statusDokumen: 'TRUE',
+          rejectionReason: null,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('pendaftaranId', pendaftaranIdInt);
+
+      if (docUpdateError) {
+        console.error('[api/pendonor/seleksi/registration] batch doc update error:', docUpdateError);
+        return res.status(500).json({ message: 'Gagal memperbarui dokumen pendaftaran secara massal' });
+      }
+    }
+
+    // 6. Tentukan status baru di database berdasarkan aksi
     let newStatus;
     if (action === 'reject') {
       newStatus = 'DITOLAK';
     } else if (action === 'revision') {
       newStatus = 'REVIEW';
-    } else if (action === 'verify') {
-      newStatus = 'EXAM'; // Verifikasi dokumen sukses, lanjut ke tahap seleksi/ujian
+    } else if (action === 'verify' || action === 'batch_verify') {
+      newStatus = 'LULUS';
     }
 
-    // 6. Update status pendaftaran
+    // 7. Update status pendaftaran
     const { error: updateError } = await supabase
       .from('pendaftaran')
       .update({
@@ -97,6 +116,25 @@ export default async function handler(req, res) {
     if (updateError) {
       console.error('[api/pendonor/seleksi/registration] update error:', updateError);
       return res.status(500).json({ message: 'Gagal memperbarui status pendaftaran' });
+    }
+
+    // 8. Insert notifikasi ke mahasiswa jika status verify/reject/batch_verify
+    if (action === 'verify' || action === 'reject' || action === 'batch_verify') {
+      const beasiswaTitle = registration.beasiswa?.judul || 'Beasiswa';
+      const pesan = (action === 'reject')
+        ? `Mohon maaf, Anda dinyatakan tidak lulus seleksi ${beasiswaTitle}.`
+        : `Selamat! Anda dinyatakan lulus seleksi ${beasiswaTitle}. Silakan lakukan daftar ulang.`;
+
+      const { error: notifError } = await supabase
+        .from('notifikasi')
+        .insert({
+          userId: registration.userId,
+          pesan: pesan,
+        });
+
+      if (notifError) {
+        console.error('[api/pendonor/seleksi/registration] notif insert error:', notifError);
+      }
     }
 
     return res.status(200).json({
