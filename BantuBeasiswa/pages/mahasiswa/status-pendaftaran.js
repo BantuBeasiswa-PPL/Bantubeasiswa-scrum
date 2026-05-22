@@ -109,7 +109,13 @@ export default function StatusPendaftaran({ user }) {
 
         {/* ── ResultBanner (muncul hanya saat LULUS / DITOLAK) ── */}
         {!loading && isFinished && (
-          <ResultBanner status={status} judulBeasiswa={beasiswaInfo?.judul} />
+          <ResultBanner 
+            status={status} 
+            judulBeasiswa={beasiswaInfo?.judul} 
+            namaMahasiswa={user?.nama}
+            nominal={beasiswaInfo?.nominal}
+            namaOrganisasi={beasiswaInfo?.pendonor?.statusOrganisasi}
+          />
         )}
 
         {/* ── Header Section ── */}
@@ -138,7 +144,7 @@ export default function StatusPendaftaran({ user }) {
                   </span>
                   <span className="hidden md:inline-block w-1.5 h-1.5 bg-gray-300 rounded-full" />
                   <span className="text-gray-500">
-                    {beasiswaInfo?.pendonor?.nama_organisasi ?? ''}
+                    {beasiswaInfo?.pendonor?.statusOrganisasi ?? ''}
                   </span>
                   <span className="hidden md:inline-block w-1.5 h-1.5 bg-gray-300 rounded-full" />
                   <span>Daftar: {formatDate(createdAt)}</span>
@@ -260,7 +266,7 @@ export default function StatusPendaftaran({ user }) {
               </div>
             ) : (
               <div className="space-y-4 text-sm">
-                <InfoRow label="Pendonor"  value={beasiswaInfo?.pendonor?.nama_organisasi ?? '–'} />
+                <InfoRow label="Pendonor"  value={beasiswaInfo?.pendonor?.statusOrganisasi ?? '–'} />
                 <InfoRow label="Beasiswa"  value={beasiswaInfo?.judul ?? '–'} />
                 <InfoRow label="Terdaftar" value={formatDate(createdAt)} />
                 <InfoRow
