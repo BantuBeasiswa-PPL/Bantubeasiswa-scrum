@@ -41,7 +41,7 @@ const QUICK_LINKS = [
   },
   {
     id         : 'quick-tutorial',
-    href       : '/mahasiswa/tutorial',
+    href       : '/tutorial-administrasi',
     icon       : '📚',
     label      : 'Tutorial Administrasi',
     desc       : 'Panduan kelengkapan dokumen',
