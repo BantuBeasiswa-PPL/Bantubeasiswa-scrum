@@ -28,7 +28,7 @@ const menuItems = [
   },
   {
     label: 'Tutorial Administrasi',
-    href: '/mahasiswa/tutorial',
+    href: '/tutorial-administrasi',
     icon: '📚',
   },
   {

@@ -9,6 +9,7 @@ import {
   fetchAllProvinsi,
   fetchWilayahByProvinsi,
 } from '../../lib/beasiswaQuery';
+import BookmarkButton from '../../components/BookmarkButton';
 
 // ─── Color tokens (sama dengan file lain di project) ─────────────────────────
 const C = {
@@ -143,7 +144,7 @@ function SkeletonBeasiswaCard() {
 }
 
 // ─── Card Beasiswa ────────────────────────────────────────────────────────────
-function BeasiswaCard({ beasiswa }) {
+function BeasiswaCard({ beasiswa, userId }) {
   const [hovered, setHovered] = useState(false);
 
   const wilayahList = (beasiswa.beasiswa_wilayah ?? [])
@@ -174,14 +175,15 @@ function BeasiswaCard({ beasiswa }) {
       <div className="h-1.5 rounded-t-xl" style={{ backgroundColor: C.blue }} />
 
       <div className="p-5 flex flex-col flex-1">
-        {/* ── Header baris 1: judul + badge deadline ─── */}
+        {/* ── Header baris 1: judul + badge deadline + bookmark ─── */}
         <div className="flex items-start justify-between gap-3 mb-1">
           <h2 className="text-base font-bold leading-snug line-clamp-2"
             style={{ color: C.dark }}>
             {beasiswa.judul}
           </h2>
-          <div className="shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <DeadlineBadge deadline={beasiswa.deadline} />
+            <BookmarkButton beasiswaId={beasiswa.beasiswaId || beasiswa.id} userId={userId} />
           </div>
         </div>
 
@@ -520,7 +522,7 @@ export default function CariBeasiswaPage({ user, publicMode = false }) {
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonBeasiswaCard key={i} />)
             : beasiswaList.length === 0
               ? <EmptyState onReset={handleReset} />
-              : beasiswaList.map((b) => <BeasiswaCard key={b.beasiswaId} beasiswa={b} />)
+              : beasiswaList.map((b) => <BeasiswaCard key={b.beasiswaId || b.id} beasiswa={b} userId={user?.userId || user?.accountId} />)
           }
         </div>
 
