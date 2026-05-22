@@ -11,6 +11,7 @@
 -- ============================================================
 -- SECTION 1: CLEANUP (safe to re-run)
 -- ============================================================
+DROP TABLE IF EXISTS notifikasi          CASCADE;
 DROP TABLE IF EXISTS penyaluran_dana   CASCADE;
 DROP TABLE IF EXISTS tutorial          CASCADE;
 DROP TABLE IF EXISTS laporan_link_rusak CASCADE;
@@ -278,6 +279,17 @@ CREATE TABLE penyaluran_dana (
     "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ----------------------------------------------------------
+-- 3.15 notifikasi
+-- ----------------------------------------------------------
+CREATE TABLE notifikasi (
+    "notifikasiId" BIGSERIAL PRIMARY KEY,
+    "userId"       BIGINT    NOT NULL REFERENCES "user"("userId") ON DELETE CASCADE,
+    pesan          TEXT      NOT NULL,
+    "isRead"       BOOLEAN   NOT NULL DEFAULT false,
+    "createdAt"    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 
 -- ============================================================
 -- SECTION 4: INDEXES
@@ -318,6 +330,10 @@ CREATE INDEX idx_dokumen_status      ON dokumen("statusDokumen");
 -- rekening
 CREATE INDEX idx_rekening_user   ON rekening("userId");
 CREATE INDEX idx_rekening_status ON rekening(status);
+
+-- notifikasi
+CREATE INDEX idx_notifikasi_user    ON notifikasi("userId");
+CREATE INDEX idx_notifikasi_is_read ON notifikasi("isRead");
 
 -- favorit
 CREATE INDEX idx_favorit_user     ON favorit("userId");
