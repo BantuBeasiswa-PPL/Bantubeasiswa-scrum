@@ -3,6 +3,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
 
+const redirectMap = {
+  admin: '/admin/dashboard',
+  mahasiswa: '/mahasiswa/dashboard',
+  pendonor: '/pendonor/program',
+};
+
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
@@ -35,9 +42,12 @@ export default async function handler(req, res) {
     nama = data?.nama ?? 'Admin';
     userId = data?.adminId ?? null;
   } else if (user.role === 'pendonor') {
-    const { data } = await supabase.from('pendonor').select('statusOrganisasi, pendonorId').eq('accountId', user.accountId).single();
+    const { data } = await supabase.from('pendonor').select('statusOrganisasi, pendonorId, statusVerifikasi').eq('accountId', user.accountId).single();
     nama = data?.statusOrganisasi ?? 'Pendonor';
     userId = data?.pendonorId ?? null;
+    
+    // Store pendonor verification status for redirect logic
+    req.pendonorStatus = data?.statusVerifikasi;
   } else {
     const { data } = await supabase.from('user').select('nama, userId').eq('accountId', user.accountId).single();
     nama = data?.nama ?? '';
@@ -79,15 +89,20 @@ export default async function handler(req, res) {
     sameSite: 'lax',
   }));
 
-  // 6. Map redirect berdasarkan role
-  const redirectMap = {
-    mahasiswa: '/mahasiswa/dashboard',
-    pendonor : '/pendonor/dashboard',
-    admin    : '/admin/dashboard',
-  };
+  // 6. Handle pendonor status-based redirect
+  let finalRedirect = redirectMap[role] || '/';
+  
+  if (role === 'pendonor') {
+    if (req.pendonorStatus === 'pending') {
+      finalRedirect = '/pendonor/tunggu-verifikasi';
+    } else if (req.pendonorStatus === 'rejected') {
+      return res.status(401).json({ message: 'Akun Anda ditolak. Hubungi admin untuk informasi lebih lanjut.' });
+    }
+    // If 'verified', use default redirectMap
+  }
 
   return res.status(200).json({ 
     message : 'Login berhasil',
-    redirect: redirectMap[role] || '/'
+    redirect: finalRedirect
   });
 }

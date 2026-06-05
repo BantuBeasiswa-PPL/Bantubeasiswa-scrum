@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
-import { withAuth } from '../../lib/auth';
+import { withPendonorAuth } from '../../lib/auth';
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -432,5 +432,5 @@ export default function PendonorDashboardPage({ user }) {
 
 // ─── SSR Guard ────────────────────────────────────────────────────────────────
 export async function getServerSideProps(context) {
-  return withAuth(context, 'pendonor');
+  return withPendonorAuth(context);
 }

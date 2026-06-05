@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { parse } from 'cookie';
+import { supabase } from './db';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -39,6 +40,54 @@ export function withAuth(context, allowedRoles) {
     return {
       redirect: {
         destination: '/login',
+        permanent  : false,
+      },
+    };
+  }
+
+  return {
+    props: {
+      user: {
+        accountId: decoded.accountId,
+        userId   : decoded.userId   ?? null,
+        email    : decoded.email,
+        role     : decoded.role,
+        nama     : decoded.nama     ?? '',
+      },
+    },
+  };
+}
+
+/**
+ * Helper getServerSideProps: proteksi halaman pendonor berdasarkan verification status.
+ * Redirect ke /pendonor/tunggu-verifikasi jika belum diverifikasi.
+ *
+ * @param {object} context   - Next.js SSR context
+ * @returns {{ props: { user } } | { redirect }}
+ */
+export async function withPendonorAuth(context) {
+  const decoded = verifyToken(context.req);
+
+  if (!decoded || decoded.role !== 'pendonor') {
+    return {
+      redirect: {
+        destination: '/pendonor/login',
+        permanent  : false,
+      },
+    };
+  }
+
+  // Check verification status dari database
+  const { data: pendonorData, error } = await supabase
+    .from('pendonor')
+    .select('statusVerifikasi')
+    .eq('accountId', decoded.accountId)
+    .single();
+
+  if (error || !pendonorData || pendonorData.statusVerifikasi !== 'verified') {
+    return {
+      redirect: {
+        destination: '/pendonor/tunggu-verifikasi',
         permanent  : false,
       },
     };

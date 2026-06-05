@@ -12,6 +12,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Semua field harus diisi (termasuk nama organisasi, email, kontak, alamat, dan password).' });
   }
 
+  if (password.length < 8) {
+    return res.status(400).json({ message: 'Password harus minimal 8 karakter.' });
+  }
+
   const { data: existingAccount, error: checkError } = await supabase
     .from('account')
     .select('accountId')
@@ -55,6 +59,7 @@ export default async function handler(req, res) {
           statusOrganisasi: namaOrganisasi,
           kontak: kontak,
           alamat: alamat,
+          statusVerifikasi: 'pending',
         }
       ]);
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
+import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 
 const COLORS = {
   primaryBlue : '#0056b3',
@@ -28,53 +28,34 @@ function EyeOffIcon() {
   );
 }
 
-export default function RegisterPendonorPage() {
+export default function PendonorLoginPage() {
   const router = useRouter();
-
-  const [namaOrganisasi, setNamaOrganisasi] = useState('');
   const [email, setEmail] = useState('');
-  const [kontak, setKontak] = useState('');
-  const [alamat, setAlamat] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleRegister(e) {
+  async function handleLogin(e) {
     e.preventDefault();
     setError('');
-
-    if (password.length < 8) {
-      setError('Password harus minimal 8 karakter.');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Password dan konfirmasi password tidak cocok.');
-      return;
-    }
-
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/register-pendonor', {
-        method: 'POST',
+      const res = await fetch('/api/auth/loginAPI', {
+        method : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ namaOrganisasi, email, kontak, alamat, password }),
+        body   : JSON.stringify({ email, password, role: 'pendonor' }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || 'Pendaftaran gagal. Silakan coba lagi.');
+        setError(data.message || 'Login gagal. Periksa kembali email dan password Anda.');
         return;
       }
 
-      router.push('/login?registered=true');
+      router.push(data.redirect || '/pendonor/program');
     } catch {
       setError('Terjadi kesalahan jaringan. Silakan coba lagi.');
     } finally {
@@ -85,10 +66,12 @@ export default function RegisterPendonorPage() {
   return (
     <>
       <Head>
-        <title>Daftar Pendonor · BantuBeasiswa</title>
+        <title>Masuk Pendonor · BantuBeasiswa</title>
       </Head>
+
       <div className="min-h-screen flex items-center justify-center p-6 sm:p-10" style={{ backgroundColor: COLORS.lightBG }}>
         <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          
           <div className="flex items-center gap-2 mb-8 justify-center">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-base shrink-0" style={{ backgroundColor: COLORS.primaryBlue, color: COLORS.white }}>
               BB
@@ -99,31 +82,16 @@ export default function RegisterPendonorPage() {
           </div>
 
           <h2 className="font-extrabold text-2xl mb-1 text-center" style={{ color: COLORS.darkText }}>
-            Daftar Pendonor
+            Masuk Pendonor
           </h2>
           <p className="text-sm mb-6 text-center" style={{ color: '#6b7280' }}>
-            Buat akun organisasi untuk mulai membuat program beasiswa.
+            Masuk dengan akun organisasi pendonor Anda.
           </p>
 
-          <form onSubmit={handleRegister} noValidate>
-            <div className="mb-4">
-              <label htmlFor="namaOrganisasi" className="block text-sm font-medium mb-1.5" style={{ color: COLORS.darkText }}>
-                Nama Organisasi
-              </label>
-              <input
-                id="namaOrganisasi" type="text" required
-                value={namaOrganisasi} onChange={(e) => setNamaOrganisasi(e.target.value)}
-                placeholder="Misal: Yayasan Pendidikan Bersama"
-                className="w-full px-4 py-2.5 text-sm rounded-lg border border-gray-200 outline-none transition-all"
-                style={{ color: COLORS.darkText }}
-                onFocus={(e) => { e.target.style.borderColor = COLORS.primaryBlue; e.target.style.boxShadow = '0 0 0 3px rgba(0,86,179,0.1)'; }}
-                onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-              />
-            </div>
-
+          <form onSubmit={handleLogin} noValidate>
             <div className="mb-4">
               <label htmlFor="email" className="block text-sm font-medium mb-1.5" style={{ color: COLORS.darkText }}>
-                Email
+                Email Organisasi
               </label>
               <input
                 id="email" type="email" required
@@ -136,37 +104,7 @@ export default function RegisterPendonorPage() {
               />
             </div>
 
-            <div className="mb-4">
-              <label htmlFor="kontak" className="block text-sm font-medium mb-1.5" style={{ color: COLORS.darkText }}>
-                Kontak
-              </label>
-              <input
-                id="kontak" type="text" required
-                value={kontak} onChange={(e) => setKontak(e.target.value)}
-                placeholder="Nomor telepon atau email kontak"
-                className="w-full px-4 py-2.5 text-sm rounded-lg border border-gray-200 outline-none transition-all"
-                style={{ color: COLORS.darkText }}
-                onFocus={(e) => { e.target.style.borderColor = COLORS.primaryBlue; e.target.style.boxShadow = '0 0 0 3px rgba(0,86,179,0.1)'; }}
-                onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-              />
-            </div>
-
-            <div className="mb-4">
-              <label htmlFor="alamat" className="block text-sm font-medium mb-1.5" style={{ color: COLORS.darkText }}>
-                Alamat
-              </label>
-              <input
-                id="alamat" type="text" required
-                value={alamat} onChange={(e) => setAlamat(e.target.value)}
-                placeholder="Alamat organisasi"
-                className="w-full px-4 py-2.5 text-sm rounded-lg border border-gray-200 outline-none transition-all"
-                style={{ color: COLORS.darkText }}
-                onFocus={(e) => { e.target.style.borderColor = COLORS.primaryBlue; e.target.style.boxShadow = '0 0 0 3px rgba(0,86,179,0.1)'; }}
-                onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-              />
-            </div>
-
-            <div className="mb-4">
+            <div className="mb-6">
               <label htmlFor="password" className="block text-sm font-medium mb-1.5" style={{ color: COLORS.darkText }}>
                 Password
               </label>
@@ -174,7 +112,7 @@ export default function RegisterPendonorPage() {
                 <input
                   id="password" type={showPassword ? 'text' : 'password'} required
                   value={password} onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimal 8 karakter" minLength={8}
+                  placeholder="••••••••"
                   className="w-full px-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-200 outline-none transition-all"
                   style={{ color: COLORS.darkText }}
                   onFocus={(e) => { e.target.style.borderColor = COLORS.primaryBlue; e.target.style.boxShadow = '0 0 0 3px rgba(0,86,179,0.1)'; }}
@@ -186,30 +124,6 @@ export default function RegisterPendonorPage() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
                 >
                   {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1.5" style={{ color: COLORS.darkText }}>
-                Konfirmasi Password
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required
-                  value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Ulangi password"
-                  className="w-full px-4 pr-10 py-2.5 text-sm rounded-lg border border-gray-200 outline-none transition-all"
-                  style={{ color: COLORS.darkText }}
-                  onFocus={(e) => { e.target.style.borderColor = COLORS.primaryBlue; e.target.style.boxShadow = '0 0 0 3px rgba(0,86,179,0.1)'; }}
-                  onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
-                >
-                  {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
             </div>
@@ -231,7 +145,7 @@ export default function RegisterPendonorPage() {
               onMouseEnter={(e) => { if (!loading) e.currentTarget.style.backgroundColor = '#004494'; }}
               onMouseLeave={(e) => { if (!loading) e.currentTarget.style.backgroundColor = COLORS.primaryBlue; }}
             >
-              {loading ? 'Memproses...' : 'Daftar Sekarang'}
+              {loading ? 'Memproses...' : 'Masuk'}
             </button>
 
             <div className="mt-4 text-center">
@@ -245,9 +159,9 @@ export default function RegisterPendonorPage() {
           </form>
 
           <p className="text-center text-sm mt-6 text-gray-500">
-            Sudah punya akun?{' '}
-            <Link href="/login" className="font-semibold text-blue-600 hover:text-yellow-500 transition-colors">
-              Masuk di sini
+            Belum punya akun pendonor?{' '}
+            <Link href="/pendonor/register" className="font-semibold text-blue-600 hover:text-yellow-500 transition-colors">
+              Daftar di sini
             </Link>
           </p>
         </div>
