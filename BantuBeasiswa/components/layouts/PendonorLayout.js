@@ -2,6 +2,10 @@ import BaseLayout from './BaseLayout';
 
 const menuItems = [
   {
+    label: 'Dashboard Pendonor',
+    href: '/pendonor/dashboard',
+  },
+  {
     label: 'Profil Pendonor',
     href: '/pendonor/profil',
   },
