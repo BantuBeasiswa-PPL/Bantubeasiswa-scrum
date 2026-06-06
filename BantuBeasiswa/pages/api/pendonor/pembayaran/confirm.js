@@ -54,6 +54,9 @@ export default async function handler(req, res) {
         beasiswa:beasiswaId (
           beasiswaId,
           judul
+        ),
+        pendaftaran:pendaftaranId (
+          userId
         )
       `)
       .eq('penyaluranId', penyaluranIdInt)
@@ -96,33 +99,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Penyaluran sudah dikonfirmasi sebelumnya' });
     }
 
-    // 7. Cari semua penerima beasiswa (status = 'LULUS') untuk beasiswaId terkait
-    const beasiswaId = penyaluran.beasiswaId;
+    // 7. Kirim notifikasi ke penerima beasiswa terkait pembayaran langsung ini
     const beasiswaTitle = penyaluran.beasiswa?.judul || 'Beasiswa';
+    const recipientUserId = penyaluran.pendaftaran?.userId;
 
-    const { data: recipients, error: recipientsError } = await supabase
-      .from('pendaftaran')
-      .select('userId')
-      .eq('beasiswaId', beasiswaId)
-      .eq('status', 'LULUS');
-
-    if (recipientsError) {
-      console.error('[api/pendonor/pembayaran/confirm] Fetch recipients error:', recipientsError);
-    }
-
-    // 8. Insert notifikasi secara massal ke semua penerima
-    if (recipients && recipients.length > 0) {
-      const notifPayloads = recipients.map((r) => ({
-        userId: r.userId,
-        pesan: `Dana untuk program beasiswa "${beasiswaTitle}" telah dikonfirmasi dan disalurkan oleh pendonor. Silakan periksa rekening Anda secara berkala.`,
-      }));
-
+    if (recipientUserId) {
       const { error: notifInsertError } = await supabase
         .from('notifikasi')
-        .insert(notifPayloads);
+        .insert({
+          userId: recipientUserId,
+          pesan: `Dana untuk program beasiswa "${beasiswaTitle}" telah dikonfirmasi dan ditransfer langsung ke rekening Anda oleh pendonor. Silakan periksa rekening Anda secara berkala.`,
+        });
 
       if (notifInsertError) {
-        console.error('[api/pendonor/pembayaran/confirm] Batch notification insert error:', notifInsertError);
+        console.error('[api/pendonor/pembayaran/confirm] Notification insert error:', notifInsertError);
       }
     }
 

@@ -4,37 +4,26 @@ const menuItems = [
   {
     label: 'Dashboard',
     href: '/mahasiswa/dashboard',
-    icon: '🏠',
   },
   {
     label: 'Profil Saya',
     href: '/mahasiswa/profil/profil',
-    icon: '👤',
   },
   {
     label: 'Cari Beasiswa',
     href: '/mahasiswa/cari',
-    icon: '🔍',
   },
   {
     label: 'Status Pendaftaran',
     href: '/mahasiswa/pendaftaran',
-    icon: '📋',
-  },
-  {
-    label: 'Daftar Ulang Rekening',
-    href: '/mahasiswa/daftar-ulang-rekening',
-    icon: '💳',
   },
   {
     label: 'Tutorial Administrasi',
     href: '/tutorial-administrasi',
-    icon: '📚',
   },
   {
     label: 'Beasiswa Favorit',
     href: '/mahasiswa/favorit',
-    icon: '⭐',
   },
 ];
 
