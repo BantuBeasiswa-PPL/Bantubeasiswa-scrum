@@ -74,7 +74,10 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
   // Filters logic
   const filteredList = penyaluranList.filter((item) => {
     const programTitle = item.beasiswa?.judul?.toLowerCase() || '';
-    const matchesSearch = programTitle.includes(searchQuery.toLowerCase()) || (item.idTransaksi || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const studentName = item.pendaftaran?.user?.nama?.toLowerCase() || '';
+    const matchesSearch = programTitle.includes(searchQuery.toLowerCase()) || 
+                          studentName.includes(searchQuery.toLowerCase()) ||
+                          (item.idTransaksi || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     if (selectedFilter === 'Semua') return matchesSearch;
     if (selectedFilter === 'Pending') return item.status === 'pending' && matchesSearch;
@@ -89,7 +92,7 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
         <title>Pembayaran Beasiswa · BantuBeasiswa</title>
         <meta
           name="description"
-          content="Dashboard konfirmasi transfer dan penyaluran dana beasiswa."
+          content="Dashboard konfirmasi transfer dan penyaluran dana beasiswa langsung ke rekening mahasiswa."
         />
       </Head>
 
@@ -103,7 +106,7 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
             </h1>
           </div>
           <p className="text-sm ml-4" style={{ color: C.gray }}>
-            Kelola rincian transfer dana dan konfirmasi bukti pembayaran penyaluran beasiswa Anda.
+            Kelola transfer dana beasiswa langsung ke rekening masing-masing mahasiswa penerima.
           </p>
         </div>
 
@@ -147,10 +150,10 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
             style={{ borderColor: '#e5e7eb', borderTop: `4px solid ${C.blue}` }}
           >
             <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-              Penyaluran Pending
+              Transfer Pending
             </p>
             <p className="text-2xl font-extrabold text-blue-700">{totalPendingCount}</p>
-            <p className="text-xs text-gray-400 mt-2">Program beasiswa menunggu konfirmasi</p>
+            <p className="text-xs text-gray-400 mt-2">Penerima menunggu transfer langsung</p>
           </div>
 
           {/* Card 4: Disbursed Count */}
@@ -159,7 +162,7 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
             style={{ borderColor: '#e5e7eb', borderTop: `4px solid ${C.indigo}` }}
           >
             <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
-              Tersalurkan Penuh
+              Transfer Selesai
             </p>
             <p className="text-2xl font-extrabold text-indigo-700">{totalDisbursedCount}</p>
             <p className="text-xs text-gray-400 mt-2">Selesai terdistribusikan ke mahasiswa</p>
@@ -191,7 +194,7 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
             <div className="relative w-full md:w-80">
               <input
                 type="text"
-                placeholder="Cari program beasiswa / ID transaksi..."
+                placeholder="Cari penerima / program / ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-100"
@@ -207,16 +210,16 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
               <thead>
                 <tr style={{ backgroundColor: '#f9fafb' }}>
                   <th className="px-6 py-4 font-semibold text-xs uppercase text-gray-500 tracking-wider">
-                    Nama Program Beasiswa
+                    Penerima & Program Beasiswa
                   </th>
                   <th className="px-6 py-4 font-semibold text-xs uppercase text-gray-500 tracking-wider">
-                    Total Dana
+                    Nominal Transfer
                   </th>
                   <th className="px-6 py-4 font-semibold text-xs uppercase text-gray-500 tracking-wider">
-                    Penerima
+                    Rekening Tujuan
                   </th>
                   <th className="px-6 py-4 font-semibold text-xs uppercase text-gray-500 tracking-wider">
-                    Tanggal Penyaluran
+                    Tanggal Transfer
                   </th>
                   <th className="px-6 py-4 font-semibold text-xs uppercase text-gray-500 tracking-wider">
                     Status
@@ -242,22 +245,44 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
                       className="transition-colors hover:bg-slate-50"
                       style={{ backgroundColor: idx % 2 === 1 ? '#f9fafb' : C.white }}
                     >
-                      {/* Nama Program */}
+                      {/* Penerima & Program */}
                       <td className="px-6 py-4.5">
-                        <p className="font-bold text-gray-900 leading-snug">{item.beasiswa?.judul}</p>
+                        <p className="font-bold text-gray-900 leading-snug">
+                          {item.pendaftaran?.user?.nama || '—'}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {item.pendaftaran?.user?.email || '—'}
+                        </p>
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 mt-1.5 rounded bg-blue-50 text-blue-700 text-[10px] font-semibold border border-blue-100">
+                          🎓 {item.beasiswa?.judul}
+                        </div>
                         {item.idTransaksi && (
                           <p className="text-xs text-gray-400 mt-1">ID Transaksi: {item.idTransaksi}</p>
                         )}
                       </td>
 
-                      {/* Total Dana */}
+                      {/* Nominal */}
                       <td className="px-6 py-4.5 font-bold text-gray-900 tabular-nums">
                         Rp {item.jumlahDana?.toLocaleString('id-ID')}
                       </td>
 
-                      {/* Penerima */}
-                      <td className="px-6 py-4.5 font-semibold text-gray-600">
-                        {item.jumlahPenerima} Mahasiswa
+                      {/* Rekening Tujuan */}
+                      <td className="px-6 py-4.5">
+                        {(() => {
+                          const rek = item.pendaftaran?.user?.rekening?.[0];
+                          if (!rek) return <span className="text-gray-400 font-medium">—</span>;
+                          let bankName = '—';
+                          if (rek.namRekening) {
+                            const parts = rek.namRekening.split(' - ');
+                            bankName = parts[0] ? parts[0].trim() : '—';
+                          }
+                          return (
+                            <div>
+                              <p className="font-bold text-gray-800">{bankName}</p>
+                              <p className="text-xs text-gray-500 font-mono mt-0.5">{rek.nomorRekening}</p>
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Tanggal Penyaluran */}
@@ -321,7 +346,7 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
           {/* Footer Card */}
           <div className="px-6 py-4 border-t flex justify-end" style={{ borderColor: '#f3f4f6' }}>
             <p className="text-xs text-gray-400">
-              Menampilkan {filteredList.length} dari {penyaluranList.length} transaksi penyaluran dana.
+              Menampilkan {filteredList.length} dari {penyaluranList.length} transaksi transfer dana.
             </p>
           </div>
         </div>
@@ -373,7 +398,7 @@ export async function getServerSideProps(context) {
     };
   }
 
-  // Fetch penyaluran_dana + relation beasiswa
+  // Fetch penyaluran_dana + relations
   const { data: penyaluranList, error } = await supabaseClient
     .from('penyaluran_dana')
     .select(`
@@ -382,6 +407,18 @@ export async function getServerSideProps(context) {
         beasiswaId,
         judul,
         nominal
+      ),
+      pendaftaran (
+        pendaftaranId,
+        user (
+          userId,
+          nama,
+          email,
+          rekening (
+            namRekening,
+            nomorRekening
+          )
+        )
       )
     `)
     .eq('pendonorId', pendonorId)

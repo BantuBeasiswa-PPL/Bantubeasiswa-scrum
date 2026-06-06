@@ -19,7 +19,7 @@ const menuItems = [
   },
   {
     label: 'Dashboard Laporan',
-    href: '/pendonor/laporan',
+    href: '/pendonor/dashboard-laporan',
   },
 ];
 

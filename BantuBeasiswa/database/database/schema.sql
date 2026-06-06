@@ -270,6 +270,7 @@ CREATE TABLE penyaluran_dana (
     "penyaluranId"      BIGSERIAL PRIMARY KEY,
     "pendonorId"        BIGINT    NOT NULL REFERENCES pendonor("pendonorId") ON DELETE CASCADE,
     "beasiswaId"        BIGINT    NOT NULL REFERENCES beasiswa("beasiswaId") ON DELETE CASCADE,
+    "pendaftaranId"     BIGINT    REFERENCES pendaftaran("pendaftaranId") ON DELETE CASCADE,
     "jumlahDana"        INT       NOT NULL DEFAULT 0,
     "jumlahPenerima"    INT       NOT NULL DEFAULT 0,
     "tanggalPenyaluran" DATE      NOT NULL DEFAULT CURRENT_DATE,
@@ -349,6 +350,7 @@ CREATE INDEX idx_laporan_status   ON laporan_link_rusak(status);
 -- penyaluran_dana
 CREATE INDEX idx_penyaluran_pendonor ON penyaluran_dana("pendonorId");
 CREATE INDEX idx_penyaluran_beasiswa ON penyaluran_dana("beasiswaId");
+CREATE INDEX idx_penyaluran_pendaftaran ON penyaluran_dana("pendaftaranId");
 CREATE INDEX idx_penyaluran_status   ON penyaluran_dana(status);
 
 

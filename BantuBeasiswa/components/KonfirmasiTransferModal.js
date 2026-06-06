@@ -292,30 +292,61 @@ export default function KonfirmasiTransferModal({
                 backgroundColor: C.blueLight,
                 border: `1px solid ${C.blueBorder}`,
                 borderRadius: '0.75rem',
-                padding: '1rem',
+                padding: '1.25rem',
                 marginBottom: '1.5rem',
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.75rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.875rem',
               }}
             >
-              <div style={{ gridColumn: 'span 2' }}>
-                <p style={{ fontSize: '0.75rem', color: C.gray, textTransform: 'uppercase', fontWeight: 700 }}>
+              <div>
+                <p style={{ fontSize: '0.7rem', color: C.gray, textTransform: 'uppercase', fontWeight: 700, margin: 0, marginBottom: '0.125rem' }}>
                   Program Beasiswa
                 </p>
-                <p style={{ fontSize: '0.95rem', fontWeight: 700, color: C.blue }}>
+                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: C.blue, margin: 0 }}>
                   {penyaluran?.beasiswa?.judul}
                 </p>
               </div>
+              
               <div>
-                <p style={{ fontSize: '0.75rem', color: C.gray }}>Jumlah Penerima</p>
-                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: C.dark }}>
-                  {penyaluran?.jumlahPenerima} Mahasiswa
+                <p style={{ fontSize: '0.7rem', color: C.gray, textTransform: 'uppercase', fontWeight: 700, margin: 0, marginBottom: '0.125rem' }}>
+                  Penerima Beasiswa
+                </p>
+                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: C.dark, margin: 0 }}>
+                  {penyaluran?.pendaftaran?.user?.nama || '—'}
                 </p>
               </div>
+
               <div>
-                <p style={{ fontSize: '0.75rem', color: C.gray }}>Total Transfer</p>
-                <p style={{ fontSize: '0.9rem', fontWeight: 700, color: C.green }}>
+                <p style={{ fontSize: '0.7rem', color: C.gray, textTransform: 'uppercase', fontWeight: 700, margin: 0, marginBottom: '0.125rem' }}>
+                  Rekening Penerima
+                </p>
+                {(() => {
+                  const rek = penyaluran?.pendaftaran?.user?.rekening?.[0];
+                  if (!rek) return <p style={{ fontSize: '0.9rem', fontWeight: 700, color: C.red, margin: 0 }}>Belum mengisi rekening</p>;
+                  let bankName = '—';
+                  if (rek.namRekening) {
+                    const parts = rek.namRekening.split(' - ');
+                    bankName = parts[0] ? parts[0].trim() : '—';
+                  }
+                  return (
+                    <div style={{ background: '#ffffff', border: '1px solid #d1d5db', borderRadius: '0.375rem', padding: '0.5rem 0.75rem', marginTop: '0.25rem' }}>
+                      <p style={{ fontSize: '0.85rem', fontWeight: 700, color: C.dark, margin: 0 }}>
+                        {bankName}
+                      </p>
+                      <p style={{ fontSize: '0.95rem', fontWeight: 800, color: C.blue, fontFamily: 'monospace', margin: '0.125rem 0 0 0' }}>
+                        {rek.nomorRekening}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div>
+                <p style={{ fontSize: '0.7rem', color: C.gray, textTransform: 'uppercase', fontWeight: 700, margin: 0, marginBottom: '0.125rem' }}>
+                  Total Transfer
+                </p>
+                <p style={{ fontSize: '1.1rem', fontWeight: 800, color: C.green, margin: 0 }}>
                   Rp {penyaluran?.jumlahDana?.toLocaleString('id-ID')}
                 </p>
               </div>
