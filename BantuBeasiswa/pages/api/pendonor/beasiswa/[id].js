@@ -174,18 +174,19 @@ export default async function handler(req, res) {
       });
     }
 
-    // ─── PATCH METHOD (PUBLISH) ───────────────────────────────────────────
+    // ─── PATCH METHOD (SUBMIT FOR REVIEW) ─────────────────────────────────
     if (method === 'PATCH') {
       if (beasiswa.status !== 'draft') {
         return res.status(403).json({
-          message: 'Hanya beasiswa dengan status draft yang dapat dipublikasikan'
+          message: 'Hanya beasiswa dengan status draft yang dapat diajukan persetujuan'
         });
       }
 
       const { data: updated, error: updateError } = await supabase
         .from('beasiswa')
         .update({
-          status: 'aktif',
+          status: 'pending',
+          alasanPenolakan: null,
           updatedAt: new Date().toISOString()
         })
         .eq('beasiswaId', parseInt(id))
@@ -194,13 +195,13 @@ export default async function handler(req, res) {
 
       if (updateError) {
         console.error('[pendonor/beasiswa/[id]] PATCH error:', updateError);
-        return res.status(500).json({ message: 'Gagal mempublikasikan beasiswa' });
+        return res.status(500).json({ message: 'Gagal mengajukan persetujuan beasiswa' });
       }
 
       return res.status(200).json({
         beasiswaId: updated.beasiswaId,
         status: updated.status,
-        message: 'Program beasiswa berhasil dipublikasikan'
+        message: 'Program beasiswa berhasil diajukan untuk persetujuan admin'
       });
     }
   } catch (err) {

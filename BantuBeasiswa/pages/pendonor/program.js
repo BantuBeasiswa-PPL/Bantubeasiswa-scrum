@@ -19,6 +19,7 @@ const C = {
 // ─── Status Badge ────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
   draft   : { bg: '#f3f4f6', color: '#374151', label: 'Draft'     },
+  pending : { bg: '#fffbeb', color: '#b45309', label: 'Menunggu Persetujuan' },
   aktif   : { bg: '#d1fae5', color: '#065f46', label: 'Aktif'     },
   ditutup : { bg: '#fee2e2', color: '#b91c1c', label: 'Ditutup'    },
   selesai : { bg: '#e0e7ff', color: '#3730a3', label: 'Selesai'    },
@@ -68,7 +69,7 @@ function formatDatetimeLocal(iso) {
 
 
 // ─── Beasiswa Card ───────────────────────────────────────────────────────────
-function BeasiswaCard({ beasiswa, onEdit, onDelete }) {
+function BeasiswaCard({ beasiswa, onEdit, onDelete, onSubmitApproval }) {
   const [showActions, setShowActions] = useState(false);
 
   return (
@@ -89,7 +90,7 @@ function BeasiswaCard({ beasiswa, onEdit, onDelete }) {
         </div>
         <div className="flex items-center gap-2 ml-4">
           <StatusBadge status={beasiswa.status} />
-          {showActions && (
+          {showActions && beasiswa.status === 'draft' && (
             <div className="flex gap-1">
               <button
                 onClick={() => onEdit(beasiswa)}
@@ -116,6 +117,12 @@ function BeasiswaCard({ beasiswa, onEdit, onDelete }) {
         {beasiswa.deskripsi || 'Tidak ada deskripsi'}
       </p>
 
+      {beasiswa.alasanPenolakan && beasiswa.status === 'draft' && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+          <strong>⚠️ Ditolak Admin:</strong> {beasiswa.alasanPenolakan}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
         <div>
           <span style={{ color: C.gray }}>Nominal:</span>
@@ -131,20 +138,31 @@ function BeasiswaCard({ beasiswa, onEdit, onDelete }) {
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <div className="text-sm">
+      <div className="flex justify-between items-center gap-2">
+        <div className="text-sm mr-2">
           <span style={{ color: C.gray }}>Deadline:</span>
           <div className="font-semibold" style={{ color: C.dark }}>
             {formatTanggal(beasiswa.deadline)}
           </div>
         </div>
-        <Link
-          href={`/beasiswa/${beasiswa.beasiswaId}`}
-          className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-          style={{ backgroundColor: C.blue, color: C.white }}
-        >
-          Lihat Detail →
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {beasiswa.status === 'draft' && (
+            <button
+              onClick={() => onSubmitApproval(beasiswa)}
+              className="px-3.5 py-2 rounded-lg text-sm font-bold text-white transition-all hover:shadow-md active:scale-95 shrink-0"
+              style={{ backgroundColor: '#ff9800' }}
+            >
+              🚀 Ajukan
+            </button>
+          )}
+          <Link
+            href={`/beasiswa/${beasiswa.beasiswaId}`}
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors shrink-0"
+            style={{ backgroundColor: C.blue, color: C.white }}
+          >
+            Lihat Detail →
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -590,6 +608,25 @@ export default function KelolaProgramPage({ user }) {
     }
   };
 
+  const handleSubmitApproval = async (beasiswa) => {
+    if (!confirm(`Ajukan program beasiswa "${beasiswa.judul}" ke admin untuk disetujui?`)) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/pendonor/beasiswa/${beasiswa.beasiswaId}`, {
+        method: 'PATCH',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Gagal mengajukan persetujuan');
+      alert('Berhasil diajukan! Program sedang menunggu review admin.');
+      await fetchBeasiswa(); // Refresh list
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <Head>
@@ -659,6 +696,7 @@ export default function KelolaProgramPage({ user }) {
                 beasiswa={b}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onSubmitApproval={handleSubmitApproval}
               />
             ))}
           </div>
