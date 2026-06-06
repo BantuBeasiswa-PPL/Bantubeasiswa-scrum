@@ -65,6 +65,7 @@ export default async function handler(req, res) {
       .from('pendaftaran')
       .select(`
         pendaftaranId,
+        userId,
         status,
         createdAt,
         user:userId (
@@ -90,9 +91,37 @@ export default async function handler(req, res) {
       return res.status(500).json({ message: 'Gagal mengambil data pendaftar' });
     }
 
+    const userIds = [...new Set((pendaftaranList ?? []).map((item) => item.userId).filter(Boolean))];
+    let rekeningByUserId = {};
+
+    if (userIds.length > 0) {
+      const { data: rekeningList, error: rekeningError } = await supabase
+        .from('rekening')
+        .select('*')
+        .in('userId', userIds)
+        .order('rekeningId', { ascending: false });
+
+      if (rekeningError) {
+        console.error('[api/pendonor/seleksi/list] rekening fetch error:', rekeningError);
+      } else {
+        rekeningByUserId = (rekeningList ?? []).reduce((acc, rekening) => {
+          if (!acc[rekening.userId]) acc[rekening.userId] = rekening;
+          return acc;
+        }, {});
+      }
+    }
+
+    const data = (pendaftaranList ?? []).map((item) => ({
+      ...item,
+      user: {
+        ...(item.user ?? {}),
+        rekening: rekeningByUserId[item.userId] ? [rekeningByUserId[item.userId]] : [],
+      },
+    }));
+
     return res.status(200).json({
       message: 'Daftar pendaftar berhasil diambil',
-      data: pendaftaranList ?? [],
+      data,
     });
   } catch (error) {
     console.error('[api/pendonor/seleksi/list] Error:', error);

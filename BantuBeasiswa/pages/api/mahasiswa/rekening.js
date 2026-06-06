@@ -38,7 +38,7 @@ export default async function handler(req, res) {
   }
   if (!userId) return res.status(404).json({ message: 'Profil mahasiswa tidak ditemukan.' });
 
-  const { namaBank, namaPemilik, nomorRekening } = req.body || {};
+  const { namaBank, namaPemilik, nomorRekening, fotoBukuUrl } = req.body || {};
 
   if (!namaPemilik || namaPemilik.trim().length < 3) {
     return res.status(400).json({ message: 'Nama pemilik rekening minimal 3 karakter.' });
@@ -57,6 +57,12 @@ export default async function handler(req, res) {
   const payload = {
     namRekening,
     nomorRekening: nomorBersih,
+  };
+  const enhancedPayload = {
+    ...payload,
+    namaBank: namaBank?.trim() || null,
+    namaPemilik: namaPemilik.trim(),
+    ...(fotoBukuUrl ? { fotoBukuUrl } : {}),
   };
 
   // Cek existing rekening milik user ini
@@ -86,22 +92,39 @@ export default async function handler(req, res) {
 
   let result;
   if (existing?.rekeningId) {
-    // UPDATE rekening yang sudah ada
     const { data, error } = await supabase
       .from('rekening')
-      .update(payload)
+      .update(enhancedPayload)
       .eq('rekeningId', existing.rekeningId)
       .select('*')
       .single();
     result = { data, error };
   } else {
-    // INSERT rekening baru
     const { data, error } = await supabase
       .from('rekening')
-      .insert({ ...payload, userId })
+      .insert({ ...enhancedPayload, userId })
       .select('*')
       .single();
     result = { data, error };
+  }
+
+  if (result.error?.code === 'PGRST204') {
+    if (existing?.rekeningId) {
+      const { data, error } = await supabase
+        .from('rekening')
+        .update(payload)
+        .eq('rekeningId', existing.rekeningId)
+        .select('*')
+        .single();
+      result = { data, error };
+    } else {
+      const { data, error } = await supabase
+        .from('rekening')
+        .insert({ ...payload, userId })
+        .select('*')
+        .single();
+      result = { data, error };
+    }
   }
 
   if (result.error || !result.data) {
