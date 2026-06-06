@@ -42,8 +42,13 @@ export function useStatusPendaftaran(pendaftaranId) {
 
       const { data, error: fetchError } = await supabase
         .from('pendaftaran')
+<<<<<<< Updated upstream
         .select('status, createdAt, beasiswa(beasiswaId, judul, nominal, pendonor(statusOrganisasi))')
         .eq('pendaftaranId', pendaftaranId)
+=======
+        .select('status, created_at, beasiswa(judul, nominal, pendonor(nama_organisasi))')
+        .eq('id', pendaftaranId)
+>>>>>>> Stashed changes
         .single();
 
       if (!isMounted) return;
@@ -55,7 +60,7 @@ export function useStatusPendaftaran(pendaftaranId) {
       }
 
       setStatus(data.status);
-      setCreatedAt(data.createdAt);
+      setCreatedAt(data.created_at);
       setBeasiswaInfo(data.beasiswa ?? null);
       setLoading(false);
     }
@@ -63,7 +68,6 @@ export function useStatusPendaftaran(pendaftaranId) {
     fetchInitialData();
 
     // ─── 2. Subscribe real-time UPDATE ───────────────────────────────────────
-    // Nama channel unik per pendaftaranId agar tidak bentrok jika ada banyak tab
     const channel = supabase
       .channel(`status-pendaftaran-${pendaftaranId}`)
       .on(
@@ -72,7 +76,7 @@ export function useStatusPendaftaran(pendaftaranId) {
           event: 'UPDATE',
           schema: 'public',
           table: 'pendaftaran',
-          filter: `pendaftaranId=eq.${pendaftaranId}`,
+          filter: `id=eq.${pendaftaranId}`,
         },
         (payload) => {
           if (isMounted) {
