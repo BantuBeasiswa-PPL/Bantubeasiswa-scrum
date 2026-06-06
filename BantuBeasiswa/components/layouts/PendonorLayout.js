@@ -14,6 +14,10 @@ const menuItems = [
     href: '/pendonor/seleksi-pendaftar',
   },
   {
+    label: 'Pembayaran Beasiswa',
+    href: '/pendonor/pembayaran',
+  },
+  {
     label: 'Dashboard Laporan',
     href: '/pendonor/laporan',
   },
