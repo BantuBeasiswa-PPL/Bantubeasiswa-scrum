@@ -62,6 +62,7 @@ export default async function handler(req, res) {
         beasiswa:beasiswaId (
           beasiswaId,
           judul,
+          nominal,
           pendonorId
         )
       `)
@@ -116,6 +117,38 @@ export default async function handler(req, res) {
     if (updateError) {
       console.error('[api/pendonor/seleksi/registration] update error:', updateError);
       return res.status(500).json({ message: 'Gagal memperbarui status pendaftaran' });
+    }
+
+    // 7.5 Auto-insert into penyaluran_dana if status becomes LULUS
+    if (newStatus === 'LULUS') {
+      const { data: existingPenyaluran, error: checkPenyaluranError } = await supabase
+        .from('penyaluran_dana')
+        .select('penyaluranId')
+        .eq('pendaftaranId', pendaftaranIdInt)
+        .maybeSingle();
+
+      if (checkPenyaluranError) {
+        console.error('[api/pendonor/seleksi/registration] check existing penyaluran error:', checkPenyaluranError);
+      }
+
+      if (!existingPenyaluran) {
+        const nominal = registration.beasiswa?.nominal || 0;
+        const { error: insertPenyaluranError } = await supabase
+          .from('penyaluran_dana')
+          .insert({
+            pendonorId: pendonorId,
+            beasiswaId: registration.beasiswa.beasiswaId,
+            pendaftaranId: pendaftaranIdInt,
+            jumlahDana: nominal,
+            jumlahPenerima: 1,
+            status: 'pending',
+          });
+
+        if (insertPenyaluranError) {
+          console.error('[api/pendonor/seleksi/registration] insert penyaluran_dana error:', insertPenyaluranError);
+          return res.status(500).json({ message: 'Gagal membuat rekaman penyaluran dana beasiswa' });
+        }
+      }
     }
 
     // 8. Insert notifikasi ke mahasiswa jika status verify/reject/batch_verify

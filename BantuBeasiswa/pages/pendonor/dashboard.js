@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
@@ -13,55 +13,6 @@ const C = {
   white: '#ffffff',
 };
 
-// ─── Dummy Data (ganti dengan fetch API saat backend siap) ────────────────────
-const DUMMY_STATS = {
-  totalDana      : 700000000,
-  totalPendaftar : 84,
-  programAktif   : 3,
-  kuotaTersisa   : 67,
-};
-
-const DUMMY_PROGRAMS = [
-  {
-    id          : 1,
-    nama        : 'Beasiswa Prestasi Nusantara 2026',
-    tahap       : 'REVIEW',
-    pendaftar   : 42,
-    kuotaIsi    : 25,
-    kuotaTotal  : 50,
-  },
-  {
-    id          : 2,
-    nama        : 'Beasiswa Afirmasi Papua 2026',
-    tahap       : 'EXAM',
-    pendaftar   : 30,
-    kuotaIsi    : 10,
-    kuotaTotal  : 20,
-  },
-  {
-    id          : 3,
-    nama        : 'Beasiswa Wirausaha Muda 2026',
-    tahap       : 'TERDAFTAR',
-    pendaftar   : 12,
-    kuotaIsi    : 0,
-    kuotaTotal  : 30,
-  },
-  {
-    id          : 4,
-    nama        : 'Beasiswa Inovasi Digital 2026',
-    tahap       : 'LULUS',
-    pendaftar   : 20,
-    kuotaIsi    : 20,
-    kuotaTotal  : 20,
-  },
-];
-
-const DUMMY_ACTIONS = [
-  { id: 1, type: 'warning', icon: '📄', text: '14 pendaftar menunggu verifikasi berkas di Beasiswa Prestasi Nusantara.' },
-  { id: 2, type: 'info',    icon: '🔍', text: '8 pendaftar sedang dalam tahap EXAM — jadwal ujian belum dikonfirmasi.' },
-  { id: 3, type: 'success', icon: '✅', text: 'Laporan penyaluran Afirmasi Papua sudah tersedia untuk diunduh.' },
-  { id: 4, type: 'warning', icon: '⏰', text: 'Deadline Beasiswa Wirausaha Muda: 1 September 2026 (138 hari lagi).' },
-];
 
 // ─── Badge Tahap Seleksi ──────────────────────────────────────────────────────
 const TAHAP_STYLE = {
@@ -205,18 +156,56 @@ function KuotaBar({ isi, total }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function PendonorDashboardPage({ user }) {
-  // Dummy state — ganti dengan useEffect + fetch saat API siap
-  const [stats]    = useState(DUMMY_STATS);
-  const [programs] = useState(DUMMY_PROGRAMS);
-  const [actions]  = useState(DUMMY_ACTIONS);
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [stats,    setStats   ] = useState({ totalDana: 0, totalPendaftar: 0, programAktif: 0, kuotaTersisa: 0 });
+  const [programs, setPrograms] = useState([]);
+  const [actions,  setActions ] = useState([]);
+  const [loading,  setLoading ] = useState(true);
 
-  // Data pendonor (idealnya di-fetch berdasarkan user.accountId)
-  const pendonorInfo = {
-    nama      : 'Yayasan Pendidikan Nusantara',
-    verified  : true,
-    kontak    : '021-55512345',
-    alamat    : 'Jakarta Pusat',
-  };
+  // Data pendonor dari API (user.nama dari JWT sudah berisi statusOrganisasi)
+  const [pendonorInfo, setPendonorInfo] = useState({
+    nama    : user?.nama || 'Pendonor',
+    verified: Boolean(user?.nama),
+    kontak  : '',
+    alamat  : '',
+  });
+
+  useEffect(() => {
+    async function fetchAll() {
+      try {
+        setLoading(true);
+
+        // Fetch profil + dashboard sekaligus
+        const [profilRes, dashRes] = await Promise.all([
+          fetch('/api/pendonor/profil'),
+          fetch('/api/pendonor/dashboard'),
+        ]);
+
+        if (profilRes.ok) {
+          const profil = await profilRes.json();
+          setPendonorInfo({
+            nama    : profil.statusOrganisasi || user?.nama || 'Pendonor',
+            verified: Boolean(profil.statusOrganisasi),
+            kontak  : profil.kontak || '',
+            alamat  : profil.alamat || '',
+          });
+        }
+
+        if (dashRes.ok) {
+          const dash = await dashRes.json();
+          setStats(dash.stats ?? {});
+          setPrograms(dash.programs ?? []);
+          setActions(dash.pendingActions ?? []);
+        }
+      } catch (err) {
+        console.error('[dashboard] fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAll();
+  }, []);
+
 
   return (
     <>
@@ -228,7 +217,7 @@ export default function PendonorDashboardPage({ user }) {
         />
       </Head>
 
-      <PendonorLayout user={{ nama: pendonorInfo.nama, role: 'pendonor' }}>
+      <PendonorLayout user={{ ...user, nama: pendonorInfo.nama, role: 'pendonor' }}>
 
         {/* ── Page Header ─────────────────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-7">
@@ -273,9 +262,18 @@ export default function PendonorDashboardPage({ user }) {
 
         {/* ── Summary Cards ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
-          {CARD_CONFIG.map((c) => (
-            <SummaryCard key={c.key} config={c} value={stats[c.key]} />
-          ))}
+          {loading
+            ? [1,2,3,4].map(i => (
+                <div key={i} className="rounded-xl p-5 border bg-white animate-pulse" style={{ borderColor: '#e5e7eb' }}>
+                  <div className="h-3 w-24 bg-gray-200 rounded mb-4" />
+                  <div className="h-8 w-32 bg-gray-200 rounded mb-2" />
+                  <div className="h-3 w-28 bg-gray-100 rounded" />
+                </div>
+              ))
+            : CARD_CONFIG.map((c) => (
+                <SummaryCard key={c.key} config={c} value={stats[c.key] ?? 0} />
+              ))
+          }
         </div>
 
         {/* ── Main Content: Tabel + Pending Actions ─────────────────────── */}
@@ -307,64 +305,38 @@ export default function PendonorDashboardPage({ user }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ backgroundColor: '#f9fafb' }}>
-                    <th
-                      className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wide"
-                      style={{ color: '#6b7280' }}
-                    >
-                      Nama Program
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide"
-                      style={{ color: '#6b7280' }}
-                    >
-                      Tahap
-                    </th>
-                    <th
-                      className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide"
-                      style={{ color: '#6b7280' }}
-                    >
-                      Pendaftar
-                    </th>
-                    <th
-                      className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide min-w-40"
-                      style={{ color: '#6b7280' }}
-                    >
-                      Kuota
-                    </th>
+                    <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Nama Program</th>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Tahap</th>
+                    <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Pendaftar</th>
+                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide min-w-40" style={{ color: '#6b7280' }}>Kuota</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {programs.map((prog, idx) => (
-                    <tr
-                      key={prog.id}
-                      className="border-t transition-colors hover:bg-blue-50"
-                      style={{
-                        borderColor    : '#f3f4f6',
-                        backgroundColor: idx % 2 === 1 ? '#f9fafb' : C.white,
-                      }}
-                    >
-                      {/* Nama */}
-                      <td className="px-5 py-3.5">
-                        <p className="font-medium leading-snug" style={{ color: C.dark }}>
-                          {prog.nama}
-                        </p>
-                      </td>
-                      {/* Tahap */}
-                      <td className="px-4 py-3.5">
-                        <TahapBadge tahap={prog.tahap} />
-                      </td>
-                      {/* Pendaftar */}
-                      <td className="px-4 py-3.5 text-right">
-                        <span className="font-semibold tabular-nums" style={{ color: C.blue }}>
-                          {prog.pendaftar.toLocaleString('id-ID')}
-                        </span>
-                      </td>
-                      {/* Kuota bar */}
-                      <td className="px-4 py-3.5">
-                        <KuotaBar isi={prog.kuotaIsi} total={prog.kuotaTotal} />
-                      </td>
-                    </tr>
-                  ))}
+                  {loading ? (
+                    [1,2,3].map(i => (
+                      <tr key={i} className="border-t animate-pulse" style={{ borderColor: '#f3f4f6' }}>
+                        <td className="px-5 py-4"><div className="h-4 w-48 bg-gray-200 rounded" /></td>
+                        <td className="px-4 py-4"><div className="h-5 w-16 bg-gray-100 rounded-full" /></td>
+                        <td className="px-4 py-4 text-right"><div className="h-4 w-8 bg-gray-200 rounded ml-auto" /></td>
+                        <td className="px-4 py-4"><div className="h-3 w-full bg-gray-100 rounded-full" /></td>
+                      </tr>
+                    ))
+                  ) : programs.length === 0 ? (
+                    <tr><td colSpan={4} className="px-5 py-10 text-center text-sm" style={{ color: '#9ca3af' }}>Belum ada program beasiswa. Klik + Tambah Program untuk mulai.</td></tr>
+                  ) : (
+                    programs.map((prog, idx) => (
+                      <tr
+                        key={prog.beasiswaId}
+                        className="border-t transition-colors hover:bg-blue-50"
+                        style={{ borderColor: '#f3f4f6', backgroundColor: idx % 2 === 1 ? '#f9fafb' : C.white }}
+                      >
+                        <td className="px-5 py-3.5"><p className="font-medium leading-snug" style={{ color: C.dark }}>{prog.judul}</p></td>
+                        <td className="px-4 py-3.5"><TahapBadge tahap={prog.tahap} /></td>
+                        <td className="px-4 py-3.5 text-right"><span className="font-semibold tabular-nums" style={{ color: C.blue }}>{(prog.pendaftar ?? 0).toLocaleString('id-ID')}</span></td>
+                        <td className="px-4 py-3.5"><KuotaBar isi={prog.kuotaIsi ?? 0} total={prog.kuotaTotal ?? 0} /></td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

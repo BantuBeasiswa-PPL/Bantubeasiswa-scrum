@@ -54,6 +54,7 @@ export default async function handler(req, res) {
         linkPendaftaran,
         deadline,
         status,
+        alasanPenolakan,
         createdAt
       `)
       .eq('pendonorId', pendonorId)
