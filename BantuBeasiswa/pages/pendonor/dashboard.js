@@ -37,25 +37,8 @@ function TahapBadge({ tahap }) {
   );
 }
 
-// ─── Action type style ────────────────────────────────────────────────────────
-const ACTION_STYLE = {
-  warning: { border: '#fbbf24', bg: '#fffbeb' },
-  info   : { border: '#60a5fa', bg: '#eff6ff' },
-  success: { border: '#34d399', bg: '#ecfdf5' },
-};
 
-function ActionItem({ item }) {
-  const s = ACTION_STYLE[item.type] || ACTION_STYLE.info;
-  return (
-    <li
-      className="flex items-start gap-3 p-3 rounded-lg border-l-4 text-sm"
-      style={{ backgroundColor: s.bg, borderColor: s.border }}
-    >
-      <span className="text-base shrink-0 mt-0.5">{item.icon}</span>
-      <p style={{ color: C.dark }}>{item.text}</p>
-    </li>
-  );
-}
+
 
 // ─── Summary Card ─────────────────────────────────────────────────────────────
 const CARD_CONFIG = [
@@ -156,10 +139,8 @@ function KuotaBar({ isi, total }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function PendonorDashboardPage({ user }) {
-  // ── State ─────────────────────────────────────────────────────────────────
   const [stats,    setStats   ] = useState({ totalDana: 0, totalPendaftar: 0, programAktif: 0, kuotaTersisa: 0 });
   const [programs, setPrograms] = useState([]);
-  const [actions,  setActions ] = useState([]);
   const [loading,  setLoading ] = useState(true);
 
   // Data pendonor dari API (user.nama dari JWT sudah berisi statusOrganisasi)
@@ -195,7 +176,6 @@ export default function PendonorDashboardPage({ user }) {
           const dash = await dashRes.json();
           setStats(dash.stats ?? {});
           setPrograms(dash.programs ?? []);
-          setActions(dash.pendingActions ?? []);
         }
       } catch (err) {
         console.error('[dashboard] fetch error:', err);
@@ -276,124 +256,82 @@ export default function PendonorDashboardPage({ user }) {
           }
         </div>
 
-        {/* ── Main Content: Tabel + Pending Actions ─────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-          {/* ── Tabel Program Aktif (2/3 lebar) ──────────────────────── */}
+        {/* ── Main Content: Tabel Program Beasiswa Aktif ────────────────── */}
+        <div
+          className="rounded-xl border overflow-hidden"
+          style={{ backgroundColor: C.white, borderColor: '#e5e7eb' }}
+        >
+          {/* Header tabel */}
           <div
-            className="lg:col-span-2 rounded-xl border overflow-hidden"
-            style={{ backgroundColor: C.white, borderColor: '#e5e7eb' }}
+            className="flex items-center justify-between px-5 py-4 border-b"
+            style={{ borderColor: '#f3f4f6' }}
           >
-            {/* Header tabel */}
-            <div
-              className="flex items-center justify-between px-5 py-4 border-b"
-              style={{ borderColor: '#f3f4f6' }}
+            <h2 className="font-bold text-base" style={{ color: C.dark }}>
+              Program Beasiswa Aktif
+            </h2>
+            <span
+              className="text-xs px-2.5 py-1 rounded-full font-semibold"
+              style={{ backgroundColor: '#e8f0fb', color: C.blue }}
             >
-              <h2 className="font-bold text-base" style={{ color: C.dark }}>
-                Program Beasiswa Aktif
-              </h2>
-              <span
-                className="text-xs px-2.5 py-1 rounded-full font-semibold"
-                style={{ backgroundColor: '#e8f0fb', color: C.blue }}
-              >
-                {programs.length} program
-              </span>
-            </div>
-
-            {/* Tabel */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ backgroundColor: '#f9fafb' }}>
-                    <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Nama Program</th>
-                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Tahap</th>
-                    <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Pendaftar</th>
-                    <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide min-w-40" style={{ color: '#6b7280' }}>Kuota</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    [1,2,3].map(i => (
-                      <tr key={i} className="border-t animate-pulse" style={{ borderColor: '#f3f4f6' }}>
-                        <td className="px-5 py-4"><div className="h-4 w-48 bg-gray-200 rounded" /></td>
-                        <td className="px-4 py-4"><div className="h-5 w-16 bg-gray-100 rounded-full" /></td>
-                        <td className="px-4 py-4 text-right"><div className="h-4 w-8 bg-gray-200 rounded ml-auto" /></td>
-                        <td className="px-4 py-4"><div className="h-3 w-full bg-gray-100 rounded-full" /></td>
-                      </tr>
-                    ))
-                  ) : programs.length === 0 ? (
-                    <tr><td colSpan={4} className="px-5 py-10 text-center text-sm" style={{ color: '#9ca3af' }}>Belum ada program beasiswa. Klik + Tambah Program untuk mulai.</td></tr>
-                  ) : (
-                    programs.map((prog, idx) => (
-                      <tr
-                        key={prog.beasiswaId}
-                        className="border-t transition-colors hover:bg-blue-50"
-                        style={{ borderColor: '#f3f4f6', backgroundColor: idx % 2 === 1 ? '#f9fafb' : C.white }}
-                      >
-                        <td className="px-5 py-3.5"><p className="font-medium leading-snug" style={{ color: C.dark }}>{prog.judul}</p></td>
-                        <td className="px-4 py-3.5"><TahapBadge tahap={prog.tahap} /></td>
-                        <td className="px-4 py-3.5 text-right"><span className="font-semibold tabular-nums" style={{ color: C.blue }}>{(prog.pendaftar ?? 0).toLocaleString('id-ID')}</span></td>
-                        <td className="px-4 py-3.5"><KuotaBar isi={prog.kuotaIsi ?? 0} total={prog.kuotaTotal ?? 0} /></td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer tabel */}
-            <div
-              className="px-5 py-3 flex justify-end border-t"
-              style={{ borderColor: '#f3f4f6' }}
-            >
-              <button
-                className="text-xs font-semibold transition-colors"
-                style={{ color: C.blue }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = C.gold)}
-                onMouseLeave={(e) => (e.currentTarget.style.color = C.blue)}
-              >
-                Lihat semua program →
-              </button>
-            </div>
+              {programs.length} program
+            </span>
           </div>
 
-          {/* ── Pending Actions (1/3 lebar) ──────────────────────────── */}
+          {/* Tabel */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: '#f9fafb' }}>
+                  <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Nama Program</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Tahap</th>
+                  <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Pendaftar</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide min-w-40" style={{ color: '#6b7280' }}>Kuota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  [1,2,3].map(i => (
+                    <tr key={i} className="border-t animate-pulse" style={{ borderColor: '#f3f4f6' }}>
+                      <td className="px-5 py-4"><div className="h-4 w-48 bg-gray-200 rounded" /></td>
+                      <td className="px-4 py-4"><div className="h-5 w-16 bg-gray-100 rounded-full" /></td>
+                      <td className="px-4 py-4 text-right"><div className="h-4 w-8 bg-gray-200 rounded ml-auto" /></td>
+                      <td className="px-4 py-4"><div className="h-3 w-full bg-gray-100 rounded-full" /></td>
+                    </tr>
+                  ))
+                ) : programs.length === 0 ? (
+                  <tr><td colSpan={4} className="px-5 py-10 text-center text-sm" style={{ color: '#9ca3af' }}>Belum ada program beasiswa. Klik + Tambah Program untuk mulai.</td></tr>
+                ) : (
+                  programs.map((prog, idx) => (
+                    <tr
+                      key={prog.beasiswaId}
+                      className="border-t transition-colors hover:bg-blue-50"
+                      style={{ borderColor: '#f3f4f6', backgroundColor: idx % 2 === 1 ? '#f9fafb' : C.white }}
+                    >
+                      <td className="px-5 py-3.5"><p className="font-medium leading-snug" style={{ color: C.dark }}>{prog.judul}</p></td>
+                      <td className="px-4 py-3.5"><TahapBadge tahap={prog.tahap} /></td>
+                      <td className="px-4 py-3.5 text-right"><span className="font-semibold tabular-nums" style={{ color: C.blue }}>{(prog.pendaftar ?? 0).toLocaleString('id-ID')}</span></td>
+                      <td className="px-4 py-3.5"><KuotaBar isi={prog.kuotaIsi ?? 0} total={prog.kuotaTotal ?? 0} /></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer tabel */}
           <div
-            className="rounded-xl border"
-            style={{ backgroundColor: C.white, borderColor: '#e5e7eb' }}
+            className="px-5 py-3 flex justify-end border-t"
+            style={{ borderColor: '#f3f4f6' }}
           >
-            {/* Header */}
-            <div
-              className="flex items-center justify-between px-5 py-4 border-b"
-              style={{ borderColor: '#f3f4f6' }}
+            <Link
+              href="/pendonor/program"
+              className="text-xs font-semibold transition-colors"
+              style={{ color: C.blue }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = C.gold)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = C.blue)}
             >
-              <h2 className="font-bold text-base" style={{ color: C.dark }}>
-                Pending Actions
-              </h2>
-              <span
-                className="w-5 h-5 flex items-center justify-center text-xs font-bold rounded-full text-white"
-                style={{ backgroundColor: '#ef4444' }}
-              >
-                {actions.length}
-              </span>
-            </div>
-
-            {/* Action list */}
-            <ul className="p-4 space-y-3">
-              {actions.map((a) => (
-                <ActionItem key={a.id} item={a} />
-              ))}
-            </ul>
-
-            {/* CTA */}
-            <div className="px-4 pb-4">
-              <button
-                className="w-full py-2.5 rounded-lg text-sm font-semibold border-2 transition-all hover:shadow-sm"
-                style={{ borderColor: C.blue, color: C.blue, backgroundColor: '#e8f0fb' }}
-              >
-                Lihat Semua Notifikasi
-              </button>
-            </div>
+              Lihat semua program →
+            </Link>
           </div>
         </div>
 
