@@ -275,6 +275,8 @@ CREATE TABLE penyaluran_dana (
     "tanggalPenyaluran" DATE      NOT NULL DEFAULT CURRENT_DATE,
     status              TEXT      NOT NULL DEFAULT 'pending',
     "laporanFile"       TEXT,     -- nullable: path/URL file laporan
+    "buktiTransferUrl"  TEXT,     -- nullable: path/URL bukti transfer
+    "idTransaksi"       VARCHAR(255), -- ID transaksi pembayaran
     "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT now(),
     "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
