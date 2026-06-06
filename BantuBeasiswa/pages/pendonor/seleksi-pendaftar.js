@@ -38,6 +38,21 @@ function resolveFileUrl(url) {
   return '/' + url;
 }
 
+function normalizeRekening(row) {
+  if (!row) return null;
+
+  const namRekening = row.namRekening ?? '';
+  const parts = namRekening.includes(' - ') ? namRekening.split(' - ') : [];
+
+  return {
+    namaBank: row.namaBank ?? row.nama_bank ?? '',
+    namaPemilik: row.namaPemilik ?? row.nama_pemilik ?? parts.slice(1).join(' - ') ?? '',
+    nomorRekening: row.nomorRekening ?? row.nomor_rekening ?? '',
+    fotoBukuUrl: row.fotoBukuUrl ?? row.foto_buku_url ?? '',
+    status: row.status ?? '-',
+  };
+}
+
 export default function SeleksiPendaftarPage({ user }) {
   const router = useRouter();
   
@@ -474,7 +489,7 @@ export default function SeleksiPendaftarPage({ user }) {
                                       <span>{doc.jenis === 'ktp' ? 'KTP' : doc.jenis === 'transkrip' ? 'Transkrip Nilai' : doc.jenis === 'motivation_letter' ? 'Motivation Letter' : doc.jenis}</span>
                                       {doc.statusDokumen === 'FALSE' && doc.rejectionReason && (
                                         <span className="text-xs text-red-500 font-normal mt-0.5">
-                                          Masalah: "{doc.rejectionReason}"
+                                          Masalah: &quot;{doc.rejectionReason}&quot;
                                         </span>
                                       )}
                                     </div>
@@ -552,6 +567,60 @@ export default function SeleksiPendaftarPage({ user }) {
                         </table>
                       </div>
                     </div>
+
+                    {selectedApplicant.status === 'LULUS' && (() => {
+                      const rekening = normalizeRekening(selectedApplicant.user?.rekening?.[0]);
+
+                      return (
+                        <div>
+                          <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                            Informasi Rekening Penerima
+                          </h3>
+                          <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-4">
+                            {!rekening ? (
+                              <p className="text-sm font-medium text-emerald-800">
+                                Mahasiswa belum mengirim data rekening daftar ulang.
+                              </p>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="text-xs font-bold uppercase text-emerald-700">Bank</p>
+                                  <p className="mt-1 font-semibold text-gray-900">{rekening.namaBank || '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold uppercase text-emerald-700">Nama Pemilik</p>
+                                  <p className="mt-1 font-semibold text-gray-900">{rekening.namaPemilik || '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold uppercase text-emerald-700">Nomor Rekening</p>
+                                  <p className="mt-1 font-mono font-semibold text-gray-900">{rekening.nomorRekening || '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold uppercase text-emerald-700">Status</p>
+                                  <p className="mt-1 font-semibold text-gray-900">{rekening.status || '-'}</p>
+                                </div>
+                                <div className="sm:col-span-2 flex items-center justify-between gap-3 rounded-md border border-emerald-200 bg-white px-3 py-2">
+                                  <span className="text-sm font-semibold text-gray-700">Buku Rekening</span>
+                                  {rekening.fotoBukuUrl ? (
+                                    <a
+                                      id={`view-rekening-photo-btn-${selectedApplicant.pendaftaranId}`}
+                                      href={resolveFileUrl(rekening.fotoBukuUrl)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center px-3 py-1.5 border border-emerald-300 rounded-lg text-xs font-semibold hover:bg-emerald-50 transition shadow-sm text-emerald-700 bg-white"
+                                    >
+                                      Lihat Foto
+                                    </a>
+                                  ) : (
+                                    <span className="text-xs font-medium text-gray-500">Belum ada foto</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Verification Desk Footer - Overall Actions */}

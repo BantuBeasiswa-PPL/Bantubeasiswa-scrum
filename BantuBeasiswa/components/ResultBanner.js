@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Link from 'next/link';
 
 export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nominal, namaOrganisasi }) {
   const [showFeedback, setShowFeedback] = useState(false);
@@ -20,6 +19,10 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
 
   const handleDownload = () => {
     alert('Mengunduh Surat Keputusan Kelulusan Beasiswa... (Unduhan Simulasi PDF)');
+  };
+
+  const handleNextStep = () => {
+    window.location.assign('/mahasiswa/daftar-ulang-rekening');
   };
 
   const isLulus = status === 'LULUS';
@@ -109,11 +112,14 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                     Unduh Surat Kelulusan
                   </button>
 
-                  <Link href="/mahasiswa/daftar-ulang">
-                    <span className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer">
+                  <button
+                    type="button"
+                    id="btn-langkah-selanjutnya-rekening"
+                    onClick={handleNextStep}
+                    className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
                       Langkah Selanjutnya →
-                    </span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>
@@ -162,7 +168,7 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                       Review & Masukan Tim Penyeleksi:
                     </h3>
                     <p className="text-sm text-red-50/95 leading-relaxed">
-                      "Dokumen pendaftaran Anda lengkap dan memenuhi kualifikasi. Namun, karena keterbatasan kuota alokasi program beasiswa ini, tim seleksi memprioritaskan kandidat dengan kesesuaian profil dan skor seleksi kumulatif yang paling tinggi. Kami menyarankan Anda untuk terus memantau beasiswa mendatang dan melamar kembali."
+                      &quot;Dokumen pendaftaran Anda lengkap dan memenuhi kualifikasi. Namun, karena keterbatasan kuota alokasi program beasiswa ini, tim seleksi memprioritaskan kandidat dengan kesesuaian profil dan skor seleksi kumulatif yang paling tinggi. Kami menyarankan Anda untuk terus memantau beasiswa mendatang dan melamar kembali.&quot;
                     </p>
                   </div>
                 )}

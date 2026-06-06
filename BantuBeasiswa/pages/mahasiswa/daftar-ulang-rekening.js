@@ -7,6 +7,7 @@ import { withAuth } from '@/lib/auth';
 import { supabase } from '@/lib/db';
 import {
   getLatestLulusPendaftaran,
+  getLatestRekening,
   getMahasiswaProfile,
 } from '@/lib/mahasiswaProfile';
 
@@ -131,6 +132,7 @@ export default function DaftarUlangRekeningPage({
   profile,
   lulusPendaftaran,
   batchYear,
+  existingRekening,
 }) {
   const fileInputRef = useRef(null);
   const router = useRouter();
@@ -140,9 +142,9 @@ export default function DaftarUlangRekeningPage({
   const [submitError, setSubmitError] = useState('');
   const [touched, setTouched] = useState({});
   const [values, setValues] = useState({
-    bankName: '',
-    accountHolderName: profile.nama || user.nama || '',
-    accountNumber: '',
+    bankName: existingRekening?.namaBank || '',
+    accountHolderName: existingRekening?.namaPemilik || profile.nama || user.nama || '',
+    accountNumber: existingRekening?.nomorRekening || '',
     proofFile: null,
     certified: false,
   });
@@ -152,8 +154,13 @@ export default function DaftarUlangRekeningPage({
   const nama = profile.nama || user.nama || 'Mahasiswa';
   const email = profile.email || user.email || '-';
   const scholarshipTitle = beasiswa?.judul || 'Beasiswa Pendidikan';
+  // Tipe beasiswa dari data riil DB — fallback bertingkat
   const scholarshipType =
-    beasiswa?.tipe || pendonor?.statusOrganisasi || pendonor?.nama_organisasi || scholarshipTitle;
+    beasiswa?.tipe ||
+    beasiswa?.jenis ||
+    pendonor?.statusOrganisasi ||
+    pendonor?.nama_organisasi ||
+    'Beasiswa';
 
   const errors = useMemo(() => validateValues(values), [values]);
   const isFormValid = Object.keys(errors).length === 0;
@@ -231,7 +238,7 @@ export default function DaftarUlangRekeningPage({
         return;
       }
       setSubmitted(true);
-      setTimeout(() => router.push('/mahasiswa/profil/profil'), 1500);
+      setTimeout(() => router.push('/mahasiswa/profil'), 1500);
     } catch {
       setSubmitError('Terjadi kesalahan jaringan. Coba lagi.');
     } finally {
@@ -438,7 +445,7 @@ export default function DaftarUlangRekeningPage({
 
             <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
               <Link
-                href="/mahasiswa/profil/profil"
+                href="/mahasiswa/profil"
                 className="text-sm font-semibold text-gray-500 transition hover:text-gray-800"
               >
                 Kembali ke Profil
@@ -512,6 +519,7 @@ export async function getServerSideProps(context) {
   const { user } = auth.props;
   const profile = await getMahasiswaProfile(user);
   const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
+  const existingRekening = await getLatestRekening(profile.userId);
   const batchYear = new Date(
     lulusPendaftaran?.createdAt ||
       lulusPendaftaran?.created_at ||
@@ -524,6 +532,7 @@ export async function getServerSideProps(context) {
       profile,
       lulusPendaftaran,
       batchYear,
+      existingRekening: existingRekening ?? null,
     },
   };
 }

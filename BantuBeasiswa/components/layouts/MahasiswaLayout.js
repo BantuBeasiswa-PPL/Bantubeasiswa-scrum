@@ -7,7 +7,7 @@ const menuItems = [
   },
   {
     label: 'Profil Saya',
-    href: '/mahasiswa/profil/profil',
+    href: '/mahasiswa/profil',
   },
   {
     label: 'Cari Beasiswa',
