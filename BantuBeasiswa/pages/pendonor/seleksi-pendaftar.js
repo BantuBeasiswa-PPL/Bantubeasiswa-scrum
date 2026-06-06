@@ -38,6 +38,105 @@ function resolveFileUrl(url) {
   return '/' + url;
 }
 
+function splitNamRekening(namRekening = '') {
+  if (!namRekening.includes(' - ')) {
+    return { namaBank: '', namaPemilik: namRekening };
+  }
+
+  const [namaBank, ...namaPemilikParts] = namRekening.split(' - ');
+  return {
+    namaBank,
+    namaPemilik: namaPemilikParts.join(' - '),
+  };
+}
+
+function RekeningPenerimaCard({ rekening }) {
+  const hasRekening = Boolean(rekening);
+  const fallback = splitNamRekening(rekening?.namRekening || '');
+  const namaBank = rekening?.namaBank || fallback.namaBank || '-';
+  const namaPemilik = rekening?.namaPemilik || fallback.namaPemilik || rekening?.namRekening || '-';
+  const fotoBukuUrl = rekening?.fotoBukuUrl || '';
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+      <div className="border-b border-gray-100 bg-gray-50 px-4 py-3 flex items-center justify-between gap-3">
+        <h4 className="text-sm font-bold text-gray-800">
+          Informasi Rekening Penerima
+        </h4>
+        <span
+          className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${
+            hasRekening
+              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              : 'bg-amber-50 text-amber-700 border border-amber-200'
+          }`}
+        >
+          {hasRekening ? 'Sudah daftar' : 'Belum daftar'}
+        </span>
+      </div>
+
+      {hasRekening ? (
+        <div className="grid gap-4 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              Bank
+            </p>
+            <p className="mt-1 break-words font-semibold text-gray-800">
+              {namaBank}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              Nama Pemilik
+            </p>
+            <p className="mt-1 break-words font-semibold text-gray-800">
+              {namaPemilik}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              Nomor Rekening
+            </p>
+            <p className="mt-1 break-all font-mono font-semibold text-gray-800">
+              {rekening.nomorRekening || '-'}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              Status
+            </p>
+            <p className="mt-1">
+              <span className="inline-flex rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                {rekening.status || '-'}
+              </span>
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              Buku Rekening
+            </p>
+            {fotoBukuUrl ? (
+              <a
+                href={resolveFileUrl(fotoBukuUrl)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 shadow-sm transition hover:bg-gray-50"
+              >
+                Lihat Foto
+              </a>
+            ) : (
+              <p className="mt-1 text-sm text-gray-400">Belum ada foto</p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 text-sm text-gray-500">
+          Mahasiswa belum mengirim data rekening daftar ulang.
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SeleksiPendaftarPage({ user }) {
   const router = useRouter();
   
@@ -474,7 +573,7 @@ export default function SeleksiPendaftarPage({ user }) {
                                       <span>{doc.jenis === 'ktp' ? 'KTP' : doc.jenis === 'transkrip' ? 'Transkrip Nilai' : doc.jenis === 'motivation_letter' ? 'Motivation Letter' : doc.jenis}</span>
                                       {doc.statusDokumen === 'FALSE' && doc.rejectionReason && (
                                         <span className="text-xs text-red-500 font-normal mt-0.5">
-                                          Masalah: "{doc.rejectionReason}"
+                                          Masalah: &quot;{doc.rejectionReason}&quot;
                                         </span>
                                       )}
                                     </div>
@@ -552,6 +651,10 @@ export default function SeleksiPendaftarPage({ user }) {
                         </table>
                       </div>
                     </div>
+
+                    {selectedApplicant.status === 'LULUS' && (
+                      <RekeningPenerimaCard rekening={selectedApplicant.rekening} />
+                    )}
                   </div>
 
                   {/* Verification Desk Footer - Overall Actions */}

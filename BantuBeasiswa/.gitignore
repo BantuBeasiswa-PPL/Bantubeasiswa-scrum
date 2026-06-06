@@ -41,6 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 # local agent / PBI notes
+docs/
 AGENT.md
 AGENTS.md
 agent.md

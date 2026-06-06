@@ -109,7 +109,7 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                     Unduh Surat Kelulusan
                   </button>
 
-                  <Link href="/mahasiswa/daftar-ulang">
+                  <Link href="/mahasiswa/daftar-ulang-rekening">
                     <span className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer">
                       Langkah Selanjutnya →
                     </span>
@@ -162,7 +162,7 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                       Review & Masukan Tim Penyeleksi:
                     </h3>
                     <p className="text-sm text-red-50/95 leading-relaxed">
-                      "Dokumen pendaftaran Anda lengkap dan memenuhi kualifikasi. Namun, karena keterbatasan kuota alokasi program beasiswa ini, tim seleksi memprioritaskan kandidat dengan kesesuaian profil dan skor seleksi kumulatif yang paling tinggi. Kami menyarankan Anda untuk terus memantau beasiswa mendatang dan melamar kembali."
+                      &quot;Dokumen pendaftaran Anda lengkap dan memenuhi kualifikasi. Namun, karena keterbatasan kuota alokasi program beasiswa ini, tim seleksi memprioritaskan kandidat dengan kesesuaian profil dan skor seleksi kumulatif yang paling tinggi. Kami menyarankan Anda untuk terus memantau beasiswa mendatang dan melamar kembali.&quot;
                     </p>
                   </div>
                 )}

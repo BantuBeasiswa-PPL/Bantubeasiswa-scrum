@@ -5,7 +5,10 @@ import { useRouter } from 'next/router';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
 import { getServerSupabase } from '@/lib/supabaseServer';
-import { getMahasiswaProfile } from '@/lib/mahasiswaProfile';
+import {
+  getLatestLulusPendaftaran,
+  getMahasiswaProfile,
+} from '@/lib/mahasiswaProfile';
 
 function getInitials(name = '') {
   return name
@@ -119,6 +122,7 @@ export default function EditProfilMahasiswaPage({
   profile,
   provinsiOptions,
   wilayahOptions,
+  canDaftarUlangRekening,
 }) {
   const router = useRouter();
   const [saved, setSaved] = useState(false);
@@ -242,7 +246,10 @@ export default function EditProfilMahasiswaPage({
   }
 
   return (
-    <MahasiswaLayout user={{ ...user, nama, email }}>
+    <MahasiswaLayout
+      user={{ ...user, nama, email }}
+      showDaftarUlangRekening={canDaftarUlangRekening}
+    >
       <Head>
         <title>Edit Profil - BantuBeasiswa</title>
         <meta name="description" content="Edit profil mahasiswa BantuBeasiswa." />
@@ -294,7 +301,7 @@ export default function EditProfilMahasiswaPage({
                 Rekening Pencairan
               </Link>
               <Link
-                href="/mahasiswa/daftar-ulang-rekening"
+                href="/mahasiswa/laporan-kendala"
                 className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               >
                 Laporan Kendala
@@ -515,12 +522,14 @@ export default function EditProfilMahasiswaPage({
               >
                 {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
               </button>
-              <Link
-                href="/mahasiswa/daftar-ulang-rekening"
-                className="rounded-lg bg-blue-950 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-900"
-              >
-                Edit Informasi Rekening
-              </Link>
+              {canDaftarUlangRekening && (
+                <Link
+                  href="/mahasiswa/daftar-ulang-rekening"
+                  className="rounded-lg bg-blue-950 px-5 py-3 text-center text-sm font-bold text-white transition hover:bg-blue-900"
+                >
+                  Edit Informasi Rekening
+                </Link>
+              )}
             </div>
           </div>
         </form>
@@ -535,6 +544,7 @@ export async function getServerSideProps(context) {
 
   const { user } = auth.props;
   const profile = await getMahasiswaProfile(user);
+  const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
   const supabase = getServerSupabase();
 
   const [provinsiResult, wilayahResult] = await Promise.all([
@@ -579,6 +589,7 @@ export async function getServerSideProps(context) {
       profile,
       provinsiOptions,
       wilayahOptions,
+      canDaftarUlangRekening: Boolean(lulusPendaftaran),
     },
   };
 }

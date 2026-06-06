@@ -220,7 +220,10 @@ CREATE TABLE rekening (
     "rekeningId"     BIGSERIAL PRIMARY KEY,
     "userId"         BIGINT    NOT NULL REFERENCES "user"("userId") ON DELETE CASCADE,
     "namRekening"    TEXT      NOT NULL,
+    "namaBank"       TEXT,
+    "namaPemilik"    TEXT,
     "nomorRekening"  TEXT      NOT NULL UNIQUE,
+    "fotoBukuUrl"    TEXT,
     status           TEXT      NOT NULL DEFAULT 'aktif',
     "createdAt"      TIMESTAMPTZ NOT NULL DEFAULT now(),
     "updatedAt"      TIMESTAMPTZ NOT NULL DEFAULT now()

@@ -50,17 +50,18 @@ export function normalizeRekening(row) {
 
   // "namRekening" adalah nama kolom aktual di Supabase (format: "NamaBank - NamaPemilik")
   const namRekening = source.namRekening ?? '';
+  const hasCombinedName = namRekening.includes(' - ');
 
   return {
     namaBank:
       source.namaBank ??
       source.nama_bank ??
-      (namRekening.includes(' - ') ? namRekening.split(' - ')[0] : namRekening) ??
+      (hasCombinedName ? namRekening.split(' - ')[0] : '') ??
       '',
     namaPemilik:
       source.namaPemilik ??
       source.nama_pemilik ??
-      (namRekening.includes(' - ') ? namRekening.split(' - ').slice(1).join(' - ') : namRekening) ??
+      (hasCombinedName ? namRekening.split(' - ').slice(1).join(' - ') : namRekening) ??
       '',
     nomorRekening: source.nomorRekening ?? source.nomor_rekening ?? '',
     fotoBukuUrl: source.fotoBukuUrl ?? source.foto_buku_url ?? '',

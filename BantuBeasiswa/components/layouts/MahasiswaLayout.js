@@ -25,6 +25,7 @@ const menuItems = [
     label: 'Daftar Ulang Rekening',
     href: '/mahasiswa/daftar-ulang-rekening',
     icon: '💳',
+    requiresLulus: true,
   },
   {
     label: 'Tutorial Administrasi',
@@ -42,9 +43,13 @@ const menuItems = [
  * MahasiswaLayout
  * @param {{ children: React.ReactNode, user: { nama: string, role: string } }} props
  */
-export default function MahasiswaLayout({ children, user }) {
+export default function MahasiswaLayout({ children, user, showDaftarUlangRekening = false }) {
+  const visibleMenuItems = menuItems.filter(
+    (item) => !item.requiresLulus || showDaftarUlangRekening
+  );
+
   return (
-    <BaseLayout user={user} menuItems={menuItems}>
+    <BaseLayout user={user} menuItems={visibleMenuItems}>
       {children}
     </BaseLayout>
   );

@@ -38,8 +38,11 @@ export default async function handler(req, res) {
   }
   if (!userId) return res.status(404).json({ message: 'Profil mahasiswa tidak ditemukan.' });
 
-  const { namaBank, namaPemilik, nomorRekening } = req.body || {};
+  const { namaBank, namaPemilik, nomorRekening, fotoBukuUrl } = req.body || {};
 
+  if (!namaBank || !namaBank.trim()) {
+    return res.status(400).json({ message: 'Nama bank wajib dipilih.' });
+  }
   if (!namaPemilik || namaPemilik.trim().length < 3) {
     return res.status(400).json({ message: 'Nama pemilik rekening minimal 3 karakter.' });
   }
@@ -47,14 +50,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Nomor rekening harus 10–16 digit angka.' });
   }
 
-  // Gabungkan nama bank + nama pemilik ke kolom "namRekening"
-  const namRekening = namaBank
-    ? `${namaBank.trim()} - ${namaPemilik.trim()}`
-    : namaPemilik.trim();
+  const cleanNamaBank = namaBank.trim();
+  const cleanNamaPemilik = namaPemilik.trim();
+  const cleanNomorRekening = nomorRekening.trim();
+  const cleanFotoBukuUrl = typeof fotoBukuUrl === 'string' && fotoBukuUrl.trim()
+    ? fotoBukuUrl.trim()
+    : null;
 
   const payload = {
-    namRekening,                           // kolom aktual: "namRekening" (bukan namaRekening)
-    nomorRekening: nomorRekening.trim(),
+    // Kolom lama tetap diisi agar fitur lama tetap kompatibel.
+    namRekening: `${cleanNamaBank} - ${cleanNamaPemilik}`,
+    namaBank: cleanNamaBank,
+    namaPemilik: cleanNamaPemilik,
+    nomorRekening: cleanNomorRekening,
+    fotoBukuUrl: cleanFotoBukuUrl,
+    updatedAt: new Date().toISOString(),
   };
 
   // Cek existing rekening (untuk update jika sudah ada)

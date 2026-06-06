@@ -201,17 +201,23 @@ export default function DaftarUlangRekeningPage({
     setSubmitError('');
     try {
       // Upload foto buku tabungan ke Storage (opsional — tidak memblokir submit)
-      let fotoBukuUrl = null;
-      if (values.proofFile) {
-        const ext = values.proofFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('rekening')
-          .upload(fileName, values.proofFile, { upsert: true });
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('rekening').getPublicUrl(uploadData.path);
-          fotoBukuUrl = urlData?.publicUrl ?? null;
-        }
+      const ext = values.proofFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const filePath = `rekening/${profile.userId}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('dokumen')
+        .upload(filePath, values.proofFile, { upsert: true });
+
+      if (uploadError) {
+        setSubmitError(`Gagal mengunggah foto buku tabungan: ${uploadError.message}`);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage.from('dokumen').getPublicUrl(filePath);
+      const fotoBukuUrl = urlData?.publicUrl ?? null;
+
+      if (!fotoBukuUrl) {
+        setSubmitError('Gagal mendapatkan URL foto buku tabungan.');
+        return;
       }
       // Simpan data rekening ke database
       const res = await fetch('/api/mahasiswa/rekening', {
@@ -231,9 +237,16 @@ export default function DaftarUlangRekeningPage({
         return;
       }
       setSubmitted(true);
-      setTimeout(() => router.push('/mahasiswa/profil/profil'), 1500);
-    } catch {
-      setSubmitError('Terjadi kesalahan jaringan. Coba lagi.');
+      setTimeout(() => {
+        const pendaftaranId = lulusPendaftaran?.pendaftaranId;
+        router.push(
+          pendaftaranId
+            ? `/mahasiswa/status-pendaftaran?id=${pendaftaranId}`
+            : '/mahasiswa/pendaftaran'
+        );
+      }, 2000);
+    } catch (error) {
+      setSubmitError(error?.message || 'Terjadi kesalahan jaringan. Coba lagi.');
     } finally {
       setSubmitting(false);
     }
@@ -244,7 +257,7 @@ export default function DaftarUlangRekeningPage({
   }
 
   return (
-    <MahasiswaLayout user={{ ...user, nama, email }}>
+    <MahasiswaLayout user={{ ...user, nama, email }} showDaftarUlangRekening>
       <Head>
         <title>Daftar Ulang Rekening - BantuBeasiswa</title>
         <meta
@@ -427,7 +440,7 @@ export default function DaftarUlangRekeningPage({
 
             {submitted && (
               <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                ✅ Data rekening berhasil disimpan! Mengalihkan ke halaman profil...
+                Data rekening berhasil disimpan! Mengalihkan ke halaman status pendaftaran...
               </div>
             )}
             {submitError && (
@@ -452,7 +465,14 @@ export default function DaftarUlangRekeningPage({
                     : 'cursor-not-allowed bg-gray-300'
                 }`}
               >
-                {submitting ? 'Menyimpan...' : 'Confirm & Submit Data'}
+                {submitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    Menyimpan...
+                  </span>
+                ) : (
+                  'Confirm & Submit Data'
+                )}
               </button>
             </div>
           </form>
@@ -512,6 +532,15 @@ export async function getServerSideProps(context) {
   const { user } = auth.props;
   const profile = await getMahasiswaProfile(user);
   const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
+  if (!lulusPendaftaran) {
+    return {
+      redirect: {
+        destination: '/mahasiswa/pendaftaran',
+        permanent: false,
+      },
+    };
+  }
+
   const batchYear = new Date(
     lulusPendaftaran?.createdAt ||
       lulusPendaftaran?.created_at ||

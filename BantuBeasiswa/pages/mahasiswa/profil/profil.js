@@ -4,6 +4,7 @@ import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
 import { getServerSupabase } from '@/lib/supabaseServer';
 import {
+  getLatestLulusPendaftaran,
   getLatestRekening,
   getMahasiswaProfile,
 } from '@/lib/mahasiswaProfile';
@@ -52,7 +53,13 @@ function formatTanggal(value) {
   }).format(new Date(value));
 }
 
-export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLabels }) {
+export default function ProfilMahasiswaPage({
+  user,
+  profile,
+  rekening,
+  wilayahLabels,
+  canDaftarUlangRekening,
+}) {
   const nama = profile.nama || user.nama || 'Mahasiswa';
   const email = profile.email || user.email || '-';
   const tempatLahir = [
@@ -66,7 +73,10 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
   ].filter(Boolean).join(', ');
 
   return (
-    <MahasiswaLayout user={{ ...user, nama, email }}>
+    <MahasiswaLayout
+      user={{ ...user, nama, email }}
+      showDaftarUlangRekening={canDaftarUlangRekening}
+    >
       <Head>
         <title>Profil Saya - BantuBeasiswa</title>
         <meta
@@ -107,12 +117,14 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
               >
                 Data Pribadi
               </Link>
-              <Link
-                href="/mahasiswa/daftar-ulang-rekening"
-                className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-              >
-                Rekening Pencairan
-              </Link>
+              {canDaftarUlangRekening && (
+                <Link
+                  href="/mahasiswa/daftar-ulang-rekening"
+                  className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  Rekening Pencairan
+                </Link>
+              )}
               <Link
                 href="/mahasiswa/laporan-kendala"
                 className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-left text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
@@ -182,6 +194,7 @@ export async function getServerSideProps(context) {
   const { user } = auth.props;
   const profile = await getMahasiswaProfile(user);
   const rekening = await getLatestRekening(profile.userId);
+  const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
   const supabase = getServerSupabase();
 
   const provinsiIds = [
@@ -217,6 +230,7 @@ export async function getServerSideProps(context) {
       profile,
       rekening,
       wilayahLabels,
+      canDaftarUlangRekening: Boolean(lulusPendaftaran),
     },
   };
 }

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useStatusPendaftaran, STATUS_TO_STEP } from '@/hooks/useStatusPendaftaran';
 import ResultBanner from '@/components/ResultBanner';
@@ -68,11 +69,12 @@ export default function StatusPendaftaran({ user }) {
   );
 
   const isFinished = status === 'LULUS' || status === 'DITOLAK';
+  const canDaftarUlangRekening = status === 'LULUS';
 
   // ── Render: Error ──
   if (error) {
     return (
-      <MahasiswaLayout user={user}>
+      <MahasiswaLayout user={user} showDaftarUlangRekening={canDaftarUlangRekening}>
         <div className="flex items-center justify-center py-20">
           <div className="text-center max-w-md">
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -96,7 +98,7 @@ export default function StatusPendaftaran({ user }) {
   }
 
   return (
-    <MahasiswaLayout user={user}>
+    <MahasiswaLayout user={user} showDaftarUlangRekening={canDaftarUlangRekening}>
       <Head>
         <title>Status Pendaftaran – BantuBeasiswa</title>
         <meta
@@ -251,7 +253,7 @@ export default function StatusPendaftaran({ user }) {
                   {PHASE_DETAILS[currentStep].description}
                 </div>
                 <div className="mt-6">
-                  <PhaseAction currentStep={currentStep} />
+                  <PhaseAction currentStep={currentStep} status={status} />
                 </div>
               </>
             )}
@@ -329,7 +331,7 @@ function InfoRow({ label, value }) {
   );
 }
 
-function PhaseAction({ currentStep }) {
+function PhaseAction({ currentStep, status }) {
   if (currentStep === 1)
     return (
       <button className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
@@ -352,9 +354,18 @@ function PhaseAction({ currentStep }) {
         Buka Tautan Seleksi
       </button>
     );
+  if (currentStep === 4 && status === 'LULUS')
+    return (
+      <Link
+        href="/mahasiswa/daftar-ulang-rekening"
+        className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm"
+      >
+        Langkah Selanjutnya
+      </Link>
+    );
   if (currentStep === 4)
     return (
-      <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm">
+      <button className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
         Lihat Pengumuman Lengkap
       </button>
     );
