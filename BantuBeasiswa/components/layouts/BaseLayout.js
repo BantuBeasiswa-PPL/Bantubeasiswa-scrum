@@ -38,6 +38,7 @@ function SidebarItem({ item, isActive, onClose }) {
   return (
     <Link
       href={item.href}
+      prefetch={false}
       onClick={onClose}
       className={`
         flex items-center px-4 py-3 rounded-lg mx-2 text-sm font-medium
