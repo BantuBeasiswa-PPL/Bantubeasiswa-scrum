@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '../../lib/db';
 import { getServerSupabase } from '../../lib/supabaseServer';
-import { withAuth } from '../../lib/auth';
+import { withPendonorAuth } from '../../lib/auth';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
 import KonfirmasiTransferModal from '../../components/KonfirmasiTransferModal';
 import * as XLSX from 'xlsx';
@@ -613,7 +613,7 @@ export default function DashboardPembayaran({ user, pendonorId, initialQueueList
 
 // --- Next.js SSR Authorization Guard & Data Prefetching ---
 export async function getServerSideProps(context) {
-  const auth = withAuth(context, 'pendonor');
+  const auth = await withPendonorAuth(context);
   if (auth.redirect) return auth;
 
   const { user } = auth.props;
