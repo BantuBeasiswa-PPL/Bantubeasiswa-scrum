@@ -19,6 +19,7 @@ const C = {
 // ─── Status Badge ────────────────────────────────────────────────────────────
 const STATUS_STYLE = {
   draft   : { bg: '#f3f4f6', color: '#374151', label: 'Draft'     },
+  pending : { bg: '#fffbeb', color: '#b45309', label: 'Menunggu Persetujuan' },
   aktif   : { bg: '#d1fae5', color: '#065f46', label: 'Aktif'     },
   ditutup : { bg: '#fee2e2', color: '#b91c1c', label: 'Ditutup'   },
   selesai : { bg: '#e0e7ff', color: '#3730a3', label: 'Selesai'   },
@@ -107,12 +108,114 @@ function formatDatetimeLocal(iso) {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+<<<<<<< HEAD
 // ─── Helper: get applicant count ─────────────────────────────────────────────
 function getApplicantCount(beasiswa) {
   if (beasiswa.pendaftaran && Array.isArray(beasiswa.pendaftaran) && beasiswa.pendaftaran.length > 0) {
     return beasiswa.pendaftaran[0]?.count ?? 0;
   }
   return 0;
+=======
+
+// ─── Beasiswa Card ───────────────────────────────────────────────────────────
+function BeasiswaCard({ beasiswa, onEdit, onDelete, onSubmitApproval }) {
+  const [showActions, setShowActions] = useState(false);
+
+  return (
+    <div
+      className="rounded-xl border p-5 transition-all duration-200 hover:shadow-md"
+      style={{ backgroundColor: C.white, borderColor: '#e5e7eb' }}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-lg truncate" style={{ color: C.dark }}>
+            {beasiswa.judul}
+          </h3>
+          <p className="text-sm mt-1" style={{ color: C.gray }}>
+            Dibuat {formatTanggal(beasiswa.createdAt)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 ml-4">
+          <StatusBadge status={beasiswa.status} />
+          {showActions && beasiswa.status === 'draft' && (
+            <div className="flex gap-1">
+              <button
+                onClick={() => onEdit(beasiswa)}
+                className="p-1.5 rounded text-sm transition-colors"
+                style={{ color: C.blue }}
+                title="Edit"
+              >
+                ✏️
+              </button>
+              <button
+                onClick={() => onDelete(beasiswa)}
+                className="p-1.5 rounded text-sm transition-colors"
+                style={{ color: C.red }}
+                title="Hapus"
+              >
+                🗑️
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <p className="text-sm mb-4 line-clamp-2" style={{ color: C.gray }}>
+        {beasiswa.deskripsi || 'Tidak ada deskripsi'}
+      </p>
+
+      {beasiswa.alasanPenolakan && beasiswa.status === 'draft' && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+          <strong>⚠️ Ditolak Admin:</strong> {beasiswa.alasanPenolakan}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+        <div>
+          <span style={{ color: C.gray }}>Nominal:</span>
+          <div className="font-semibold" style={{ color: C.dark }}>
+            {formatRupiah(beasiswa.nominal)}
+          </div>
+        </div>
+        <div>
+          <span style={{ color: C.gray }}>Kuota:</span>
+          <div className="font-semibold" style={{ color: C.dark }}>
+            {beasiswa.kuota || '—'} penerima
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-between items-center gap-2">
+        <div className="text-sm mr-2">
+          <span style={{ color: C.gray }}>Deadline:</span>
+          <div className="font-semibold" style={{ color: C.dark }}>
+            {formatTanggal(beasiswa.deadline)}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {beasiswa.status === 'draft' && (
+            <button
+              onClick={() => onSubmitApproval(beasiswa)}
+              className="px-3.5 py-2 rounded-lg text-sm font-bold text-white transition-all hover:shadow-md active:scale-95 shrink-0"
+              style={{ backgroundColor: '#ff9800' }}
+            >
+              🚀 Ajukan
+            </button>
+          )}
+          <Link
+            href={`/beasiswa/${beasiswa.beasiswaId}`}
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors shrink-0"
+            style={{ backgroundColor: C.blue, color: C.white }}
+          >
+            Lihat Detail →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+>>>>>>> 52eedbe5d5518f1951926949703ae20406197132
 }
 
 // ─── Empty State ─────────────────────────────────────────────────────────────
@@ -529,6 +632,7 @@ export default function KelolaProgramPage({ user }) {
     }
   };
 
+<<<<<<< HEAD
   // ── Table cell shared styles ─────────────────────────────────────────────
   const thStyle = {
     padding: '14px 16px', textAlign: 'left', fontSize: 13,
@@ -537,6 +641,25 @@ export default function KelolaProgramPage({ user }) {
   const tdStyle = {
     padding: '14px 16px', fontSize: 14, color: C.dark,
     borderBottom: '1px solid #f3f4f6',
+=======
+  const handleSubmitApproval = async (beasiswa) => {
+    if (!confirm(`Ajukan program beasiswa "${beasiswa.judul}" ke admin untuk disetujui?`)) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/pendonor/beasiswa/${beasiswa.beasiswaId}`, {
+        method: 'PATCH',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Gagal mengajukan persetujuan');
+      alert('Berhasil diajukan! Program sedang menunggu review admin.');
+      await fetchBeasiswa(); // Refresh list
+    } catch (err) {
+      alert('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+>>>>>>> 52eedbe5d5518f1951926949703ae20406197132
   };
 
   return (
@@ -603,6 +726,7 @@ export default function KelolaProgramPage({ user }) {
           </div>
         )}
 
+<<<<<<< HEAD
         {/* ── Table ────────────────────────────────────────────────────────── */}
         <div style={{
           background: C.white, borderRadius: 12,
@@ -650,6 +774,39 @@ export default function KelolaProgramPage({ user }) {
                             {formatRupiah(b.nominal)} per penerima
                           </div>
                         </td>
+=======
+        {/* ── Beasiswa Grid ────────────────────────────────────────────────── */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-xl border p-5 animate-pulse"
+                style={{ backgroundColor: C.white, borderColor: '#e5e7eb' }}>
+                <div className="h-5 w-3/4 rounded bg-gray-200 mb-3" />
+                <div className="h-3 w-1/2 rounded bg-gray-100 mb-4" />
+                <div className="space-y-2 mb-4">
+                  <div className="h-3 w-full rounded bg-gray-100" />
+                  <div className="h-3 w-4/5 rounded bg-gray-100" />
+                </div>
+                <div className="h-8 w-24 rounded bg-gray-200" />
+              </div>
+            ))}
+          </div>
+        ) : beasiswaList.length === 0 ? (
+          <EmptyState onCreate={handleCreate} />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {beasiswaList.map((b) => (
+              <BeasiswaCard
+                key={b.beasiswaId}
+                beasiswa={b}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onSubmitApproval={handleSubmitApproval}
+              />
+            ))}
+          </div>
+        )}
+>>>>>>> 52eedbe5d5518f1951926949703ae20406197132
 
                         {/* Status */}
                         <td style={{ ...tdStyle, textAlign: 'center' }}>

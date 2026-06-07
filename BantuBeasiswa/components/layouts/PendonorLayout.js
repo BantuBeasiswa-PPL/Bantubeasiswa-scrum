@@ -2,6 +2,10 @@ import BaseLayout from './BaseLayout';
 
 const menuItems = [
   {
+    label: 'Dashboard Pendonor',
+    href: '/pendonor/dashboard',
+  },
+  {
     label: 'Profil Pendonor',
     href: '/pendonor/profil',
   },
@@ -11,11 +15,15 @@ const menuItems = [
   },
   {
     label: 'Seleksi Pendaftar',
-    href: '/pendonor/seleksi',
+    href: '/pendonor/seleksi-pendaftar',
+  },
+  {
+    label: 'Pembayaran Beasiswa',
+    href: '/pendonor/pembayaran',
   },
   {
     label: 'Dashboard Laporan',
-    href: '/pendonor/laporan',
+    href: '/pendonor/dashboard-laporan',
   },
 ];
 

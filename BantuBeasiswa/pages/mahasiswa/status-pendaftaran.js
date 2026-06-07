@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useStatusPendaftaran, STATUS_TO_STEP } from '@/hooks/useStatusPendaftaran';
@@ -109,7 +109,13 @@ export default function StatusPendaftaran({ user }) {
 
         {/* ── ResultBanner (muncul hanya saat LULUS / DITOLAK) ── */}
         {!loading && isFinished && (
-          <ResultBanner status={status} judulBeasiswa={beasiswaInfo?.judul} />
+          <ResultBanner
+            status={status}
+            judulBeasiswa={beasiswaInfo?.judul}
+            namaMahasiswa={user?.nama}
+            nominal={beasiswaInfo?.nominal}
+            namaOrganisasi={beasiswaInfo?.pendonor?.statusOrganisasi}
+          />
         )}
 
         {/* ── Header Section ── */}
@@ -138,7 +144,7 @@ export default function StatusPendaftaran({ user }) {
                   </span>
                   <span className="hidden md:inline-block w-1.5 h-1.5 bg-gray-300 rounded-full" />
                   <span className="text-gray-500">
-                    {beasiswaInfo?.pendonor?.nama_organisasi ?? ''}
+                    {beasiswaInfo?.pendonor?.statusOrganisasi ?? ''}
                   </span>
                   <span className="hidden md:inline-block w-1.5 h-1.5 bg-gray-300 rounded-full" />
                   <span>Daftar: {formatDate(createdAt)}</span>
@@ -245,7 +251,7 @@ export default function StatusPendaftaran({ user }) {
                   {PHASE_DETAILS[currentStep].description}
                 </div>
                 <div className="mt-6">
-                  <PhaseAction currentStep={currentStep} />
+                  <PhaseAction currentStep={currentStep} pendaftaranId={pendaftaranId} status={status} />
                 </div>
               </>
             )}
@@ -260,7 +266,7 @@ export default function StatusPendaftaran({ user }) {
               </div>
             ) : (
               <div className="space-y-4 text-sm">
-                <InfoRow label="Pendonor"  value={beasiswaInfo?.pendonor?.nama_organisasi ?? '–'} />
+                <InfoRow label="Pendonor"  value={beasiswaInfo?.pendonor?.statusOrganisasi ?? '–'} />
                 <InfoRow label="Beasiswa"  value={beasiswaInfo?.judul ?? '–'} />
                 <InfoRow label="Terdaftar" value={formatDate(createdAt)} />
                 <InfoRow
@@ -295,6 +301,185 @@ export async function getServerSideProps(context) {
   return withAuth(context, 'mahasiswa');
 }
 
+// ─── Label jenis dokumen ─────────────────────────────────────────────────────
+const JENIS_LABEL = {
+  ktp              : 'KTP / Kartu Identitas',
+  transkrip        : 'Transkrip Nilai',
+  motivation_letter: 'Motivation Letter / Surat Motivasi',
+};
+
+// ─── Dokumen Bermasalah Section ───────────────────────────────────────────────
+function DokumenBermasalahSection({ pendaftaranId }) {
+  const [dokumenList, setDokumenList] = useState([]);
+  const [loadingDok,  setLoadingDok ] = useState(true);
+  const [uploading,   setUploading  ] = useState({});   // { [dokumenId]: bool }
+  const [uploadMsg,   setUploadMsg  ] = useState({});   // { [dokumenId]: {ok, text} }
+  const fileInputRefs = useRef({});
+
+  // ── Fetch dokumen ─────────────────────────────────────────────────────────
+  const fetchDokumen = async () => {
+    if (!pendaftaranId) return;
+    try {
+      setLoadingDok(true);
+      const res  = await fetch(`/api/mahasiswa/dokumen?pendaftaranId=${pendaftaranId}`);
+      const json = await res.json();
+      if (res.ok) setDokumenList(json.data ?? []);
+    } catch { /* silent */ }
+    finally { setLoadingDok(false); }
+  };
+
+  useEffect(() => { fetchDokumen(); }, [pendaftaranId]);
+
+  // Filter hanya yang bermasalah (statusDokumen = 'FALSE')
+  const bermasalah = dokumenList.filter(d => d.statusDokumen === 'FALSE');
+
+  if (loadingDok) {
+    return (
+      <div className="mt-4 space-y-2">
+        {[1, 2].map(i => (
+          <div key={i} className="h-16 bg-gray-100 rounded-lg animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+
+  if (bermasalah.length === 0) {
+    return (
+      <div className="mt-4 flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 px-4 py-3 rounded-lg border border-emerald-200">
+        <span className="text-base">✓</span>
+        Semua dokumen Anda sedang dalam proses verifikasi. Tidak ada yang perlu diperbaiki saat ini.
+      </div>
+    );
+  }
+
+  // ── Upload ulang handler ────────────────────────────────────────────────
+  const handleFileChange = async (e, dok) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(p => ({ ...p, [dok.dokumenId]: true }));
+    setUploadMsg(p => ({ ...p, [dok.dokumenId]: null }));
+
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload  = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch('/api/dokumen/upload', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({
+          pendaftaranId: pendaftaranId,
+          jenis        : dok.jenis,
+          fileBase64   : base64,
+          mimeType     : file.type,
+          fileName     : file.name,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Gagal upload');
+
+      setUploadMsg(p => ({ ...p, [dok.dokumenId]: { ok: true, text: 'Dokumen berhasil dikirim ulang! Menunggu verifikasi.' } }));
+      // Refresh list setelah sukses
+      await fetchDokumen();
+    } catch (err) {
+      setUploadMsg(p => ({ ...p, [dok.dokumenId]: { ok: false, text: err.message || 'Gagal mengunggah dokumen.' } }));
+    } finally {
+      setUploading(p => ({ ...p, [dok.dokumenId]: false }));
+      // Reset file input
+      if (fileInputRefs.current[dok.dokumenId]) {
+        fileInputRefs.current[dok.dokumenId].value = '';
+      }
+    }
+  };
+
+  return (
+    <div className="mt-5 space-y-3">
+      {/* Header warning */}
+      <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+        <span className="text-amber-500 text-lg">⚠</span>
+        <div>
+          <p className="text-sm font-semibold text-amber-800">
+            {bermasalah.length} dokumen memerlukan perbaikan
+          </p>
+          <p className="text-xs text-amber-600">
+            Harap perbaiki dan kirim ulang dokumen di bawah ini sesuai catatan dari reviewer.
+          </p>
+        </div>
+      </div>
+
+      {/* Daftar dokumen bermasalah */}
+      {bermasalah.map(dok => (
+        <div
+          key={dok.dokumenId}
+          className="rounded-xl border border-red-200 bg-red-50 p-4"
+        >
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="flex-1 min-w-0">
+              {/* Jenis dokumen */}
+              <p className="text-sm font-bold text-red-800 mb-1">
+                📄 {JENIS_LABEL[dok.jenis] ?? dok.jenis}
+              </p>
+
+              {/* Catatan dari pendonor */}
+              {dok.rejectionReason && (
+                <div className="mt-1 mb-2 bg-white border border-red-200 rounded-lg px-3 py-2">
+                  <p className="text-xs font-semibold text-red-500 mb-0.5">Catatan dari reviewer:</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{dok.rejectionReason}</p>
+                </div>
+              )}
+
+              {/* Error tambahan */}
+              {dok.error && (
+                <p className="text-xs text-red-500 mt-1">Detail: {dok.error}</p>
+              )}
+
+              {/* Pesan upload */}
+              {uploadMsg[dok.dokumenId] && (
+                <p className={`text-xs mt-2 font-medium ${
+                  uploadMsg[dok.dokumenId].ok ? 'text-emerald-600' : 'text-red-600'
+                }`}>
+                  {uploadMsg[dok.dokumenId].ok ? '✓ ' : '✕ '}
+                  {uploadMsg[dok.dokumenId].text}
+                </p>
+              )}
+            </div>
+
+            {/* Tombol Kirim Ulang */}
+            <div className="shrink-0">
+              <input
+                ref={el => { fileInputRefs.current[dok.dokumenId] = el; }}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={e => handleFileChange(e, dok)}
+              />
+              <button
+                id={`btn-kirim-ulang-${dok.dokumenId}`}
+                disabled={uploading[dok.dokumenId]}
+                onClick={() => fileInputRefs.current[dok.dokumenId]?.click()}
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-150 border"
+                style={{
+                  backgroundColor: uploading[dok.dokumenId] ? '#f3f4f6' : '#dc2626',
+                  color          : uploading[dok.dokumenId] ? '#9ca3af' : '#ffffff',
+                  borderColor    : uploading[dok.dokumenId] ? '#e5e7eb' : '#dc2626',
+                  cursor         : uploading[dok.dokumenId] ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {uploading[dok.dokumenId] ? 'Mengunggah...' : '↑ Kirim Ulang'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
@@ -323,18 +508,30 @@ function InfoRow({ label, value }) {
   );
 }
 
-function PhaseAction({ currentStep }) {
+function PhaseAction({ currentStep, pendaftaranId, status }) {
+  const router = useRouter();
+
   if (currentStep === 1)
     return (
-      <button className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors">
-        Lihat Berkas Saya
+      <button
+        id="btn-cari-beasiswa-lain"
+        onClick={() => router.push('/mahasiswa/cari')}
+        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+      >
+        Cari Beasiswa Lain
       </button>
     );
   if (currentStep === 2)
     return (
-      <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm">
-        Hubungi Helpdesk
-      </button>
+      <div className="space-y-4">
+        <DokumenBermasalahSection pendaftaranId={pendaftaranId} />
+        <button
+          id="btn-hubungi-helpdesk"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          Hubungi Helpdesk
+        </button>
+      </div>
     );
   if (currentStep === 3)
     return (
@@ -346,10 +543,24 @@ function PhaseAction({ currentStep }) {
         Buka Tautan Seleksi
       </button>
     );
-  if (currentStep === 4)
+  if (currentStep === 4 && status === 'LULUS')
     return (
-      <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm">
-        Lihat Pengumuman Lengkap
+      <button
+        id="btn-langkah-selanjutnya"
+        onClick={() => router.push('/mahasiswa/daftar-ulang-rekening')}
+        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm"
+      >
+        Langkah Selanjutnya
+      </button>
+    );
+  if (currentStep === 4 && status === 'DITOLAK')
+    return (
+      <button
+        id="btn-cari-beasiswa-lain-ditolak"
+        onClick={() => router.push('/mahasiswa/cari')}
+        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+      >
+        Cari Beasiswa Lain
       </button>
     );
   return null;

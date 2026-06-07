@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '../../components/layouts/MahasiswaLayout';
+import PendonorLayout from '../../components/layouts/PendonorLayout';
 import LaporKendalaModal from '../../components/LaporKendalaModal';
 import { verifyToken } from '../../lib/auth';
 import { fetchBeasiswaById } from '../../lib/beasiswaQuery';
@@ -109,8 +110,12 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
   // Check if user is pendonor owner of this beasiswa
   const isPendonorOwner = user?.role === 'pendonor' && user?.accountId === beasiswa?.pendonor?.pendonorId;
 
-  // Pilih layout sesuai status login
-  const Layout = user ? MahasiswaLayout : PublicLayout;
+  // Pilih layout sesuai role user
+  const Layout = !user
+    ? PublicLayout
+    : user.role === 'pendonor'
+    ? PendonorLayout
+    : MahasiswaLayout;
 
   // Anti-spam setelah laporan berhasil
   const handleLaporSuccess = () => {
@@ -219,10 +224,10 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
 
         {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
         <nav className="flex items-center gap-2 text-sm mb-5" style={{ color: C.gray }}>
-          <Link href={user ? '/mahasiswa/cari' : '/'}
+          <Link href={!user ? '/' : user.role === 'pendonor' ? '/pendonor/program' : '/mahasiswa/cari'}
             className="hover:underline transition-colors"
             style={{ color: C.blue }}>
-            {user ? 'Cari Beasiswa' : 'Beranda'}
+            {!user ? 'Beranda' : user.role === 'pendonor' ? 'Kelola Program' : 'Cari Beasiswa'}
           </Link>
           <span>›</span>
           <span className="truncate max-w-xs" style={{ color: C.dark }}>
@@ -444,13 +449,13 @@ export default function DetailBeasiswaPage({ user, beasiswa, errorMsg }) {
                 {laporDisabled ? `Terkirim (${laporCountdown}s)` : 'Laporkan Kendala'}
               </button>
 
-              <Link href={user ? '/mahasiswa/cari' : '/'}
+              <Link href={!user ? '/' : user.role === 'pendonor' ? '/pendonor/program' : '/mahasiswa/cari'}
                 className="block text-center text-sm mt-3 py-2.5 rounded-lg border transition-colors"
                 style={{ borderColor: '#e5e7eb', color: C.gray, textDecoration: 'none' }}
                 onMouseEnter={(e) => (e.currentTarget.style.borderColor = C.blue)}
                 onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#e5e7eb')}
               >
-                {user ? '← Kembali ke Pencarian' : '← Kembali ke Beranda'}
+                {!user ? '← Kembali ke Beranda' : user.role === 'pendonor' ? '← Kembali ke Kelola Program' : '← Kembali ke Pencarian'}
               </Link>
             </div>
 

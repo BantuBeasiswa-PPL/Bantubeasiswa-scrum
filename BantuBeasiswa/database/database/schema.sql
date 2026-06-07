@@ -11,6 +11,7 @@
 -- ============================================================
 -- SECTION 1: CLEANUP (safe to re-run)
 -- ============================================================
+DROP TABLE IF EXISTS notifikasi          CASCADE;
 DROP TABLE IF EXISTS penyaluran_dana   CASCADE;
 DROP TABLE IF EXISTS tutorial          CASCADE;
 DROP TABLE IF EXISTS laporan_link_rusak CASCADE;
@@ -219,7 +220,10 @@ CREATE TABLE rekening (
     "rekeningId"     BIGSERIAL PRIMARY KEY,
     "userId"         BIGINT    NOT NULL REFERENCES "user"("userId") ON DELETE CASCADE,
     "namRekening"    TEXT      NOT NULL,
+    "namaBank"       TEXT,
+    "namaPemilik"    TEXT,
     "nomorRekening"  TEXT      NOT NULL UNIQUE,
+    "fotoBukuUrl"    TEXT,
     status           TEXT      NOT NULL DEFAULT 'aktif',
     "createdAt"      TIMESTAMPTZ NOT NULL DEFAULT now(),
     "updatedAt"      TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -269,13 +273,27 @@ CREATE TABLE penyaluran_dana (
     "penyaluranId"      BIGSERIAL PRIMARY KEY,
     "pendonorId"        BIGINT    NOT NULL REFERENCES pendonor("pendonorId") ON DELETE CASCADE,
     "beasiswaId"        BIGINT    NOT NULL REFERENCES beasiswa("beasiswaId") ON DELETE CASCADE,
+    "pendaftaranId"     BIGINT    REFERENCES pendaftaran("pendaftaranId") ON DELETE CASCADE,
     "jumlahDana"        INT       NOT NULL DEFAULT 0,
     "jumlahPenerima"    INT       NOT NULL DEFAULT 0,
     "tanggalPenyaluran" DATE      NOT NULL DEFAULT CURRENT_DATE,
     status              TEXT      NOT NULL DEFAULT 'pending',
     "laporanFile"       TEXT,     -- nullable: path/URL file laporan
+    "buktiTransferUrl"  TEXT,     -- nullable: path/URL bukti transfer
+    "idTransaksi"       VARCHAR(255), -- ID transaksi pembayaran
     "createdAt"         TIMESTAMPTZ NOT NULL DEFAULT now(),
     "updatedAt"         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ----------------------------------------------------------
+-- 3.15 notifikasi
+-- ----------------------------------------------------------
+CREATE TABLE notifikasi (
+    "notifikasiId" BIGSERIAL PRIMARY KEY,
+    "userId"       BIGINT    NOT NULL REFERENCES "user"("userId") ON DELETE CASCADE,
+    pesan          TEXT      NOT NULL,
+    "isRead"       BOOLEAN   NOT NULL DEFAULT false,
+    "createdAt"    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 
@@ -319,6 +337,10 @@ CREATE INDEX idx_dokumen_status      ON dokumen("statusDokumen");
 CREATE INDEX idx_rekening_user   ON rekening("userId");
 CREATE INDEX idx_rekening_status ON rekening(status);
 
+-- notifikasi
+CREATE INDEX idx_notifikasi_user    ON notifikasi("userId");
+CREATE INDEX idx_notifikasi_is_read ON notifikasi("isRead");
+
 -- favorit
 CREATE INDEX idx_favorit_user     ON favorit("userId");
 CREATE INDEX idx_favorit_beasiswa ON favorit("beasiswaId");
@@ -331,6 +353,7 @@ CREATE INDEX idx_laporan_status   ON laporan_link_rusak(status);
 -- penyaluran_dana
 CREATE INDEX idx_penyaluran_pendonor ON penyaluran_dana("pendonorId");
 CREATE INDEX idx_penyaluran_beasiswa ON penyaluran_dana("beasiswaId");
+CREATE INDEX idx_penyaluran_pendaftaran ON penyaluran_dana("pendaftaranId");
 CREATE INDEX idx_penyaluran_status   ON penyaluran_dana(status);
 
 

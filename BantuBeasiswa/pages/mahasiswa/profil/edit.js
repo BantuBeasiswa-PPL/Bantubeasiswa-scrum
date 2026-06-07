@@ -282,7 +282,7 @@ export default function EditProfilMahasiswaPage({
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <nav className="space-y-2">
               <Link
-                href="/mahasiswa/profil/profil"
+                href="/mahasiswa/profil"
                 className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               >
                 Data Pribadi
@@ -504,7 +504,7 @@ export default function EditProfilMahasiswaPage({
           )}
 
           <div className="mt-8 flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <Link href="/mahasiswa/profil/profil" className="text-sm font-semibold text-rose-600 transition hover:text-rose-700">
+            <Link href="/mahasiswa/profil" className="text-sm font-semibold text-rose-600 transition hover:text-rose-700">
               Batalkan
             </Link>
             <div className="flex flex-col gap-3 sm:flex-row">

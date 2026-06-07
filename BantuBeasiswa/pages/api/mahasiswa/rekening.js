@@ -31,14 +31,14 @@ export default async function handler(req, res) {
   if (!userId) {
     const { data } = await supabase
       .from('user')
-      .select('"userId"')
-      .eq('"accountId"', decoded.accountId)
+      .select('userId')
+      .eq('accountId', decoded.accountId)
       .maybeSingle();
     if (data) userId = data.userId;
   }
   if (!userId) return res.status(404).json({ message: 'Profil mahasiswa tidak ditemukan.' });
 
-  const { namaBank, namaPemilik, nomorRekening } = req.body || {};
+  const { namaBank, namaPemilik, nomorRekening, fotoBukuUrl } = req.body || {};
 
   if (!namaPemilik || namaPemilik.trim().length < 3) {
     return res.status(400).json({ message: 'Nama pemilik rekening minimal 3 karakter.' });
@@ -47,48 +47,98 @@ export default async function handler(req, res) {
     return res.status(400).json({ message: 'Nomor rekening harus 10–16 digit angka.' });
   }
 
+  const nomorBersih = nomorRekening.trim();
+
   // Gabungkan nama bank + nama pemilik ke kolom "namRekening"
   const namRekening = namaBank
     ? `${namaBank.trim()} - ${namaPemilik.trim()}`
     : namaPemilik.trim();
 
   const payload = {
-    namRekening,                           // kolom aktual: "namRekening" (bukan namaRekening)
-    nomorRekening: nomorRekening.trim(),
+    namRekening,
+    nomorRekening: nomorBersih,
+  };
+  const enhancedPayload = {
+    ...payload,
+    namaBank: namaBank?.trim() || null,
+    namaPemilik: namaPemilik.trim(),
+    ...(fotoBukuUrl ? { fotoBukuUrl } : {}),
   };
 
-  // Cek existing rekening (untuk update jika sudah ada)
+  // Cek existing rekening milik user ini
   const { data: existing } = await supabase
     .from('rekening')
-    .select('"rekeningId"')
-    .eq('"userId"', userId)
-    .order('"rekeningId"', { ascending: false })
+    .select('rekeningId, nomorRekening')
+    .eq('userId', userId)
+    .order('rekeningId', { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // Jika nomor rekening berbeda dari yang sudah ada, cek apakah nomor itu sudah dipakai user lain
+  const nomorBerubah = !existing || existing.nomorRekening !== nomorBersih;
+  if (nomorBerubah) {
+    const { data: cekDuplikat } = await supabase
+      .from('rekening')
+      .select('rekeningId, userId')
+      .eq('nomorRekening', nomorBersih)
+      .maybeSingle();
+
+    if (cekDuplikat && cekDuplikat.userId !== userId) {
+      return res.status(400).json({
+        message: 'Nomor rekening sudah terdaftar oleh pengguna lain. Harap gunakan nomor rekening yang berbeda.',
+      });
+    }
+  }
 
   let result;
   if (existing?.rekeningId) {
     const { data, error } = await supabase
       .from('rekening')
-      .update(payload)
-      .eq('"rekeningId"', existing.rekeningId)
+      .update(enhancedPayload)
+      .eq('rekeningId', existing.rekeningId)
       .select('*')
       .single();
     result = { data, error };
   } else {
     const { data, error } = await supabase
       .from('rekening')
-      .insert({ ...payload, userId })
+      .insert({ ...enhancedPayload, userId })
       .select('*')
       .single();
     result = { data, error };
   }
 
+  if (result.error?.code === 'PGRST204') {
+    if (existing?.rekeningId) {
+      const { data, error } = await supabase
+        .from('rekening')
+        .update(payload)
+        .eq('rekeningId', existing.rekeningId)
+        .select('*')
+        .single();
+      result = { data, error };
+    } else {
+      const { data, error } = await supabase
+        .from('rekening')
+        .insert({ ...payload, userId })
+        .select('*')
+        .single();
+      result = { data, error };
+    }
+  }
+
   if (result.error || !result.data) {
     console.error('[api/mahasiswa/rekening] error:', JSON.stringify(result.error), '| userId:', userId);
+
+    // Tangani error unique constraint dengan pesan ramah
+    if (result.error?.code === '23505') {
+      return res.status(400).json({
+        message: 'Nomor rekening sudah terdaftar. Harap gunakan nomor rekening yang berbeda.',
+      });
+    }
+
     return res.status(500).json({
-      message: 'Gagal menyimpan data rekening.',
-      detail: result.error?.message || result.error?.details || 'Unknown error',
+      message: 'Gagal menyimpan data rekening. Silakan coba lagi.',
     });
   }
 

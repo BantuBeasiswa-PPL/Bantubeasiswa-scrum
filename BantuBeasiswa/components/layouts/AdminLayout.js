@@ -21,6 +21,14 @@ const menuItems = [
     label: 'Laporan Kendala',
     href: '/admin/laporan',
   },
+  {
+    label: 'Laporan Global',
+    href: '/admin/laporan-global',
+  },
+  {
+    label: 'Tutorial Administrasi',
+    href: '/tutorial-administrasi',
+  },
 ];
 
 /**
