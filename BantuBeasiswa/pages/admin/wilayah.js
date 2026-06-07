@@ -4,22 +4,22 @@ import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-const JENIS_3T_OPTIONS   = ['Terdepan', 'Terluar', 'Tertinggal'];
+const JENIS_3T_OPTIONS = ['Terdepan', 'Terluar', 'Tertinggal'];
 const TIPE_WILAYAH_OPTIONS = ['kabupaten', 'kota'];
 
 const JENIS_3T_STYLE = {
-  Terdepan   : { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' },
-  Terluar    : { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' },
-  Tertinggal : { bg: '#fdf2f8', color: '#9d174d', border: '#f9a8d4' },
+  Terdepan: { bg: '#eff6ff', color: '#1d4ed8', border: '#93c5fd' },
+  Terluar: { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' },
+  Tertinggal: { bg: '#fdf2f8', color: '#9d174d', border: '#f9a8d4' },
 };
 
 const C = {
-  blue  : '#0056b3',
-  gold  : '#ffc107',
-  dark  : '#1f2937', // Darker gray for better contrast
-  white : '#ffffff',
-  red   : '#dc2626',
-  gray  : '#4b5563', // Darker gray for auxiliary text
+  blue: '#0056b3',
+  gold: '#ffc107',
+  dark: '#1f2937', // Darker gray for better contrast
+  white: '#ffffff',
+  red: '#dc2626',
+  gray: '#4b5563', // Darker gray for auxiliary text
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -28,14 +28,14 @@ function jenis3tBadge(jenis_3t) {
   return (
     <span
       style={{
-        background   : s.bg,
-        color        : s.color,
-        border       : `1px solid ${s.border}`,
-        borderRadius : 6,
-        padding      : '2px 10px',
-        fontSize     : 11,
-        fontWeight   : 600,
-        whiteSpace   : 'nowrap',
+        background: s.bg,
+        color: s.color,
+        border: `1px solid ${s.border}`,
+        borderRadius: 6,
+        padding: '2px 10px',
+        fontSize: 11,
+        fontWeight: 600,
+        whiteSpace: 'nowrap',
       }}
     >
       {jenis_3t || '—'}
@@ -48,28 +48,28 @@ function StatCard({ label, count, icon, accentColor }) {
   return (
     <div
       style={{
-        background    : C.white,
-        border        : '1px solid #e5e7eb',
-        borderTop     : `4px solid ${accentColor}`,
-        borderRadius  : 12,
-        padding       : '18px 20px',
-        display       : 'flex',
-        flexDirection : 'column',
-        gap           : 6,
+        background: C.white,
+        border: '1px solid #e5e7eb',
+        borderTop: `4px solid ${accentColor}`,
+        borderRadius: 12,
+        padding: '18px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span style={{ fontSize: 12, color: C.gray, fontWeight: 700 }}>{label}</span>
         <span
           style={{
-            fontSize        : 20,
-            background      : `${accentColor}18`,
-            borderRadius    : 8,
-            width           : 38,
-            height          : 38,
-            display         : 'flex',
-            alignItems      : 'center',
-            justifyContent  : 'center',
+            fontSize: 20,
+            background: `${accentColor}18`,
+            borderRadius: 8,
+            width: 38,
+            height: 38,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {icon}
@@ -83,13 +83,13 @@ function StatCard({ label, count, icon, accentColor }) {
 // ─── Modal Add/Edit ──────────────────────────────────────────────────────────
 function WilayahModal({ mode, initial, onClose, onSubmit, loading, provinsiList }) {
   const [form, setForm] = useState({
-    nama       : initial?.nama        || '',
-    tipe       : initial?.tipe        || 'kabupaten',
-    jenis_3t   : initial?.jenis_3t    || 'Terdepan',
-    mode       : initial?.mode        || '3T',
-    provinsiId : initial?.provinsiId  || '',
-    isAfirmasi : initial?.isAfirmasi  ?? false,
-    is3T       : initial?.is3T        ?? true,
+    nama: initial?.nama || '',
+    tipe: initial?.tipe || 'kabupaten',
+    jenis_3t: initial?.jenis_3t || 'Terdepan',
+    mode: initial?.mode || '3T',
+    provinsiId: initial?.provinsiId || '',
+    isAfirmasi: initial?.isAfirmasi ?? false,
+    is3T: initial?.is3T ?? true,
   });
   const [err, setErr] = useState('');
 
@@ -100,8 +100,8 @@ function WilayahModal({ mode, initial, onClose, onSubmit, loading, provinsiList 
 
   function handleSubmit(e) {
     e.preventDefault();
-    if (!form.nama.trim())   { setErr('Nama wilayah wajib diisi.'); return; }
-    if (!form.provinsiId)    { setErr('Provinsi wajib dipilih.'); return; }
+    if (!form.nama.trim()) { setErr('Nama wilayah wajib diisi.'); return; }
+    if (!form.provinsiId) { setErr('Provinsi wajib dipilih.'); return; }
     setErr('');
     onSubmit(form);
   }
@@ -109,9 +109,9 @@ function WilayahModal({ mode, initial, onClose, onSubmit, loading, provinsiList 
   return (
     <div
       style={{
-        position        : 'fixed', inset: 0, zIndex: 50,
-        background      : 'rgba(0,0,0,0.45)',
-        display         : 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'fixed', inset: 0, zIndex: 50,
+        background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}
       onClick={onClose}
     >
@@ -234,15 +234,15 @@ const btnSecondaryStyle = {
 // ─── CSV Export ──────────────────────────────────────────────────────────────
 function exportCSV(rows) {
   const header = ['wilayahId', 'Nama Wilayah', 'Provinsi', 'Tipe', 'Kategori 3T', 'Mode', 'is3T', 'isAfirmasi'];
-  const lines  = rows.map((r) =>
+  const lines = rows.map((r) =>
     [r.wilayahId, `"${r.nama}"`, r.provinsi?.nama || '', r.tipe, r.jenis_3t || '', r.mode, r.is3T, r.isAfirmasi].join(',')
   );
-  const csv  = [header.join(','), ...lines].join('\n');
+  const csv = [header.join(','), ...lines].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
   const date = new Date().toISOString().slice(0, 10);
-  a.href     = url;
+  a.href = url;
   a.download = `wilayah-3t-${date}.csv`;
   a.click();
   URL.revokeObjectURL(url);
@@ -257,12 +257,12 @@ function ImportCSVModal({ onClose, onSubmit, loading }) {
   function handleFileChange(e) {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
-    
+
     if (!selectedFile.name.endsWith('.csv')) {
       setErr('File harus berformat CSV');
       return;
     }
-    
+
     if (selectedFile.size > 5 * 1024 * 1024) {
       setErr('Ukuran file terlalu besar (maksimal 5MB)');
       return;
@@ -357,9 +357,28 @@ function ImportCSVModal({ onClose, onSubmit, loading }) {
           {/* Help text */}
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '10px 12px' }}>
             <p style={{ fontSize: 12, color: C.blue, margin: 0 }}>
-              💡 Download data wilayah 3T (62 kabupaten): <a href="/api/admin/wilayah/template" download="wilayah_3t_data.csv" style={{ color: C.blue, textDecoration: 'underline', cursor: 'pointer' }}>
+              💡 Download data wilayah 3T (62 kabupaten): <span
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/admin/wilayah/template');
+                    const text = await res.text();
+                    const blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'wilayah_3t_data.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  } catch (err) {
+                    console.error('Download template failed:', err);
+                  }
+                }}
+                style={{ color: C.blue, textDecoration: 'underline', cursor: 'pointer' }}
+              >
                 wilayah_3t_data.csv
-              </a>
+              </span>
             </p>
           </div>
 
@@ -368,7 +387,7 @@ function ImportCSVModal({ onClose, onSubmit, loading }) {
             <button type="button" onClick={onClose} style={btnSecondaryStyle}>
               Batal
             </button>
-            <button type="submit" disabled={loading || !file} style={{...btnPrimaryStyle, opacity: loading || !file ? 0.6 : 1}}>
+            <button type="submit" disabled={loading || !file} style={{ ...btnPrimaryStyle, opacity: loading || !file ? 0.6 : 1 }}>
               {loading ? 'Mengupload...' : 'Import'}
             </button>
           </div>
@@ -380,18 +399,18 @@ function ImportCSVModal({ onClose, onSubmit, loading }) {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function WilayahPage({ user }) {
-  const [list,         setList        ] = useState([]);
-  const [provinsiList, setProvinsiList ] = useState([]);
-  const [loading,      setLoading     ] = useState(true);
-  const [saving,       setSaving      ] = useState(false);
-  const [importing,    setImporting   ] = useState(false);
-  const [error,        setError       ] = useState('');
-  const [toast,        setToast       ] = useState('');
-  const [modal,        setModal       ] = useState(null);
-  const [importModal,  setImportModal ] = useState(false);
-  const [deleting,     setDeleting    ] = useState(null);
+  const [list, setList] = useState([]);
+  const [provinsiList, setProvinsiList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState('');
+  const [toast, setToast] = useState('');
+  const [modal, setModal] = useState(null);
+  const [importModal, setImportModal] = useState(false);
+  const [deleting, setDeleting] = useState(null);
   const [filterProvinsi, setFilterProvinsi] = useState('');
-  const [filterTipe,     setFilterTipe    ] = useState('');
+  const [filterTipe, setFilterTipe] = useState('');
 
   // ── fetch ─────────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -402,9 +421,9 @@ export default function WilayahPage({ user }) {
         fetch('/api/admin/wilayah'),
         fetch('/api/provinsi'),
       ]);
-      const wilayahData  = await wilayahRes.json();
+      const wilayahData = await wilayahRes.json();
       const provinsiData = await provinsiRes.json();
-      if (!wilayahRes.ok)  { setError(wilayahData.message  || 'Gagal memuat data wilayah.'); return; }
+      if (!wilayahRes.ok) { setError(wilayahData.message || 'Gagal memuat data wilayah.'); return; }
       if (!provinsiRes.ok) { setError(provinsiData.message || 'Gagal memuat data provinsi.'); return; }
       setList(wilayahData);
       setProvinsiList(provinsiData);
@@ -427,10 +446,10 @@ export default function WilayahPage({ user }) {
   async function handleAdd(form) {
     setSaving(true);
     try {
-      const res  = await fetch('/api/admin/wilayah', {
-        method  : 'POST',
-        headers : { 'Content-Type': 'application/json' },
-        body    : JSON.stringify(form),
+      const res = await fetch('/api/admin/wilayah', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
       });
       const data = await res.json();
       if (!res.ok) { showToast(`❌ ${data.message}`); return; }
@@ -449,10 +468,10 @@ export default function WilayahPage({ user }) {
     const id = modal.row.wilayahId;
     setSaving(true);
     try {
-      const res  = await fetch(`/api/admin/wilayah/${id}`, {
-        method  : 'PUT',
-        headers : { 'Content-Type': 'application/json' },
-        body    : JSON.stringify(form),
+      const res = await fetch(`/api/admin/wilayah/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
       });
       const data = await res.json();
       if (!res.ok) { showToast(`❌ ${data.message}`); return; }
@@ -474,7 +493,7 @@ export default function WilayahPage({ user }) {
     if (!confirm('Hapus wilayah ini? Tindakan tidak dapat dibatalkan.')) return;
     setDeleting(id);
     try {
-      const res  = await fetch(`/api/admin/wilayah/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/wilayah/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) { showToast(`❌ ${data.message}`); return; }
       setList((prev) => prev.filter((r) => r.wilayahId !== id));
@@ -496,7 +515,7 @@ export default function WilayahPage({ user }) {
         body: JSON.stringify({ csvData }),
       });
       const data = await res.json();
-      
+
       if (!res.ok) {
         showToast(`❌ ${data.message}`);
         if (data.errors) {
@@ -509,7 +528,7 @@ export default function WilayahPage({ user }) {
       await fetchData();
       setImportModal(false);
       showToast(`✅ Berhasil import ${data.imported} wilayah!`);
-      
+
     } catch (err) {
       showToast('❌ Gagal mengupload file: ' + err.message);
     } finally {
@@ -519,15 +538,15 @@ export default function WilayahPage({ user }) {
 
   // ── stat counts ──────────────────────────────────────────────────────────
   const stats = {
-    Terdepan   : list.filter((r) => r.jenis_3t === 'Terdepan').length,
-    Terluar    : list.filter((r) => r.jenis_3t === 'Terluar').length,
-    Tertinggal : list.filter((r) => r.jenis_3t === 'Tertinggal').length,
+    Terdepan: list.filter((r) => r.jenis_3t === 'Terdepan').length,
+    Terluar: list.filter((r) => r.jenis_3t === 'Terluar').length,
+    Tertinggal: list.filter((r) => r.jenis_3t === 'Tertinggal').length,
   };
 
   // ── filtered list (client-side) ──────────────────────────────────────────
   const filteredList = list.filter((r) => {
     const matchProvinsi = !filterProvinsi || String(r.provinsiId) === filterProvinsi;
-    const matchTipe     = !filterTipe     || r.tipe === filterTipe;
+    const matchTipe = !filterTipe || r.tipe === filterTipe;
     return matchProvinsi && matchTipe;
   });
 
@@ -548,12 +567,12 @@ export default function WilayahPage({ user }) {
         {toast && (
           <div
             style={{
-              position     : 'fixed', bottom: 24, right: 24, zIndex: 100,
-              background   : '#1e293b', color: '#f8fafc',
-              padding      : '12px 20px', borderRadius: 10,
-              fontSize     : 13, fontWeight: 600,
-              boxShadow    : '0 8px 24px rgba(0,0,0,0.25)',
-              animation    : 'none',
+              position: 'fixed', bottom: 24, right: 24, zIndex: 100,
+              background: '#1e293b', color: '#f8fafc',
+              padding: '12px 20px', borderRadius: 10,
+              fontSize: 13, fontWeight: 600,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+              animation: 'none',
             }}
           >
             {toast}
@@ -588,27 +607,27 @@ export default function WilayahPage({ user }) {
         {/* ── Stat Cards ───────────────────────────────────────────────── */}
         <div
           style={{
-            display             : 'grid',
-            gridTemplateColumns : 'repeat(auto-fit, minmax(160px, 1fr))',
-            gap                 : 16,
-            marginBottom        : 24,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+            gap: 16,
+            marginBottom: 24,
           }}
         >
           <StatCard label="Total Wilayah 3T" count={list.length} icon="🗺️" accentColor={C.blue} />
-          <StatCard label="Terdepan"          count={stats.Terdepan}   icon="🏅" accentColor="#1d4ed8" />
-          <StatCard label="Terluar"           count={stats.Terluar}    icon="🌊" accentColor="#b45309" />
-          <StatCard label="Tertinggal"        count={stats.Tertinggal} icon="🏔️" accentColor="#9d174d" />
+          <StatCard label="Terdepan" count={stats.Terdepan} icon="🏅" accentColor="#1d4ed8" />
+          <StatCard label="Terluar" count={stats.Terluar} icon="🌊" accentColor="#b45309" />
+          <StatCard label="Tertinggal" count={stats.Tertinggal} icon="🏔️" accentColor="#9d174d" />
         </div>
 
         {/* ── Toolbar ───────────────────────────────────────────────────── */}
         <div
           style={{
-            display        : 'flex',
-            justifyContent : 'space-between',
-            alignItems     : 'flex-start',
-            marginBottom   : 14,
-            flexWrap       : 'wrap',
-            gap            : 12,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            marginBottom: 14,
+            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
           {/* Filter Section */}
@@ -754,8 +773,8 @@ export default function WilayahPage({ user }) {
                     <tr
                       key={row.wilayahId}
                       style={{
-                        borderBottom : idx < filteredList.length - 1 ? '1px solid #f3f4f6' : 'none',
-                        background   : idx % 2 === 0 ? C.white : '#fafafa',
+                        borderBottom: idx < filteredList.length - 1 ? '1px solid #f3f4f6' : 'none',
+                        background: idx % 2 === 0 ? C.white : '#fafafa',
                       }}
                     >
                       <td style={{ padding: '10px 14px', color: '#9ca3af', width: 36 }}>{idx + 1}</td>

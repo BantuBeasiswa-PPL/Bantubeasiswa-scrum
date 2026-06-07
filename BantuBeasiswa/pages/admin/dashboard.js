@@ -229,7 +229,7 @@ export default function AdminDashboardPage({ user }) {
             icon="🎓" color={C.blue} sub="Beasiswa dengan status aktif" />
           <StatCard label="Total Pendaftar"
             value={statsLoading ? '…' : stats.totalPendaftar.toLocaleString('id-ID')}
-            icon="📋" color={C.purple} sub="Cumulative semua pendaftaran" />
+            icon="📋" color={C.purple} sub="Mahasiswa yang sudah mengisi formulir Pendaftaran beasiswa" />
           <StatCard label="Mitra Pendonor"
             value={statsLoading ? '…' : stats.totalPendonor.toLocaleString('id-ID')}
             icon="🏢" color={C.green} sub="Pendonor terdaftar di platform" />

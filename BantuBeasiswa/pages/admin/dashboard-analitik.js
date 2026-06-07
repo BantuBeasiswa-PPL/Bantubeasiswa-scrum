@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
 import { supabase } from '../../lib/db';
+import { hasAlamatKtpLengkap } from '../../lib/mahasiswaProfile';
 
 // ─── Dynamic import recharts (no SSR — recharts depends on DOM) ──────────────
 const RechartsBarChart = dynamic(
@@ -197,89 +198,76 @@ export default function DashboardAnalitikPage({ user }) {
     setLoading(true);
     setError('');
     try {
-      // 1. Beasiswa aktif count
+      // ── 1. Total Beasiswa Aktif ────────────────────────────────────
       const { count: totalBeasiswaAktif, error: e1 } = await supabase
         .from('beasiswa')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'aktif');
-
       if (e1) throw new Error(`Gagal hitung beasiswa aktif: ${e1.message}`);
 
-      // 2. Total pendaftar count
-      const { count: totalPendaftar, error: e2 } = await supabase
-        .from('pendaftaran')
-        .select('*', { count: 'exact', head: true });
+      // ── 2. Fetch user dengan data alamat KTP (untuk hitung pendaftar) ─
+      const { data: allUsers, error: e2 } = await supabase
+        .from('user')
+        .select('userId, kabupatenKtpId, provinsiKtpId, alamatKtp');
+      if (e2) throw new Error(`Gagal ambil data user: ${e2.message}`);
 
-      if (e2) throw new Error(`Gagal hitung pendaftar: ${e2.message}`);
+      const pendaftarLengkap = (allUsers || []).filter(hasAlamatKtpLengkap);
+      const totalPendaftar = pendaftarLengkap.length;
 
-      // 3. Query wilayah 3T → beasiswa_wilayah → beasiswa → pendaftaran
-      //    Reversed direction: start from 3T wilayah, find beasiswa targeting them,
-      //    then count pendaftaran for those beasiswa.
-      const { data: wilayah3T, error: e3 } = await supabase
+      // ── 3. Fetch wilayah 3T yang punya jenis_3t ────────────────────
+      const { data: wilayah3TList, error: e5 } = await supabase
         .from('wilayah')
-        .select(`
-          wilayahId,
-          jenis_3t,
-          is3T,
-          beasiswa_wilayah (
-            beasiswaId
-          )
-        `)
-        .eq('is3T', true);
+        .select('wilayahId, jenis_3t')
+        .eq('is3T', true)
+        .not('jenis_3t', 'is', null);
+      if (e5) throw new Error(`Gagal ambil wilayah 3T: ${e5.message}`);
 
-      if (e3) throw new Error(`Gagal ambil data wilayah 3T: ${e3.message}`);
-
-      // Collect unique beasiswaIds per jenis_3t category
-      const beasiswaPerKategori = { Terdepan: new Set(), Terluar: new Set(), Tertinggal: new Set() };
-      (wilayah3T || []).forEach((w) => {
-        const kat = w.jenis_3t;
-        if (!kat || !beasiswaPerKategori[kat]) return;
-        const bwList = w.beasiswa_wilayah;
-        if (!Array.isArray(bwList)) return;
-        bwList.forEach((bw) => {
-          if (bw.beasiswaId) beasiswaPerKategori[kat].add(bw.beasiswaId);
-        });
+      // Map: wilayahId → jenis_3t (Terdepan / Terluar / Tertinggal)
+      const wilayahToJenis = {};
+      (wilayah3TList || []).forEach((w) => {
+        wilayahToJenis[w.wilayahId] = w.jenis_3t;
       });
 
-      // Fetch all pendaftaran once
-      const { data: allPendaftaran, error: e4 } = await supabase
-        .from('pendaftaran')
-        .select('pendaftaranId, beasiswaId');
-
-      if (e4) throw new Error(`Gagal ambil data pendaftaran: ${e4.message}`);
-
-      // 4. Client-side aggregation: count pendaftar per jenis_3t category
+      // ── Client-side aggregation berdasarkan lokasi asal Pendaftar ──
       const kategoriCount = { Terdepan: 0, Terluar: 0, Tertinggal: 0 };
-      const countedPerKategori = { Terdepan: new Set(), Terluar: new Set(), Tertinggal: new Set() };
+      const all3TIds = new Set();
 
-      (allPendaftaran || []).forEach((p) => {
-        Object.entries(beasiswaPerKategori).forEach(([kat, beasiswaIds]) => {
-          if (beasiswaIds.has(p.beasiswaId) && !countedPerKategori[kat].has(p.pendaftaranId)) {
-            countedPerKategori[kat].add(p.pendaftaranId);
-            kategoriCount[kat]++;
-          }
-        });
+      pendaftarLengkap.forEach((u) => {
+        // Cek apakah kabupaten atau provinsi pendaftar adalah wilayah 3T
+        let jenis3T = wilayahToJenis[u.kabupatenKtpId];
+        if (!jenis3T) {
+          jenis3T = wilayahToJenis[u.provinsiKtpId];
+        }
+
+        if (jenis3T) {
+          all3TIds.add(u.userId);
+          kategoriCount[jenis3T]++;
+        }
       });
 
-      // Count unique 3T pendaftar (a pendaftar counts once even if linked to multiple 3T categories)
-      const all3TIds = new Set([
-        ...countedPerKategori.Terdepan,
-        ...countedPerKategori.Terluar,
-        ...countedPerKategori.Tertinggal,
-      ]);
       const totalPendaftar3T = all3TIds.size;
 
-      // 5. Build chart data
+      // Build chart data
       const barData = [
         { kategori: 'Terdepan', jumlah: kategoriCount.Terdepan },
         { kategori: 'Terluar', jumlah: kategoriCount.Terluar },
         { kategori: 'Tertinggal', jumlah: kategoriCount.Tertinggal },
       ];
 
-      // 6. 3T priority fulfillment %
+      // 3T priority fulfillment %
       const persen3T = totalPendaftar > 0
         ? parseFloat(((totalPendaftar3T / totalPendaftar) * 100).toFixed(1))
         : 0;
+
+      // Debug log — cek data yang ditarik berdasarkan user location
+      console.log('═══════════════════════════════════════════════');
+      console.log('[DashboardAnalitik] DATA TRACE (Lokasi Pendaftar)');
+      console.log('═══════════════════════════════════════════════');
+      console.log(`📍 Ditemukan ${wilayah3TList?.length} Wilayah 3T`);
+      console.log(`📋 Total Pendaftar (alamat KTP lengkap): ${totalPendaftar}`);
+      console.log(`✅ Pendaftar dari 3T: ${totalPendaftar3T} orang`);
+      console.log(`📊 Rincian: Terdepan=${kategoriCount.Terdepan}, Terluar=${kategoriCount.Terluar}, Tertinggal=${kategoriCount.Tertinggal}`);
+      console.log('═══════════════════════════════════════════════');
 
       setStats({
         totalBeasiswaAktif: totalBeasiswaAktif ?? 0,
@@ -296,16 +284,68 @@ export default function DashboardAnalitikPage({ user }) {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Fetch regional metrics via RPC (PBI-20) ────────────────────────────────
+
+  // ── Fetch regional metrics (PBI-20) — client-side aggregation ───────────────
   const fetchMetrics = useCallback(async () => {
     setMetricsLoading(true);
     setMetricsError('');
     try {
-      const { data, error: rpcErr } = await supabase.rpc('get_regional_metrics');
-      if (rpcErr) throw new Error(`RPC error: ${rpcErr.message}`);
-      setMetricsData(data || []);
+      // Fetch wilayah 3T/Afirmasi with provinsi info
+      const { data: wilayahList, error: we } = await supabase
+        .from('wilayah')
+        .select('wilayahId, nama, tipe, jenis_3t, is3T, isAfirmasi, provinsiId')
+        .or('is3T.eq.true,isAfirmasi.eq.true');
+      if (we) throw new Error(`Gagal ambil wilayah: ${we.message}`);
+
+      // Fetch provinsi names
+      const { data: provList, error: pe } = await supabase
+        .from('provinsi')
+        .select('provinsiId, nama, isAfirmasi');
+      if (pe) throw new Error(`Gagal ambil provinsi: ${pe.message}`);
+
+      // Fetch lokasi KTP user yang sudah mengisi formulir alamat KTP
+      const { data: userList, error: pde } = await supabase
+        .from('user')
+        .select('userId, kabupatenKtpId, provinsiKtpId, alamatKtp');
+      if (pde) throw new Error(`Gagal ambil data user: ${pde.message}`);
+
+      // --- Client-side aggregation ---
+      const provMap = {};
+      (provList || []).forEach((p) => { provMap[p.provinsiId] = p; });
+
+      // Hitung Pendaftar berdasarkan lokasi asal user (hanya alamat KTP lengkap)
+      const pendaftarPerWilayah = {};
+      (userList || []).filter(hasAlamatKtpLengkap).forEach((u) => {
+        // Tambahkan hitungan ke kabupaten dan provinsi
+        if (u.kabupatenKtpId) {
+          pendaftarPerWilayah[u.kabupatenKtpId] = (pendaftarPerWilayah[u.kabupatenKtpId] || 0) + 1;
+        }
+        if (u.provinsiKtpId) {
+          pendaftarPerWilayah[u.provinsiKtpId] = (pendaftarPerWilayah[u.provinsiKtpId] || 0) + 1;
+        }
+      });
+
+      // Build metrics per wilayah
+      const metrics = (wilayahList || []).map((w) => {
+        const prov = provMap[w.provinsiId];
+        const totalPendaftar = pendaftarPerWilayah[w.wilayahId] || 0;
+
+        return {
+          wilayah_id: w.wilayahId,
+          wilayah_nama: w.nama,
+          provinsi_nama: prov?.nama ?? null,
+          tipe: w.tipe,
+          jenis_3t: w.jenis_3t,
+          is_3t: w.is3T,
+          is_afirmasi: w.isAfirmasi || (prov?.isAfirmasi ?? false),
+          total_pendaftar: totalPendaftar,
+        };
+      });
+
+      // Sort: most pendaftar first
+      metrics.sort((a, b) => b.total_pendaftar - a.total_pendaftar || a.wilayah_nama.localeCompare(b.wilayah_nama));
+      setMetricsData(metrics);
     } catch (err) {
       console.error('[fetchMetrics]', err);
       setMetricsError(err.message);
@@ -314,12 +354,34 @@ export default function DashboardAnalitikPage({ user }) {
     }
   }, []);
 
-  useEffect(() => { fetchMetrics(); }, [fetchMetrics]);
+  useEffect(() => {
+    fetchData();
+    fetchMetrics();
+
+    // Subscribe ke perubahan di tabel 'user' untuk update otomatis (Real-time)
+    const channel = supabase
+      .channel('dashboard_user_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'user' },
+        (payload) => {
+          console.log('[Realtime] Perubahan terdeteksi pada tabel user:', payload);
+          // Auto-refresh data saat ada update profil user atau user baru
+          fetchData();
+          fetchMetrics();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchData, fetchMetrics]);
 
   // ── Export CSV helper (PBI-20) ─────────────────────────────────────────────
   function exportCSV() {
     if (!metricsData.length) return;
-    const headers = ['Wilayah', 'Provinsi', 'Tipe', 'Jenis 3T', '3T', 'Afirmasi', 'Total Pendaftar', 'Total Dana (Rp)'];
+    const headers = ['Wilayah', 'Provinsi', 'Tipe', 'Jenis 3T', '3T', 'Afirmasi', 'Total Pendaftar'];
     const rows = metricsData.map((r) => [
       `"${r.wilayah_nama}"`,
       `"${r.provinsi_nama ?? ''}"`,
@@ -328,7 +390,6 @@ export default function DashboardAnalitikPage({ user }) {
       r.is_3t ? 'Ya' : 'Tidak',
       r.is_afirmasi ? 'Ya' : 'Tidak',
       r.total_pendaftar,
-      r.total_dana,
     ]);
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -336,8 +397,12 @@ export default function DashboardAnalitikPage({ user }) {
     const a = document.createElement('a');
     a.href = url;
     a.download = `regional_metrics_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    // Tunda revoke agar browser Chrome/Edge sempat membaca nama file
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -394,7 +459,7 @@ export default function DashboardAnalitikPage({ user }) {
             value={stats.totalPendaftar.toLocaleString('id-ID')}
             icon="📋"
             color={C.purple}
-            sub="Kumulatif semua pendaftaran beasiswa"
+            sub="Mahasiswa yang sudah mengisi formulir Pendaftaran beasiswa"
             loading={loading}
           />
           <StatCard
@@ -461,9 +526,7 @@ export default function DashboardAnalitikPage({ user }) {
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             <span style={{ fontSize: 14 }}>💡</span>
-            Data di-aggregate dari tabel <strong style={{ margin: '0 2px' }}>pendaftaran</strong> →
-            <strong style={{ margin: '0 2px' }}>beasiswa</strong> →
-            <strong style={{ margin: '0 2px' }}>beasiswa_wilayah</strong> →
+            Data di-aggregate dari tabel <strong style={{ margin: '0 2px' }}>user</strong> (alamat KTP lengkap) →
             <strong style={{ margin: '0 2px' }}>wilayah</strong> (GROUP BY jenis_3t secara client-side)
           </div>
         </div>
@@ -487,7 +550,7 @@ export default function DashboardAnalitikPage({ user }) {
                 Detailed Regional Metrics
               </h2>
               <p style={{ fontSize: 12, color: C.gray, marginTop: 4 }}>
-                Data wilayah 3T &amp; Afirmasi — pendaftar &amp; dana tersalurkan per daerah
+                Data wilayah 3T &amp; Afirmasi — jumlah pendaftar per daerah
               </p>
             </div>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -536,7 +599,7 @@ export default function DashboardAnalitikPage({ user }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e2e8f0' }}>
-                  {['Region Name', 'Provinsi', 'Classification', 'Total Applicants', 'Allocated Funds', 'Status'].map((h) => (
+                  {['Region Name', 'Provinsi', 'Classification', 'Total Applicants', 'Status'].map((h) => (
                     <th key={h} style={{
                       padding: '11px 16px', textAlign: 'left',
                       fontSize: 11, fontWeight: 700, color: '#374151',
@@ -551,7 +614,7 @@ export default function DashboardAnalitikPage({ user }) {
                   // Skeleton rows
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      {Array.from({ length: 6 }).map((__, j) => (
+                      {Array.from({ length: 5 }).map((__, j) => (
                         <td key={j} style={{ padding: '13px 16px' }}>
                           <span style={{
                             display: 'inline-block',
@@ -567,7 +630,7 @@ export default function DashboardAnalitikPage({ user }) {
                   ))
                 ) : metricsData.length === 0 ? (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={5}>
                       <div style={{
                         padding: '48px 24px', textAlign: 'center',
                         color: C.gray, display: 'flex',
@@ -582,9 +645,6 @@ export default function DashboardAnalitikPage({ user }) {
                 ) : (
                   metricsData.map((row) => {
                     const isExpanded = expandedRow === row.wilayah_id;
-                    const danaPerPendaftar = row.total_pendaftar > 0
-                      ? Math.round(row.total_dana / row.total_pendaftar)
-                      : 0;
                     // Classification badge config
                     const badgeCfg = row.jenis_3t
                       ? { label: row.jenis_3t, bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' }
@@ -642,12 +702,6 @@ export default function DashboardAnalitikPage({ user }) {
                           <td style={{ padding: '12px 16px', fontWeight: 700, color: C.dark, textAlign: 'right' }}>
                             {Number(row.total_pendaftar).toLocaleString('id-ID')}
                           </td>
-                          {/* Allocated Funds */}
-                          <td style={{ padding: '12px 16px', fontWeight: 600, color: C.green, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            {row.total_dana > 0
-                              ? `Rp ${Number(row.total_dana).toLocaleString('id-ID')}`
-                              : <span style={{ color: '#d1d5db', fontWeight: 400 }}>—</span>}
-                          </td>
                           {/* Status badge */}
                           <td style={{ padding: '12px 16px' }}>
                             <span style={{
@@ -666,7 +720,7 @@ export default function DashboardAnalitikPage({ user }) {
                         {/* Expanded detail row */}
                         {isExpanded && (
                           <tr key={`${row.wilayah_id}-detail`} style={{ borderBottom: '1px solid #f3f4f6', background: '#f0f9ff' }}>
-                            <td colSpan={6} style={{ padding: '0 16px 16px 40px' }}>
+                            <td colSpan={5} style={{ padding: '0 16px 16px 40px' }}>
                               <div style={{
                                 display: 'flex', gap: 24, flexWrap: 'wrap',
                                 padding: '14px 20px',
@@ -685,12 +739,6 @@ export default function DashboardAnalitikPage({ user }) {
                                 <div>
                                   <p style={{ fontSize: 11, color: C.gray, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Jenis 3T</p>
                                   <p style={{ fontSize: 15, fontWeight: 700, color: C.dark }}>{row.jenis_3t ?? '—'}</p>
-                                </div>
-                                <div>
-                                  <p style={{ fontSize: 11, color: C.gray, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Dana / Pendaftar</p>
-                                  <p style={{ fontSize: 15, fontWeight: 700, color: C.green }}>
-                                    {danaPerPendaftar > 0 ? `Rp ${danaPerPendaftar.toLocaleString('id-ID')}` : '—'}
-                                  </p>
                                 </div>
                                 <div>
                                   <p style={{ fontSize: 11, color: C.gray, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Flag</p>
@@ -723,8 +771,8 @@ export default function DashboardAnalitikPage({ user }) {
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
               <span style={{ fontSize: 14 }}>💡</span>
-              Data via RPC <strong style={{ margin: '0 2px' }}>get_regional_metrics()</strong> —
-              JOIN 5 tabel: wilayah, beasiswa_wilayah, beasiswa, pendaftaran, penyaluran_dana.
+              Data di-aggregate dari tabel <strong style={{ margin: '0 2px' }}>user</strong> (alamat KTP lengkap) &amp;
+              <strong style={{ margin: '0 2px' }}>wilayah</strong>.
               Klik baris untuk detail. Total: <strong style={{ marginLeft: 4 }}>{metricsData.length} wilayah</strong>
             </div>
           )}
