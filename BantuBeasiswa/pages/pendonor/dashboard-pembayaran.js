@@ -7,6 +7,7 @@ import { withAuth } from '../../lib/auth';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
 import KonfirmasiTransferModal from '../../components/KonfirmasiTransferModal';
 import * as XLSX from 'xlsx';
+import { showSuccess, showError, showConfirm, showWarning } from '../../lib/swal';
 
 // --- Harmonious Design Tokens & Premium Color Palette ---
 const C = {
@@ -48,12 +49,12 @@ export default function DashboardPembayaran({ user, pendonorId, initialQueueList
     const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'application/pdf'];
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      alert('Format file tidak didukung. Harap unggah berkas PNG, JPG, JPEG, atau PDF.');
+      await showWarning('Perhatian', 'Format file tidak didukung. Harap unggah berkas PNG, JPG, JPEG, atau PDF.');
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      alert('Ukuran file melebihi 5MB. Harap unggah berkas yang lebih kecil.');
+      await showWarning('Perhatian', 'Ukuran file melebihi 5MB. Harap unggah berkas yang lebih kecil.');
       return;
     }
 
@@ -101,11 +102,11 @@ export default function DashboardPembayaran({ user, pendonorId, initialQueueList
         throw new Error(resData.message || 'Gagal mengonfirmasi batch pembayaran.');
       }
 
-      alert(resData.message);
+      await showSuccess('Berhasil!', resData.message);
       refreshData();
     } catch (err) {
       console.error('[Confirm Batch Error]', err);
-      alert(err.message || 'Terjadi kesalahan tidak terduga saat memproses batch.');
+      await showError('Gagal!', err.message || 'Terjadi kesalahan tidak terduga saat memproses batch.');
     } finally {
       setIsProcessingBatch(false);
       if (batchFileInputRef.current) {
@@ -244,22 +245,23 @@ export default function DashboardPembayaran({ user, pendonorId, initialQueueList
     });
 
     if (pendingItems.length === 0) {
-      alert('Tidak ada transaksi pending dalam antrean batch saat ini.');
+      await showWarning('Perhatian', 'Tidak ada transaksi pending dalam antrean batch saat ini.');
       return;
     }
 
     const confirmMsg = `Apakah Anda yakin ingin menyetujui dan memproses pembayaran batch secara massal untuk ${pendingItems.length} transaksi pending senilai Rp ${totalAmountPending.toLocaleString('id-ID')}?\n\nAnda akan diminta untuk mengunggah 1 file bukti transfer untuk seluruh transaksi dalam batch ini.`;
     
-    if (confirm(confirmMsg)) {
+    const result = await showConfirm('Konfirmasi Batch?', confirmMsg, 'Ya, Lanjutkan', 'Batal');
+    if (result.isConfirmed) {
       batchFileInputRef.current?.click();
     }
   };
 
   // Prepare standard payload format needed by KonfirmasiTransferModal
-  const handleInitiateClick = (item) => {
+  const handleInitiateClick = async (item) => {
     const p = item.penyaluran_dana?.[0];
     if (!p || !p.penyaluranId) {
-      alert('Data transaksi penyaluran belum berhasil dibuat atau sedang diproses. Silakan refresh halaman.');
+      await showWarning('Perhatian', 'Data transaksi penyaluran belum berhasil dibuat atau sedang diproses. Silakan refresh halaman.');
       return;
     }
     

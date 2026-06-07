@@ -3,6 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
 import { withAuth } from '../../lib/auth';
+import { showSuccess, showError, showConfirm, showWarning } from '../../lib/swal';
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -166,11 +167,11 @@ export default function SeleksiPendaftarPage({ user }) {
         // Update document state locally
         updateLocalDocState(dokumenId, 'TRUE', null);
       } else {
-        alert(json.message || 'Gagal menyetujui dokumen');
+        await showError('Gagal!', json.message || 'Gagal menyetujui dokumen');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan jaringan.');
+      await showError('Gagal!', 'Terjadi kesalahan jaringan.');
     }
   };
 
@@ -185,7 +186,7 @@ export default function SeleksiPendaftarPage({ user }) {
   const handleFlagDocument = async (e) => {
     e.preventDefault();
     if (!rejectionReason.trim()) {
-      alert('Alasan penolakan wajib diisi');
+      await showWarning('Perhatian', 'Alasan penolakan wajib diisi');
       return;
     }
 
@@ -207,11 +208,11 @@ export default function SeleksiPendaftarPage({ user }) {
         setFlagDoc(null);
         setRejectionReason('');
       } else {
-        alert(json.message || 'Gagal memberi flag pada dokumen');
+        await showError('Gagal!', json.message || 'Gagal memberi flag pada dokumen');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan jaringan.');
+      await showError('Gagal!', 'Terjadi kesalahan jaringan.');
     }
   };
 
@@ -247,11 +248,14 @@ export default function SeleksiPendaftarPage({ user }) {
       batch_verify: 'menyetujui semua dokumen dan meloloskan pendaftaran ini (LULUS)'
     }[action];
 
+    const titleMsg = action === 'batch_verify' ? 'Batch Verify?' : 'Konfirmasi Tindakan';
     const confirmMsg = action === 'batch_verify'
       ? 'Apakah Anda yakin ingin menyetujui semua dokumen dan meloloskan pendaftaran ini?'
       : `Apakah Anda yakin ingin ${actionLabel}?`;
 
-    if (!confirm(confirmMsg)) {
+    const isDanger = action === 'reject';
+    const result = await showConfirm(titleMsg, confirmMsg, 'Ya', 'Batal', isDanger);
+    if (!result.isConfirmed) {
       return;
     }
 
@@ -290,16 +294,18 @@ export default function SeleksiPendaftarPage({ user }) {
         });
         
         setApplicants(updatedApplicants);
-        alert(action === 'batch_verify'
-          ? 'Berhasil: Semua dokumen disetujui dan status pendaftaran diubah menjadi LULUS'
-          : `Berhasil: Status pendaftaran diubah menjadi ${newStatus}`
+        await showSuccess(
+          'Berhasil!',
+          action === 'batch_verify'
+            ? 'Semua dokumen disetujui dan status pendaftaran diubah menjadi LULUS'
+            : `Status pendaftaran diubah menjadi ${newStatus}`
         );
       } else {
-        alert(json.message || 'Gagal mengubah status pendaftaran');
+        await showError('Gagal!', json.message || 'Gagal mengubah status pendaftaran');
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan jaringan.');
+      await showError('Gagal!', 'Terjadi kesalahan jaringan.');
     }
   };
 

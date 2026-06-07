@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { showSuccess } from '../lib/swal';
 
 export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nominal, namaOrganisasi }) {
   const [showFeedback, setShowFeedback] = useState(false);
@@ -17,8 +18,8 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
     }).format(value);
   };
 
-  const handleDownload = () => {
-    alert('Mengunduh Surat Keputusan Kelulusan Beasiswa... (Unduhan Simulasi PDF)');
+  const handleDownload = async () => {
+    await showSuccess('Simulasi Unduhan', 'Mengunduh Surat Keputusan Kelulusan Beasiswa... (Unduhan Simulasi PDF)');
   };
 
   const handleNextStep = () => {

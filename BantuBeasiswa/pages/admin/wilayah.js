@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import Head from 'next/head';
 import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
+import { showConfirm } from '../../lib/swal';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const JENIS_3T_OPTIONS   = ['Terdepan', 'Terluar', 'Tertinggal'];
@@ -471,7 +472,8 @@ export default function WilayahPage({ user }) {
 
   // ── delete ───────────────────────────────────────────────────────────────
   async function handleDelete(id) {
-    if (!confirm('Hapus wilayah ini? Tindakan tidak dapat dibatalkan.')) return;
+    const result = await showConfirm('Hapus Wilayah?', 'Hapus wilayah ini? Tindakan tidak dapat dibatalkan.', 'Ya, Hapus', 'Batal', true);
+    if (!result.isConfirmed) return;
     setDeleting(id);
     try {
       const res  = await fetch(`/api/admin/wilayah/${id}`, { method: 'DELETE' });
