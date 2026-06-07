@@ -45,6 +45,16 @@ export function normalizeMahasiswaProfile(row, fallback = {}) {
   };
 }
 
+/** Pendaftar dihitung setelah mahasiswa mengisi formulir alamat KTP (bukan saat daftar akun). */
+export function hasAlamatKtpLengkap(user) {
+  return Boolean(
+    user?.provinsiKtpId &&
+    user?.kabupatenKtpId &&
+    user?.alamatKtp &&
+    String(user.alamatKtp).trim()
+  );
+}
+
 export function normalizeRekening(row) {
   const source = row || {};
 
