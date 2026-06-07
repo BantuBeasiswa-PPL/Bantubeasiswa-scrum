@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/db'; 
+import { supabase } from '../../../lib/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { serialize } from 'cookie';
@@ -6,7 +6,7 @@ import { serialize } from 'cookie';
 const redirectMap = {
   admin: '/admin/dashboard',
   mahasiswa: '/mahasiswa/dashboard',
-  pendonor: '/pendonor/program',
+  pendonor: '/pendonor/dashboard',
 };
 
 export default async function handler(req, res) {
@@ -63,19 +63,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-  if (role === 'pendonor') {
-    if (pendonorStatus === 'rejected') {
-      return res.status(401).json({
-        message: 'Akun Anda ditolak. Hubungi admin untuk informasi lebih lanjut.',
-        status : 'rejected',
-      });
-    }
-    if (pendonorStatus !== 'verified') {
-      return res.status(403).json({
-        status: 'pending',
-        notice: 'Akun Anda belum diverifikasi oleh admin. Silakan tunggu persetujuan admin sebelum masuk.',
-      });
-    }
+  if (role === 'pendonor' && pendonorStatus === 'rejected') {
+    return res.status(401).json({
+      message: 'Akun Anda ditolak. Hubungi admin untuk informasi lebih lanjut.',
+      status : 'rejected',
+    });
   }
 
   const token = jwt.sign(
@@ -91,6 +83,15 @@ export default async function handler(req, res) {
     maxAge  : 60 * 60 * 24 * 7,
     sameSite: 'lax',
   }));
+
+  if (role === 'pendonor' && pendonorStatus !== 'verified') {
+    return res.status(200).json({
+      message : 'Login berhasil',
+      redirect: '/pendonor/dokumen-verifikasi',
+      status  : 'pending',
+      notice  : 'Akun Anda belum diverifikasi admin. Lengkapi profil dan unggah dokumen pendukung untuk proses verifikasi.',
+    });
+  }
 
   return res.status(200).json({
     message : 'Login berhasil',

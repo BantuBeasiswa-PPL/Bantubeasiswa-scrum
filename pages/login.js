@@ -84,10 +84,6 @@ export default function LoginPage() {
   const { registered, redirect: redirectAfterLogin, verifikasi } = router.query;
 
   useEffect(() => {
-    if (verifikasi === 'pending') {
-      setSelectedRole('pendonor');
-      setNotice('Akun Anda belum diverifikasi oleh admin. Silakan tunggu persetujuan admin sebelum masuk.');
-    }
     if (verifikasi === 'rejected') {
       setSelectedRole('pendonor');
       setError('Akun Anda ditolak. Hubungi admin untuk informasi lebih lanjut.');
@@ -110,8 +106,9 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      if (res.status === 403 && data.status === 'pending') {
-        setNotice(data.notice || 'Akun Anda belum diverifikasi oleh admin. Silakan tunggu persetujuan admin sebelum masuk.');
+      if (data.status === 'pending' && data.redirect) {
+        setNotice(data.notice || 'Akun Anda belum diverifikasi admin. Mengalihkan...');
+        setTimeout(() => router.push(data.redirect), 1500);
         return;
       }
 
