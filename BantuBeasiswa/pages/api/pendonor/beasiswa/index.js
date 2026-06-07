@@ -54,13 +54,9 @@ export default async function handler(req, res) {
         linkPendaftaran,
         deadline,
         status,
-<<<<<<< HEAD
+        alasanPenolakan,
         createdAt,
         pendaftaran(count)
-=======
-        alasanPenolakan,
-        createdAt
->>>>>>> 52eedbe5d5518f1951926949703ae20406197132
       `)
       .eq('pendonorId', pendonorId)
       .order('beasiswaId', { ascending: false });

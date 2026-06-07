@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
+import { showSuccess, showError, showConfirm } from '../../lib/swal';
 
 // ─── Color tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -118,7 +119,13 @@ export default function KelolaBeasiswaPage({ user }) {
   // Handlers
   const handleApprove = async (beasiswaId) => {
     const item = beasiswaList.find(b => b.beasiswaId === beasiswaId);
-    if (!confirm(`Apakah Anda yakin ingin menyetujui program beasiswa "${item?.judul}"?`)) return;
+    const result = await showConfirm(
+      'Setujui Beasiswa?',
+      `Apakah Anda yakin ingin menyetujui program beasiswa "${item?.judul}"?`,
+      'Ya, Setujui',
+      'Batal'
+    );
+    if (!result.isConfirmed) return;
 
     setSubmitting(true);
     try {
@@ -130,11 +137,11 @@ export default function KelolaBeasiswaPage({ user }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Gagal menyetujui beasiswa');
       
-      alert('Program beasiswa berhasil disetujui dan berstatus aktif.');
+      await showSuccess('Berhasil!', 'Program beasiswa berhasil disetujui dan berstatus aktif.');
       setDetailBeasiswa(null);
       await fetchData();
     } catch (e) {
-      alert('Error: ' + e.message);
+      await showError('Error', e.message);
     } finally {
       setSubmitting(false);
     }
@@ -157,7 +164,7 @@ export default function KelolaBeasiswaPage({ user }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Gagal menolak beasiswa');
 
-      alert('Program beasiswa telah ditolak dan dikembalikan ke status draft pendonor.');
+      await showSuccess('Berhasil!', 'Program beasiswa telah ditolak dan dikembalikan ke status draft pendonor.');
       setRejectBeasiswa(null);
       setRejectReason('');
       setDetailBeasiswa(null);
@@ -186,7 +193,7 @@ export default function KelolaBeasiswaPage({ user }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Gagal menghapus beasiswa');
 
-      alert('Program beasiswa berhasil dihapus secara permanen.');
+      await showSuccess('Berhasil!', 'Program beasiswa berhasil dihapus secara permanen.');
       setDeleteBeasiswa(null);
       setDeleteReason('');
       setDetailBeasiswa(null);

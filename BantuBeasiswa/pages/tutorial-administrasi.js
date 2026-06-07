@@ -5,6 +5,7 @@ import MahasiswaLayout from '../components/layouts/MahasiswaLayout';
 import AdminLayout from '../components/layouts/AdminLayout';
 import { withAuth } from '../lib/auth';
 import { getServerSupabase } from '../lib/supabaseServer';
+import { showSuccess, showError, showConfirm } from '../lib/swal';
 
 const C = {
   blue: '#0056b3',
@@ -224,7 +225,14 @@ export default function TutorialAdministrasiPage({ user, initialTutorials, templ
 
   // Handler Delete click
   const handleDeleteClick = async (tutorial) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus tutorial "${tutorial.judul}"?`)) {
+    const result = await showConfirm(
+      'Hapus Tutorial?',
+      `Apakah Anda yakin ingin menghapus tutorial "${tutorial.judul}"?`,
+      'Ya, Hapus',
+      'Batal',
+      true
+    );
+    if (!result.isConfirmed) {
       return;
     }
 
@@ -240,9 +248,9 @@ export default function TutorialAdministrasiPage({ user, initialTutorials, templ
 
       // Hapus dari state
       setTutorials(tutorials.filter(t => t.id !== tutorial.id));
-      alert('Tutorial berhasil dihapus.');
+      await showSuccess('Berhasil!', 'Tutorial berhasil dihapus.');
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      await showError('Gagal!', `Error: ${err.message}`);
     }
   };
 

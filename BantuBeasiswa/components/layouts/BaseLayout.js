@@ -146,7 +146,10 @@ export default function BaseLayout({ children, user, menuItems }) {
               item={item}
               isActive={
                 item.href === router.pathname ||
-                (item.href !== '/' && router.pathname.startsWith(item.href))
+                (item.href !== '/' && (
+                  router.pathname.startsWith(item.href + '/') ||
+                  router.pathname === item.href
+                ))
               }
               onClose={() => setSidebarOpen(false)}
             />
