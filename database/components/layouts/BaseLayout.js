@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { useContrastMode } from '../../lib/useContrastMode';
-import { useFontSize } from '../../lib/useFontSize';
 
 // ─── Helper: get user initials for avatar ────────────────────────────────────
 function getInitials(nama = '') {
@@ -38,12 +36,10 @@ function SidebarItem({ item, isActive, onClose }) {
   return (
     <Link
       href={item.href}
-      prefetch={false}
       onClick={onClose}
       className={`
-        flex items-center px-4 py-3 rounded-lg mx-2 text-sm font-medium
+        flex items-center gap-3 px-4 py-3 rounded-lg mx-2 text-sm font-medium
         transition-all duration-200 group
-        ${item.icon ? 'gap-3' : ''}
         ${
           isActive
             ? 'bg-white/20 text-white border-l-4 border-white pl-3'
@@ -51,7 +47,7 @@ function SidebarItem({ item, isActive, onClose }) {
         }
       `}
     >
-      {item.icon && <span className="text-lg leading-none">{item.icon}</span>}
+      <span className="text-lg leading-none">{item.icon}</span>
       <span className="leading-tight">{item.label}</span>
     </Link>
   );
@@ -60,21 +56,7 @@ function SidebarItem({ item, isActive, onClose }) {
 // ─── Main BaseLayout ──────────────────────────────────────────────────────────
 export default function BaseLayout({ children, user, menuItems }) {
   const router = useRouter();
-  const [sidebarOpen,   setSidebarOpen  ] = useState(false);
-  const [logoutLoading, setLogoutLoading] = useState(false);
-  
-  // Accessibility hooks
-  const { isHighContrast, toggle: toggleContrast } = useContrastMode(user?.id);
-  const { level, decrease: decreaseFont, increase: increaseFont, canDecrease, canIncrease } = useFontSize(user?.id);
-
-  async function handleLogout() {
-    setLogoutLoading(true);
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } finally {
-      router.push('/login');
-    }
-  }
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const nama  = user?.nama  || 'Pengguna';
   const role  = user?.role  || 'mahasiswa';
@@ -153,56 +135,10 @@ export default function BaseLayout({ children, user, menuItems }) {
           ))}
         </nav>
 
-        {/* Bottom: Logout + version tag */}
-        <div className="px-4 py-3 border-t border-white/20 space-y-2">
-          <button
-            id="btn-logout"
-            onClick={handleLogout}
-            disabled={logoutLoading}
-            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200"
-            style={{
-              backgroundColor: logoutLoading ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.1)',
-              color          : logoutLoading ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.85)',
-              border         : '1px solid rgba(255,255,255,0.15)',
-              cursor         : logoutLoading ? 'not-allowed' : 'pointer',
-            }}
-            onMouseEnter={(e) => {
-              if (!logoutLoading) {
-                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.18)';
-                e.currentTarget.style.color = '#ffffff';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!logoutLoading) {
-                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
-              }
-            }}
-          >
-            {logoutLoading ? (
-              <>
-                <span style={{
-                  width: '12px', height: '12px',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  borderTop: '2px solid white',
-                  borderRadius: '50%',
-                  display: 'inline-block',
-                  animation: 'spin 0.7s linear infinite',
-                }} />
-                Keluar...
-              </>
-            ) : (
-              <>
-                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
-                </svg>
-                Keluar
-              </>
-            )}
-          </button>
+        {/* Bottom: version tag */}
+        <div className="px-4 py-3 border-t border-white/20">
           <p className="text-blue-200 text-xs text-center">v1.0.0 · BantuBeasiswa</p>
         </div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </aside>
 
       {/* ── MAIN AREA (navbar + content) ─────────────────────────────────── */}
@@ -261,26 +197,23 @@ export default function BaseLayout({ children, user, menuItems }) {
           <div className="flex items-center gap-2">
             {/* Kontras Button */}
             <button
-              onClick={toggleContrast}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border transition-all hover:shadow-sm"
               style={{
                 borderColor: '#ffc107',
                 color: '#0056b3',
-                backgroundColor: isHighContrast ? '#00d9ff' : '#fff9e6',
+                backgroundColor: '#fff9e6',
               }}
               title="Toggle kontras tinggi"
               aria-label="Toggle kontras"
             >
-              <span style={{ color: isHighContrast ? '#0a0e27' : '#ffc107' }}>◑</span>
-              <span className="hidden sm:inline">{isHighContrast ? 'Normal' : 'Kontras'}</span>
+              <span style={{ color: '#ffc107' }}>◑</span>
+              <span className="hidden sm:inline">Kontras</span>
             </button>
 
             {/* Font Size Controls */}
             <div className="flex items-center rounded-lg border overflow-hidden" style={{ borderColor: '#e5e7eb' }}>
               <button
-                onClick={decreaseFont}
-                disabled={!canDecrease}
-                className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
                 style={{ color: '#0056b3' }}
                 title="Perkecil font"
                 aria-label="Perkecil ukuran font"
@@ -289,9 +222,7 @@ export default function BaseLayout({ children, user, menuItems }) {
               </button>
               <div className="w-px h-5 bg-gray-200" />
               <button
-                onClick={increaseFont}
-                disabled={!canIncrease}
-                className="w-10 h-10 flex items-center justify-center text-lg font-bold transition-colors hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors hover:bg-gray-100"
                 style={{ color: '#0056b3' }}
                 title="Perbesar font"
                 aria-label="Perbesar ukuran font"

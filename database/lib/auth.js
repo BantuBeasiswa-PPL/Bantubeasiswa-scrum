@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { parse } from 'cookie';
-import { supabase } from './db';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -49,57 +48,8 @@ export function withAuth(context, allowedRoles) {
     props: {
       user: {
         accountId: decoded.accountId,
-        userId   : decoded.userId   ?? null,
         email    : decoded.email,
         role     : decoded.role,
-        nama     : decoded.nama     ?? '',
-      },
-    },
-  };
-}
-
-/**
- * Helper getServerSideProps: proteksi halaman pendonor yang sudah diverifikasi admin.
- * Redirect ke login dengan notifikasi jika belum diverifikasi.
- */
-export async function withPendonorAuth(context) {
-  const decoded = verifyToken(context.req);
-
-  if (!decoded || decoded.role !== 'pendonor') {
-    return {
-      redirect: {
-        destination: '/login',
-        permanent  : false,
-      },
-    };
-  }
-
-  const { data: pendonorData, error } = await supabase
-    .from('pendonor')
-    .select('statusVerifikasi')
-    .eq('accountId', decoded.accountId)
-    .single();
-
-  const status = (pendonorData?.statusVerifikasi || 'pending').toLowerCase();
-
-  if (error || !pendonorData || status !== 'verified') {
-    const query = status === 'rejected' ? 'verifikasi=rejected' : 'verifikasi=pending';
-    return {
-      redirect: {
-        destination: `/login?${query}`,
-        permanent  : false,
-      },
-    };
-  }
-
-  return {
-    props: {
-      user: {
-        accountId: decoded.accountId,
-        userId   : decoded.userId   ?? null,
-        email    : decoded.email,
-        role     : decoded.role,
-        nama     : decoded.nama     ?? '',
       },
     },
   };
