@@ -58,7 +58,7 @@ export default function StatusPendaftaran({ user }) {
   // Ambil id pendaftaran dari URL query: /mahasiswa/status-pendaftaran?id=<uuid>
   const pendaftaranId = router.query.id ?? null;
 
-  const { status, beasiswaInfo, createdAt, loading, error } =
+  const { status, beasiswaInfo, createdAt, penyaluranInfo, loading, error } =
     useStatusPendaftaran(pendaftaranId);
 
   // Mapping status → nomor step aktif
@@ -115,6 +115,7 @@ export default function StatusPendaftaran({ user }) {
             namaMahasiswa={user?.nama}
             nominal={beasiswaInfo?.nominal}
             namaOrganisasi={beasiswaInfo?.pendonor?.statusOrganisasi}
+            penyaluranInfo={penyaluranInfo}
           />
         )}
 

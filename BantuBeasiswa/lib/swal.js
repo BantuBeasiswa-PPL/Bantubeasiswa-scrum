@@ -11,10 +11,10 @@ export const showAlert = (options) => {
   const isDanger = options.isDanger || false;
 
   const confirmBtnClass = isDanger
-    ? 'px-5 py-2.5 bg-red-650 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all mx-1.5 cursor-pointer outline-none border-none'
+    ? 'px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all mx-1.5 cursor-pointer outline-none border-none'
     : 'px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all mx-1.5 cursor-pointer outline-none border-none';
 
-  const cancelBtnClass = 'px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-705 rounded-xl text-sm font-bold transition-all mx-1.5 cursor-pointer outline-none border-none';
+  const cancelBtnClass = 'px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-sm font-bold transition-all mx-1.5 cursor-pointer outline-none border-none';
 
   return Swal.fire({
     customClass: {

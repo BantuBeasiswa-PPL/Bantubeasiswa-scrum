@@ -42,6 +42,18 @@ export function normalizeMahasiswaProfile(row, fallback = {}) {
       source.alamatTempatTinggal ??
       source.alamat_tempat_tinggal ??
       '',
+    namaUniversitas: source.namaUniversitas ?? source.nama_universitas ?? '',
+    jurusan: source.jurusan ?? '',
+    semesterAktif: source.semesterAktif ?? source.semester_aktif ?? '',
+    ipk: source.ipk ?? '',
+    namaAyah: source.namaAyah ?? source.nama_ayah ?? '',
+    pekerjaanAyah: source.pekerjaanAyah ?? source.pekerjaan_ayah ?? '',
+    namaIbu: source.namaIbu ?? source.nama_ibu ?? '',
+    pekerjaanIbu: source.pekerjaanIbu ?? source.pekerjaan_ibu ?? '',
+    penghasilanOrangTua: source.penghasilanOrangTua ?? source.penghasilan_orang_tua ?? '',
+    fileTranskrip: source.fileTranskrip ?? source.file_transkrip ?? '',
+    fileKk: source.fileKk ?? source.file_kk ?? '',
+    fileKtp: source.fileKtp ?? source.file_ktp ?? '',
   };
 }
 
@@ -172,3 +184,32 @@ export async function getLatestLulusPendaftaran(userId) {
 
   return null;
 }
+
+export async function getAllLulusPendaftaran(userId) {
+  if (!userId) return [];
+
+  const filters = [
+    ['userId', userId],
+    ['user_id', userId],
+  ];
+
+  for (const [column, value] of filters) {
+    const { data, error } = await supabase
+      .from('pendaftaran')
+      .select(`
+        *,
+        beasiswa (
+          *,
+          pendonor ( * )
+        )
+      `)
+      .eq(column, value)
+      .eq('status', 'LULUS')
+      .order('createdAt', { ascending: false });
+
+    if (!error && data) return data;
+  }
+
+  return [];
+}
+

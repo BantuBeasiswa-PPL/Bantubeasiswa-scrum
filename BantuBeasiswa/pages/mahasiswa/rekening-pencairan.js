@@ -66,7 +66,7 @@ function getSafeFileExtension(file) {
   return file.type === 'image/png' ? 'png' : 'jpg';
 }
 
-export default function RekeningPencairanPage({ user, profile, existingRekening }) {
+export default function RekeningPencairanPage({ user, profile, existingRekening, lulusPendaftaranList = [] }) {
   const fileInputRef = useRef(null);
   const nama = profile.nama || user.nama || 'Mahasiswa';
   const email = profile.email || user.email || '-';
@@ -176,7 +176,11 @@ export default function RekeningPencairanPage({ user, profile, existingRekening 
         <meta name="description" content="Kelola data rekening bank untuk pencairan beasiswa." />
       </Head>
 
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[360px_1fr]">
+      <div className={`mx-auto grid max-w-7xl gap-6 ${
+        lulusPendaftaranList.length > 0
+          ? 'lg:grid-cols-[280px_1fr_320px]'
+          : 'lg:grid-cols-[300px_1fr]'
+      }`}>
         {/* Sidebar */}
         <aside className="space-y-5">
           <section className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
@@ -428,6 +432,72 @@ export default function RekeningPencairanPage({ user, profile, existingRekening 
             </form>
           )}
         </section>
+
+        {/* Right Sidebar - Passed Scholarships */}
+        {lulusPendaftaranList.length > 0 && (
+          <aside className="space-y-5">
+            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm lg:sticky lg:top-6">
+              <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="text-emerald-500">🏆</span> Beasiswa Lulus
+              </h3>
+              <div className="space-y-4">
+                {lulusPendaftaranList.map((pendaftaran) => {
+                  const beasiswa = pendaftaran.beasiswa || {};
+                  const pendonor = beasiswa.pendonor || {};
+                  const batchYear = new Date(
+                    pendaftaran.createdAt || pendaftaran.created_at || new Date().toISOString()
+                  ).getFullYear();
+
+                  return (
+                    <div
+                      key={pendaftaran.pendaftaranId}
+                      className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/30 text-sm"
+                    >
+                      <p className="font-bold text-gray-900 leading-tight">
+                        {beasiswa.judul || 'Beasiswa'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {pendonor.statusOrganisasi || pendonor.nama_organisasi || 'Pendonor'}
+                      </p>
+
+                      <div className="mt-3 grid grid-cols-2 gap-2 pt-3 border-t border-emerald-100/50 text-xs">
+                        <div>
+                          <span className="text-gray-400 block">Batch</span>
+                          <span className="font-semibold text-gray-700">{batchYear}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 block">Nominal</span>
+                          <span className="font-semibold text-gray-700">
+                            {beasiswa.nominal
+                              ? new Intl.NumberFormat('id-ID', {
+                                  style: 'currency',
+                                  currency: 'IDR',
+                                  minimumFractionDigits: 0,
+                                }).format(beasiswa.nominal)
+                              : '—'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                          LULUS
+                        </span>
+                        <Link
+                          href={`/mahasiswa/status-pendaftaran?id=${pendaftaran.pendaftaranId}`}
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-800 transition"
+                        >
+                          Lihat Detail →
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          </aside>
+        )}
       </div>
     </MahasiswaLayout>
   );
@@ -441,33 +511,16 @@ export async function getServerSideProps(context) {
   const profile = await getMahasiswaProfile(user);
   const rawRekening = await getLatestRekening(profile.userId);
 
-  // Jika mahasiswa sudah LULUS, arahkan ke daftar-ulang-rekening
-  const { getServerSupabase } = await import('@/lib/supabaseServer');
-  const supabaseServer = getServerSupabase();
-  if (profile.userId) {
-    const { data: lulusPendaftaran } = await supabaseServer
-      .from('pendaftaran')
-      .select('pendaftaranId')
-      .eq('userId', profile.userId)
-      .eq('status', 'LULUS')
-      .limit(1)
-      .maybeSingle();
-
-    if (lulusPendaftaran) {
-      return {
-        redirect: {
-          destination: '/mahasiswa/daftar-ulang-rekening',
-          permanent: false,
-        },
-      };
-    }
-  }
+  // Fetch all passed scholarships
+  const { getAllLulusPendaftaran } = await import('@/lib/mahasiswaProfile');
+  const lulusPendaftaranList = await getAllLulusPendaftaran(profile.userId);
 
   return {
     props: {
       user,
       profile,
       existingRekening: rawRekening ?? null,
+      lulusPendaftaranList: JSON.parse(JSON.stringify(lulusPendaftaranList)),
     },
   };
 }

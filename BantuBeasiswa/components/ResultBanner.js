@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { showSuccess } from '../lib/swal';
 
-export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nominal, namaOrganisasi }) {
+export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nominal, namaOrganisasi, penyaluranInfo }) {
   const [showFeedback, setShowFeedback] = useState(false);
 
   if (!status || (status !== 'LULUS' && status !== 'DITOLAK')) {
@@ -19,13 +18,162 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
   };
 
   const handleDownload = async () => {
-    await showSuccess('Simulasi Unduhan', 'Mengunduh Surat Keputusan Kelulusan Beasiswa... (Unduhan Simulasi PDF)');
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Colors
+      const primaryColor = [0, 86, 179]; // Dark Blue
+      const darkColor = [33, 41, 59]; // Slate Dark
+      const grayColor = [100, 116, 139]; // Slate Gray
+      const greenColor = [5, 150, 105]; // Emerald Green
+
+      // ─── Header ───
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('BantuBeasiswa', 20, 25);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      doc.text('Portal Penyaluran & Pendanaan Beasiswa Nusantara', 20, 31);
+
+      // Divider Line
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(20, 35, 190, 35);
+
+      // ─── Document Title ───
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+      doc.text('SURAT KEPUTUSAN KELULUSAN BEASISWA', 105, 50, { align: 'center' });
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      doc.text(`Nomor Ref: SKK/${penyaluranInfo?.penyaluranId || 'SK'}/${Date.now().toString().slice(-6)}`, 105, 56, { align: 'center' });
+
+      // ─── Body Text ───
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+      
+      const introText = 'Berdasarkan hasil rangkaian proses seleksi berkas, verifikasi administrasi, dan seleksi kelayakan akademik oleh pihak pendonor, dengan ini BantuBeasiswa menyatakan bahwa pendaftar di bawah ini:';
+      const splitIntro = doc.splitTextToSize(introText, 170);
+      doc.text(splitIntro, 20, 70);
+
+      // ─── Table / Candidate Info ───
+      const startY = 88;
+      const lineHeight = 8;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Nama Penerima', 20, startY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`:  ${namaMahasiswa || '—'}`, 60, startY);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Program Beasiswa', 20, startY + lineHeight);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`:  ${judulBeasiswa || '—'}`, 60, startY + lineHeight);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Pemberi Beasiswa', 20, startY + (lineHeight * 2));
+      doc.setFont('helvetica', 'normal');
+      doc.text(`:  ${namaOrganisasi || '—'}`, 60, startY + (lineHeight * 2));
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Nominal Beasiswa', 20, startY + (lineHeight * 3));
+      doc.setFont('helvetica', 'normal');
+      doc.text(`:  ${formatRupiah(nominal)}`, 60, startY + (lineHeight * 3));
+
+      // Divider Line
+      doc.line(20, startY + (lineHeight * 4) + 2, 190, startY + (lineHeight * 4) + 2);
+
+      // ─── Payment Section ───
+      const payY = startY + (lineHeight * 4) + 12;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+      doc.text('STATUS PENYALURAN DANA', 20, payY);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+
+      const isPaid = penyaluranInfo && (penyaluranInfo.status === 'confirmed' || penyaluranInfo.status === 'tersalurkan');
+      const payDesc = isPaid 
+        ? 'Selamat! Dana beasiswa Anda telah dikonfirmasi dan ditransfer langsung oleh pendonor ke rekening pencairan Anda yang terdaftar di sistem BantuBeasiswa. Rincian transfer transaksi dapat dilihat di bawah ini:'
+        : 'Dana beasiswa Anda saat ini sedang dalam antrean pengiriman oleh pihak pendonor dan akan segera disalurkan ke rekening pencairan Anda. Rincian rencana penyaluran dapat dilihat di bawah ini:';
+      
+      const splitPayDesc = doc.splitTextToSize(payDesc, 170);
+      doc.text(splitPayDesc, 20, payY + 6);
+
+      // Payment Details Box
+      const boxY = payY + 20;
+      doc.setFillColor(248, 250, 252);
+      doc.rect(20, boxY, 170, 36, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(20, boxY, 170, 36, 'D');
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.text('Status Pembayaran', 25, boxY + 8);
+      doc.setFont('helvetica', 'normal');
+      if (isPaid) {
+        doc.setTextColor(greenColor[0], greenColor[1], greenColor[2]);
+        doc.text(':  BERHASIL DITRANSFER (Dikonfirmasi)', 65, boxY + 8);
+      } else {
+        doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+        doc.text(':  DALAM PROSES (Pending)', 65, boxY + 8);
+      }
+
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ID Transaksi', 25, boxY + 16);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`:  ${penyaluranInfo?.idTransaksi || '—'}`, 65, boxY + 16);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Tanggal Transfer', 25, boxY + 24);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`:  ${penyaluranInfo?.tanggalPenyaluran ? new Date(penyaluranInfo.tanggalPenyaluran).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}`, 65, boxY + 24);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text('Jumlah Dana', 25, boxY + 32);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`:  ${formatRupiah(penyaluranInfo?.jumlahDana || nominal)}`, 65, boxY + 32);
+
+      // ─── Footnote / Signature ───
+      doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Dokumen ini diterbitkan secara sah oleh sistem BantuBeasiswa dan tidak memerlukan tanda tangan basah.', 105, boxY + 46, { align: 'center' });
+
+      const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+      doc.text(`Jakarta, ${dateStr}`, 145, boxY + 58);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BantuBeasiswa Operations', 145, boxY + 76);
+
+      doc.save(`surat-kelulusan-${namaMahasiswa.replace(/\s+/g, '-')}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+      alert('Gagal membuat file PDF kelulusan.');
+    }
   };
 
   const handleNextStep = () => {
     window.location.assign('/mahasiswa/daftar-ulang-rekening');
   };
 
+  const isPaid = penyaluranInfo && (penyaluranInfo.status === 'confirmed' || penyaluranInfo.status === 'tersalurkan');
   const isLulus = status === 'LULUS';
 
   return (
@@ -104,13 +252,18 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                 <div className="flex flex-wrap items-center gap-3">
                   <button
                     onClick={handleDownload}
-                    className="px-5 py-2.5 bg-white/10 hover:bg-white/15 active:scale-95 text-white border border-white/15 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2"
+                    disabled={!isPaid}
+                    className={`px-5 py-2.5 border rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 ${
+                      isPaid 
+                        ? 'bg-white/10 hover:bg-white/15 active:scale-95 text-white border border-white/15 cursor-pointer' 
+                        : 'bg-white/5 text-white/40 border-white/10 cursor-not-allowed'
+                    }`}
                   >
-                    <svg className="w-4 h-4 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-4 h-4 ${isPaid ? 'text-blue-200' : 'text-white/20'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
                         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
-                    Unduh Surat Kelulusan
+                    {isPaid ? 'Unduh Surat Kelulusan' : 'Unduh Surat Kelulusan (Menunggu Transfer)'}
                   </button>
 
                   <button
