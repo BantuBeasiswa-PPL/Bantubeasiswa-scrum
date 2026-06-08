@@ -44,6 +44,11 @@ export default function TutorialAdministrasiPage({ user, initialTutorials, templ
   // State untuk data tutorial (agar bisa langsung ditambahkan admin secara dinamis)
   const [tutorials, setTutorials] = useState(initialTutorials);
 
+  // State untuk template dokumen & status unggah (admin)
+  const [templatesState, setTemplatesState] = useState(templates);
+  const [uploadingPdfId, setUploadingPdfId] = useState(null);
+  const [uploadingDocxId, setUploadingDocxId] = useState(null);
+
   // State untuk pencarian & kategori filter kartu tutorial
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKategori, setSelectedKategori] = useState('Semua');
@@ -254,6 +259,82 @@ export default function TutorialAdministrasiPage({ user, initialTutorials, templ
     }
   };
 
+  // Handler upload file template dokumen ke Supabase bucket (Khusus Admin)
+  const handleTemplateUpload = async (e, templateId, fileName, fileType) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      await showError('Gagal!', 'File melebihi kapasitas maksimal 10MB.');
+      return;
+    }
+
+    if (fileType === 'pdf') {
+      setUploadingPdfId(templateId);
+    } else {
+      setUploadingDocxId(templateId);
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        try {
+          const base64 = reader.result.split(',')[1];
+          const payload = {
+            fileName,
+            fileBase64: base64,
+            mimeType: file.type,
+          };
+
+          const res = await fetch('/api/admin/template/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.message || 'Gagal mengunggah template');
+          }
+
+          // Perbarui local state agar link unduhan segera aktif/diperbarui
+          setTemplatesState(prev => prev.map(t => {
+            if (t.id === templateId) {
+              return {
+                ...t,
+                pdfUrl: fileType === 'pdf' ? data.publicUrl : t.pdfUrl,
+                docxUrl: fileType === 'docx' ? data.publicUrl : t.docxUrl,
+              };
+            }
+            return t;
+          }));
+
+          await showSuccess('Berhasil!', `File template ${fileType.toUpperCase()} berhasil diunggah.`);
+        } catch (err) {
+          await showError('Gagal!', err.message || 'Gagal mengunggah file.');
+        } finally {
+          if (fileType === 'pdf') {
+            setUploadingPdfId(null);
+          } else {
+            setUploadingDocxId(null);
+          }
+        }
+      };
+      reader.onerror = () => {
+        throw new Error('Gagal membaca file.');
+      };
+    } catch (err) {
+      await showError('Gagal!', err.message);
+      if (fileType === 'pdf') {
+        setUploadingPdfId(null);
+      } else {
+        setUploadingDocxId(null);
+      }
+    }
+  };
+
   // Filter tutorial berdasarkan pencarian & kategori
   const filteredTutorials = tutorials.filter(t => {
     const matchesSearch = t.judul.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -263,7 +344,7 @@ export default function TutorialAdministrasiPage({ user, initialTutorials, templ
   });
 
   // Filter template berdasarkan kategori tab
-  const filteredTemplates = templates.filter(t => {
+  const filteredTemplates = templatesState.filter(t => {
     return selectedTemplateTab === 'Semua' || t.kategori === selectedTemplateTab;
   });
 
@@ -299,7 +380,7 @@ export default function TutorialAdministrasiPage({ user, initialTutorials, templ
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-2">
-                <span className="text-xl">⚙️</span> {editingTutorialId ? '✏️ Edit Tutorial Administrasi' : 'Panel Kelola Konten (Khusus Admin)'}
+                <span className="text-xl">⚙️</span> {editingTutorialId ? '✏️ Edit Tutorial Administrasi' : 'Panel Kelola Konten'}
               </h2>
               <p className="text-xs text-slate-500 mt-1">
                 {editingTutorialId 
@@ -725,24 +806,53 @@ export default function TutorialAdministrasiPage({ user, initialTutorials, templ
                   </p>
                 </div>
 
-                {/* Download Actions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <a
-                    href={template.pdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 border border-red-200 rounded-lg text-xs font-bold text-red-600 bg-red-50/30 hover:bg-red-50 hover:text-red-700 transition-all duration-200"
-                  >
-                    <span>📄</span> PDF
-                  </a>
-                  <a
-                    href={template.docxUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-1.5 py-2 px-3 border border-blue-200 rounded-lg text-xs font-bold text-blue-600 bg-blue-50/30 hover:bg-blue-50 hover:text-blue-700 transition-all duration-200"
-                  >
-                    <span>📝</span> DOCX
-                  </a>
+                {/* Download & Upload Actions */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col">
+                    <a
+                      href={template.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 py-2 px-3 border border-red-200 rounded-lg text-xs font-bold text-red-600 bg-red-50/30 hover:bg-red-50 hover:text-red-700 transition-all duration-200 w-full text-center"
+                    >
+                      <span>📄</span> PDF
+                    </a>
+                    {user.role === 'admin' && (
+                      <label className="cursor-pointer text-[10px] text-red-605 hover:text-red-800 text-center font-bold border border-dashed border-red-300 rounded py-1 bg-red-50/20 hover:bg-red-50 mt-1.5 transition-all">
+                        {uploadingPdfId === template.id ? 'Mengunggah...' : '📤 Upload PDF'}
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          disabled={uploadingPdfId === template.id || uploadingDocxId === template.id}
+                          onChange={(e) => handleTemplateUpload(e, template.id, template.pdfFile, 'pdf')}
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col">
+                    <a
+                      href={template.docxUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 py-2 px-3 border border-blue-200 rounded-lg text-xs font-bold text-blue-600 bg-blue-50/30 hover:bg-blue-50 hover:text-blue-700 transition-all duration-200 w-full text-center"
+                    >
+                      <span>📝</span> DOCX
+                    </a>
+                    {user.role === 'admin' && (
+                      <label className="cursor-pointer text-[10px] text-blue-605 hover:text-blue-800 text-center font-bold border border-dashed border-blue-300 rounded py-1 bg-blue-50/20 hover:bg-blue-50 mt-1.5 transition-all">
+                        {uploadingDocxId === template.id ? 'Mengunggah...' : '📤 Upload DOCX'}
+                        <input
+                          type="file"
+                          accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                          className="hidden"
+                          disabled={uploadingPdfId === template.id || uploadingDocxId === template.id}
+                          onChange={(e) => handleTemplateUpload(e, template.id, template.docxFile, 'docx')}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -921,6 +1031,8 @@ export async function getServerSideProps(context) {
       kategori: item.kategori,
       pdfUrl: pdfUrlData?.publicUrl || '#',
       docxUrl: docxUrlData?.publicUrl || '#',
+      pdfFile: item.pdfFile,
+      docxFile: item.docxFile,
     };
   });
 
