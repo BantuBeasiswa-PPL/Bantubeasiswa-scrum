@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import NotificationBell from '../NotificationBell';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContrastMode } from '../../lib/useContrastMode';
@@ -316,6 +317,9 @@ export default function BaseLayout({ children, user, menuItems }) {
                 +
               </button>
             </div>
+
+            {/* Notification Bell */}
+            <NotificationBell userId={user?.id} />
 
             {/* User badge (desktop) */}
             <div
