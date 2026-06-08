@@ -19,7 +19,7 @@ const menuItems = [
   },
   {
     label: 'Pembayaran Beasiswa',
-    href: '/pendonor/pembayaran',
+    href: '/pendonor/dashboard-pembayaran',
   },
   {
     label: 'Dashboard Laporan',

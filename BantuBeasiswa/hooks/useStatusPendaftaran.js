@@ -26,6 +26,7 @@ export function useStatusPendaftaran(pendaftaranId) {
   const [status, setStatus] = useState(null);
   const [beasiswaInfo, setBeasiswaInfo] = useState(null);
   const [createdAt, setCreatedAt] = useState(null);
+  const [penyaluranInfo, setPenyaluranInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -42,7 +43,26 @@ export function useStatusPendaftaran(pendaftaranId) {
 
       const { data, error: fetchError } = await supabase
         .from('pendaftaran')
-        .select('status, createdAt, beasiswa(beasiswaId, judul, nominal, pendonor(statusOrganisasi))')
+        .select(`
+          status,
+          createdAt,
+          beasiswa(
+            beasiswaId,
+            judul,
+            nominal,
+            pendonor(
+              statusOrganisasi
+            )
+          ),
+          penyaluran_dana(
+            penyaluranId,
+            status,
+            jumlahDana,
+            buktiTransferUrl,
+            idTransaksi,
+            tanggalPenyaluran
+          )
+        `)
         .eq('pendaftaranId', pendaftaranId)
         .single();
 
@@ -57,6 +77,7 @@ export function useStatusPendaftaran(pendaftaranId) {
       setStatus(data.status);
       setCreatedAt(data.createdAt);
       setBeasiswaInfo(data.beasiswa ?? null);
+      setPenyaluranInfo(data.penyaluran_dana?.[0] ?? null);
       setLoading(false);
     }
 
@@ -90,5 +111,5 @@ export function useStatusPendaftaran(pendaftaranId) {
     };
   }, [pendaftaranId]);
 
-  return { status, beasiswaInfo, createdAt, loading, error };
+  return { status, beasiswaInfo, createdAt, penyaluranInfo, loading, error };
 }
