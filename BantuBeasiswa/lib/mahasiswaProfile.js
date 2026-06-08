@@ -58,10 +58,12 @@ export function hasAlamatKtpLengkap(user) {
 export function normalizeRekening(row) {
   const source = row || {};
 
-  // "namRekening" adalah nama kolom aktual di Supabase (format: "NamaBank - NamaPemilik")
+  // Legacy fallback: data lama menyimpan bank + pemilik dalam "namRekening".
   const namRekening = source.namRekening ?? '';
 
   return {
+    id: source.id ?? source.rekeningId ?? source.rekening_id ?? null,
+    userId: source.userId ?? source.user_id ?? null,
     namaBank:
       source.namaBank ??
       source.nama_bank ??
@@ -75,6 +77,19 @@ export function normalizeRekening(row) {
     nomorRekening: source.nomorRekening ?? source.nomor_rekening ?? '',
     fotoBukuUrl: source.fotoBukuUrl ?? source.foto_buku_url ?? '',
     status: source.status ?? '',
+  };
+}
+
+async function normalizeRekeningForServer(row) {
+  const rekening = normalizeRekening(row);
+  if (!rekening.nomorRekening || typeof window !== 'undefined') {
+    return rekening;
+  }
+
+  const { decryptRekeningNumberSafe } = await import('./rekeningCrypto');
+  return {
+    ...rekening,
+    nomorRekening: decryptRekeningNumberSafe(rekening.nomorRekening),
   };
 }
 
@@ -106,22 +121,22 @@ export async function getMahasiswaProfile(user) {
 export async function getLatestRekening(userId) {
   if (!userId) return normalizeRekening(null);
 
-  const filters = [
-    ['userId', userId],
-    ['user_id', userId],
+  const queries = [
+    { userColumn: 'user_id', orderColumn: 'id' },
+    { userColumn: 'userId', orderColumn: 'rekeningId' },
   ];
 
-  for (const [column, value] of filters) {
+  for (const { userColumn, orderColumn } of queries) {
     const { data, error } = await supabase
       .from('rekening')
       .select('*')
-      .eq(column, value)
-      .order('rekeningId', { ascending: false })  // PK aktual adalah rekeningId
+      .eq(userColumn, userId)
+      .order(orderColumn, { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!error && data) {
-      return normalizeRekening(data);
+      return normalizeRekeningForServer(data);
     }
   }
 
