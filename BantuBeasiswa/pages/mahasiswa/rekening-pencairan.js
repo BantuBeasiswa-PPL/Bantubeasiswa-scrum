@@ -22,6 +22,7 @@ const BANK_OPTIONS = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
+const DOKUMEN_BUCKET = 'dokumen';
 
 function getInitials(name = '') {
   return name.split(' ').filter(Boolean).slice(0, 2)
@@ -56,6 +57,13 @@ function validateForm(values) {
       errors.proofFile = 'Ukuran file maksimal 5MB.';
   }
   return errors;
+}
+
+function getSafeFileExtension(file) {
+  const fromName = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (fromName === 'png') return 'png';
+  if (fromName === 'jpg' || fromName === 'jpeg') return 'jpg';
+  return file.type === 'image/png' ? 'png' : 'jpg';
 }
 
 export default function RekeningPencairanPage({ user, profile, existingRekening }) {
@@ -106,22 +114,34 @@ export default function RekeningPencairanPage({ user, profile, existingRekening 
     e.preventDefault();
     setTouched({ bankName: true, namaPemilik: true, nomorRekening: true, proofFile: true });
     if (!isFormValid) return;
+    if (hasExisting && !window.confirm('Update data rekening yang sudah ada?')) return;
 
     setSubmitting(true);
     setSubmitError('');
     try {
-      // Upload foto buku tabungan (opsional)
+      const activeUserId = profile.userId || existingRekening?.userId || user.userId;
+      if (!activeUserId) {
+        throw new Error('Profil mahasiswa belum memuat user ID. Silakan login ulang.');
+      }
+
       let fotoBukuUrl = existingRekening?.fotoBukuUrl || null;
       if (values.proofFile) {
-        const ext = values.proofFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const ext = getSafeFileExtension(values.proofFile);
+        const filePath = `rekening/${activeUserId}_${Date.now()}.${ext}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('rekening')
-          .upload(fileName, values.proofFile, { upsert: true });
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('rekening').getPublicUrl(uploadData.path);
-          fotoBukuUrl = urlData?.publicUrl ?? null;
+          .from(DOKUMEN_BUCKET)
+          .upload(filePath, values.proofFile, { contentType: values.proofFile.type, upsert: false });
+        if (uploadError) {
+          throw new Error(`Gagal mengunggah foto buku tabungan: ${uploadError.message}`);
         }
+
+        const { data: urlData } = supabase.storage
+          .from(DOKUMEN_BUCKET)
+          .getPublicUrl(uploadData?.path || filePath);
+        if (!urlData?.publicUrl) {
+          throw new Error('Gagal membuat URL publik foto buku tabungan.');
+        }
+        fotoBukuUrl = urlData.publicUrl;
       }
 
       const res = await fetch('/api/mahasiswa/rekening', {
@@ -132,6 +152,7 @@ export default function RekeningPencairanPage({ user, profile, existingRekening 
           namaPemilik: values.namaPemilik,
           nomorRekening: values.nomorRekening,
           fotoBukuUrl,
+          confirmUpdate: hasExisting,
         }),
       });
       const json = await res.json();
