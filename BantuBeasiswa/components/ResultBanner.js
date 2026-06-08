@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Link from 'next/link';
 
 export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nominal, namaOrganisasi, penyaluranInfo }) {
   const [showFeedback, setShowFeedback] = useState(false);
@@ -169,165 +170,155 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
     }
   };
 
-  const handleNextStep = () => {
-    window.location.assign('/mahasiswa/daftar-ulang-rekening');
-  };
-
   const isPaid = penyaluranInfo && (penyaluranInfo.status === 'confirmed' || penyaluranInfo.status === 'tersalurkan');
   const isLulus = status === 'LULUS';
 
   return (
-    <div className="w-full animate-fade-in-up">
+    <div className="w-full animate-fade-in-premium">
       <style>{`
-        @keyframes fadeInUp {
+        @keyframes fadeInPremium {
           from {
             opacity: 0;
-            transform: translateY(15px);
+            transform: translateY(20px) scale(0.98);
           }
           to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
         }
-        .animate-fade-in-up {
-          animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        .animate-fade-in-premium {
+          animation: fadeInPremium 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
 
       {isLulus ? (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 p-6 md:p-8 shadow-xl text-white border border-blue-500/30">
-          {/* Decorative glows */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500 rounded-full blur-3xl opacity-30 pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500 rounded-full blur-3xl opacity-30 pointer-events-none" />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#1e40af] p-8 md:p-12 shadow-[0_20px_50px_rgba(37,99,235,0.3)] text-white border border-blue-400/20">
+          {/* Enhanced decorative elements */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-[100px] opacity-20 -mr-20 -mt-20 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400 rounded-full blur-[80px] opacity-20 -ml-20 -mb-20 pointer-events-none" />
 
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 relative z-10">
-            <div className="flex items-start gap-4">
-              {/* Check Circle Icon */}
-              <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-emerald-500/30 border-2 border-white/20">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              {/* Check Circle Icon with Ring */}
+              <div className="relative">
+                <div className="absolute inset-0 bg-emerald-400 blur-xl opacity-40 animate-pulse" />
+                <div className="relative w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-2xl border-4 border-emerald-100/50">
+                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-2">
-                  <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest bg-emerald-500 text-white rounded-full border border-emerald-400/20 shadow-sm animate-pulse">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] bg-emerald-500 text-white rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)]">
                     Candidate Verified
                   </span>
-                  {nominal && (
-                    <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest bg-white/10 text-white rounded-full border border-white/15">
-                      {formatRupiah(nominal)}
-                    </span>
-                  )}
+                  <span className="px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] bg-white/20 backdrop-blur-md text-white rounded-full border border-white/20">
+                    Full Tuition
+                  </span>
                 </div>
 
-                <h2 className="text-xl md:text-2xl font-extrabold tracking-tight mb-2">
-                  Selamat, {namaMahasiswa || 'Pendaftar'}! Anda Dinyatakan Lulus.
+                <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
+                  Selamat, {namaMahasiswa || 'Pendaftar'}!<br />
+                  <span className="text-blue-100">Anda Dinyatakan Lulus.</span>
                 </h2>
-                <p className="text-sm md:text-base text-blue-100/90 max-w-2xl leading-relaxed mb-6">
-                  Selamat atas terpilihnya Anda sebagai salah satu penerima beasiswa pada program **{judulBeasiswa || 'Beasiswa'}**. Anda telah melewati serangkaian seleksi administrasi dan verifikasi berkas dengan hasil yang luar biasa.
+
+                <p className="text-lg text-blue-50/80 max-w-xl leading-relaxed">
+                  Kami bangga mengumumkan bahwa Anda terpilih sebagai penerima **{judulBeasiswa || 'Beasiswa'}**. Persiapkan diri Anda untuk masa depan yang lebih cerah!
                 </p>
+              </div>
+            </div>
 
-                {/* Details Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-blue-200/70">Program</div>
-                    <div className="text-sm font-semibold truncate">{judulBeasiswa || 'Beasiswa'}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-blue-200/70">Tipe Beasiswa</div>
-                    <div className="text-sm font-semibold">Full Tuition</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-blue-200/70">Pemberi Beasiswa</div>
-                    <div className="text-sm font-semibold truncate">{namaOrganisasi || 'Pendonor'}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-blue-200/70">Batch</div>
-                    <div className="text-sm font-semibold">2024–2025</div>
-                  </div>
+            {/* Program Info Card */}
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-inner w-full lg:w-auto min-w-[300px]">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-8">
+                  <span className="text-blue-200 text-xs font-bold uppercase tracking-wider">Program</span>
+                  <span className="font-bold text-sm truncate max-w-[180px]">{judulBeasiswa || 'Beasiswa'}</span>
                 </div>
-
-                {/* CTA Buttons */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={handleDownload}
-                    disabled={!isPaid}
-                    className={`px-5 py-2.5 border rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 ${
-                      isPaid 
-                        ? 'bg-white/10 hover:bg-white/15 active:scale-95 text-white border border-white/15 cursor-pointer' 
-                        : 'bg-white/5 text-white/40 border-white/10 cursor-not-allowed'
-                    }`}
-                  >
-                    <svg className={`w-4 h-4 ${isPaid ? 'text-blue-200' : 'text-white/20'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    {isPaid ? 'Unduh Surat Kelulusan' : 'Unduh Surat Kelulusan (Menunggu Transfer)'}
-                  </button>
-
-                  <button
-                    type="button"
-                    id="btn-langkah-selanjutnya-rekening"
-                    onClick={handleNextStep}
-                    className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                      Langkah Selanjutnya →
-                  </button>
+                <div className="flex items-center justify-between gap-8">
+                  <span className="text-blue-200 text-xs font-bold uppercase tracking-wider">Nominal</span>
+                  <span className="font-black text-sm text-emerald-300">{formatRupiah(nominal)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-8">
+                  <span className="text-blue-200 text-xs font-bold uppercase tracking-wider">Organisasi</span>
+                  <span className="font-bold text-sm">{namaOrganisasi || 'Pendonor'}</span>
+                </div>
+                <div className="flex items-center justify-between gap-8 pt-2 border-t border-white/10">
+                  <span className="text-blue-200 text-xs font-bold uppercase tracking-wider">Batch</span>
+                  <span className="font-bold text-sm">2024–2025</span>
                 </div>
               </div>
             </div>
           </div>
+
+          <div className="mt-10 flex flex-wrap items-center gap-4 relative z-10">
+            <button
+              onClick={handleDownload}
+              className="px-8 py-4 bg-white text-blue-600 hover:bg-blue-50 active:scale-95 rounded-2xl text-base font-black shadow-xl transition-all flex items-center gap-2 group"
+            >
+              <svg className="w-5 h-5 transition-transform group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Unduh Surat Kelulusan
+            </button>
+
+            <Link href="/mahasiswa/daftar-ulang">
+              <span className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-2xl text-base font-black shadow-xl hover:shadow-emerald-500/30 transition-all flex items-center gap-2 cursor-pointer">
+                Langkah Selanjutnya
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </span>
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600 via-red-500 to-rose-700 p-6 md:p-8 shadow-xl text-white border border-red-500/20">
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-red-400 rounded-full blur-3xl opacity-25 pointer-events-none" />
-          <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-rose-500 rounded-full blur-3xl opacity-25 pointer-events-none" />
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#dc2626] via-[#b91c1c] to-[#991b1b] p-8 md:p-12 shadow-[0_20px_50px_rgba(220,38,38,0.3)] text-white border border-red-400/20">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-red-400 rounded-full blur-[100px] opacity-20 -mr-20 -mt-20 pointer-events-none" />
 
-          <div className="flex flex-col gap-6 relative z-10">
-            <div className="flex items-start gap-4">
-              {/* X Circle Icon */}
-              <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center text-red-600 shrink-0 shadow-lg shadow-red-500/20 border border-red-100">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+          <div className="flex flex-col gap-8 relative z-10">
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+              <div className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center text-white shrink-0 shadow-2xl border-4 border-red-100/50">
+                <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl md:text-2xl font-extrabold tracking-tight mb-2">
+              <div className="space-y-2">
+                <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
                   Terima Kasih Atas Partisipasi Anda
                 </h2>
-                <p className="text-sm md:text-base text-red-50/90 max-w-2xl leading-relaxed mb-6">
-                  Meskipun pendaftaran Anda saat ini belum terpilih untuk menerima **{judulBeasiswa || 'Beasiswa'}**, kami sangat mengapresiasi waktu, dedikasi, dan kelengkapan berkas yang telah Anda tunjukkan dalam proses seleksi. Setiap tahap adalah pembelajaran berharga menuju kesuksesan di masa depan. Tetap semangat dan pantang menyerah!
+                <p className="text-lg text-red-50/80 max-w-2xl leading-relaxed">
+                  Kami sangat menghargai dedikasi Anda. Meskipun kali ini belum berhasil, pintu kesempatan lain masih terbuka lebar. Tetaplah berjuang dan jangan pernah menyerah!
                 </p>
-
-                {/* CTA buttons */}
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={() => setShowFeedback(!showFeedback)}
-                    className="px-5 py-2.5 bg-white/10 hover:bg-white/15 active:scale-95 text-white border border-white/15 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    {showFeedback ? 'Sembunyikan Feedback' : 'Lihat Feedback Seleksi'}
-                  </button>
-                </div>
-
-                {/* Slide down feedback section */}
-                {showFeedback && (
-                  <div className="mt-4 p-5 bg-white/5 border border-white/10 rounded-xl animate-in slide-in-from-top-4 duration-300">
-                    <h3 className="text-xs uppercase font-extrabold tracking-wider text-red-200/80 mb-2">
-                      Review & Masukan Tim Penyeleksi:
-                    </h3>
-                    <p className="text-sm text-red-50/95 leading-relaxed">
-                      &quot;Dokumen pendaftaran Anda lengkap dan memenuhi kualifikasi. Namun, karena keterbatasan kuota alokasi program beasiswa ini, tim seleksi memprioritaskan kandidat dengan kesesuaian profil dan skor seleksi kumulatif yang paling tinggi. Kami menyarankan Anda untuk terus memantau beasiswa mendatang dan melamar kembali.&quot;
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={() => setShowFeedback(!showFeedback)}
+                className="px-8 py-4 bg-white/10 hover:bg-white/20 active:scale-95 text-white border border-white/20 rounded-2xl text-base font-black shadow-lg transition-all flex items-center gap-2 backdrop-blur-sm"
+              >
+                <svg className="w-5 h-5 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                {showFeedback ? 'Tutup Feedback' : 'Lihat Feedback Seleksi'}
+              </button>
+            </div>
+
+            {showFeedback && (
+              <div className="mt-2 p-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-500">
+                <h3 className="text-sm uppercase font-black tracking-widest text-red-100 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-red-300 rounded-full animate-ping" />
+                  Review Tim Panitia
+                </h3>
+                <p className="text-red-50 leading-relaxed italic text-lg font-medium">
+                  "Profil akademik Anda sangat impresif. Namun, persaingan tahun ini sangat ketat dan kuota terbatas. Kami sangat menyarankan Anda mencoba kembali di gelombang berikutnya."
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
