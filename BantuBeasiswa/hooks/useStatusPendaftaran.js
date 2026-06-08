@@ -42,13 +42,18 @@ export function useStatusPendaftaran(pendaftaranId) {
 
       const { data, error: fetchError } = await supabase
         .from('pendaftaran')
-<<<<<<< Updated upstream
-        .select('status, createdAt, beasiswa(beasiswaId, judul, nominal, pendonor(statusOrganisasi))')
-        .eq('pendaftaranId', pendaftaranId)
-=======
-        .select('status, created_at, beasiswa(judul, nominal, pendonor(nama_organisasi))')
+        .select(`
+          status, 
+          created_at, 
+          beasiswa (
+            judul, 
+            nominal, 
+            pendonor (
+              nama_organisasi
+            )
+          )
+        `)
         .eq('id', pendaftaranId)
->>>>>>> Stashed changes
         .single();
 
       if (!isMounted) return;
