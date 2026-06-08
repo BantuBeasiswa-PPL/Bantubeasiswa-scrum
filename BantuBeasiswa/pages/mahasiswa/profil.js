@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
@@ -43,6 +44,36 @@ function DataItem({ label, value }) {
   );
 }
 
+function DocumentItem({ label, fileUrl }) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-xl border border-gray-200 bg-gray-50/50">
+      <div className="flex items-center gap-3">
+        <div className="text-blue-600 bg-blue-50 p-2.5 rounded-lg text-lg">
+          📄
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-800">{label}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{fileUrl ? 'Format file valid' : 'File belum diupload'}</p>
+        </div>
+      </div>
+      {fileUrl ? (
+        <a
+          href={fileUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs font-bold text-white bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        >
+          Lihat Dokumen
+        </a>
+      ) : (
+        <span className="text-xs font-semibold text-gray-400 px-3 py-1.5 rounded-lg bg-gray-100">
+          Belum Ada
+        </span>
+      )}
+    </div>
+  );
+}
+
 function formatTanggal(value) {
   if (!value) return '';
   return new Intl.DateTimeFormat('id-ID', {
@@ -53,6 +84,8 @@ function formatTanggal(value) {
 }
 
 export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLabels, isLulus }) {
+  const [activeTab, setActiveTab] = useState('pribadi');
+
   const nama = profile.nama || user.nama || 'Mahasiswa';
   const email = profile.email || user.email || '-';
   const tempatLahir = [
@@ -69,6 +102,13 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
   const rekeningHref = isLulus
     ? '/mahasiswa/daftar-ulang-rekening'
     : '/mahasiswa/rekening-pencairan';
+
+  const tabs = [
+    { id: 'pribadi', label: 'Data Pribadi' },
+    { id: 'akademik', label: 'Data Akademik' },
+    { id: 'keluarga', label: 'Data Keluarga' },
+    { id: 'dokumen', label: 'Dokumen' },
+  ];
 
   return (
     <MahasiswaLayout user={{ ...user, nama, email }}>
@@ -113,7 +153,7 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
                 Data Pribadi
               </Link>
               <Link
-                href={rekeningHref}
+                href="/mahasiswa/rekening-pencairan"
                 className="flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
               >
                 Rekening Pencairan
@@ -136,17 +176,32 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
         <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
           <div className="border-b border-gray-200">
             <div className="flex flex-wrap gap-2">
-              <button className="border-b-2 border-blue-600 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
-                Data Pribadi
-              </button>
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-4 py-3 text-sm font-semibold transition ${
+                    activeTab === tab.id
+                      ? 'border-b-2 border-blue-600 bg-blue-50 text-blue-700'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="mt-8 flex flex-col gap-3 border-b border-gray-100 pb-6 md:flex-row md:items-start md:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-950">Data Pribadi</h2>
+              <h2 className="text-2xl font-bold text-gray-950">
+                {tabs.find((t) => t.id === activeTab)?.label}
+              </h2>
               <p className="mt-1 text-sm text-gray-500">
-                Pastikan data pribadi benar untuk mempermudah proses pendaftaran.
+                {activeTab === 'pribadi' && 'Pastikan data pribadi benar untuk mempermudah proses pendaftaran.'}
+                {activeTab === 'akademik' && 'Detail riwayat pendidikan dan pencapaian IPK terakhir.'}
+                {activeTab === 'keluarga' && 'Informasi detail mengenai wali dan kondisi ekonomi keluarga.'}
+                {activeTab === 'dokumen' && 'Berkas dokumen wajib untuk verifikasi data mahasiswa.'}
               </p>
             </div>
             <Link
@@ -159,25 +214,67 @@ export default function ProfilMahasiswaPage({ user, profile, rekening, wilayahLa
           </div>
 
           <div className="mt-7">
-            <h3 className="text-lg font-bold text-gray-900">Biodata</h3>
-            <div className="mt-6 grid gap-6 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <DataItem label="Tentang Saya" value={profile.tentangSaya} />
-              </div>
-              <DataItem label="Nama Lengkap" value={nama} />
-              <DataItem label="NIK" value={profile.nik} />
-              <DataItem label="Jenis Kelamin" value={profile.jenisKelamin} />
-              <DataItem label="Tempat Lahir" value={tempatLahir} />
-              <DataItem label="Tanggal Lahir" value={formatTanggal(profile.tanggalLahir)} />
-              <DataItem label="Email" value={email} />
-              <DataItem label="No Handphone" value={profile.noHandphone} />
-              <DataItem label="Nama Bank" value={rekening.namaBank} />
-              <DataItem label="No Rekening" value={rekening.nomorRekening} />
-              <DataItem label="Status Rekening" value={rekening.status} />
-              <div className="md:col-span-2">
-                <DataItem label="Alamat Sesuai KTP" value={alamatKtp} />
-              </div>
-            </div>
+            {activeTab === 'pribadi' && (
+              <>
+                <h3 className="text-lg font-bold text-gray-900">Biodata</h3>
+                <div className="mt-6 grid gap-6 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <DataItem label="Tentang Saya" value={profile.tentangSaya} />
+                  </div>
+                  <DataItem label="Nama Lengkap" value={nama} />
+                  <DataItem label="NIK" value={profile.nik} />
+                  <DataItem label="Jenis Kelamin" value={profile.jenisKelamin} />
+                  <DataItem label="Tempat Lahir" value={tempatLahir} />
+                  <DataItem label="Tanggal Lahir" value={formatTanggal(profile.tanggalLahir)} />
+                  <DataItem label="Email" value={email} />
+                  <DataItem label="No Handphone" value={profile.noHandphone} />
+                  <DataItem label="Nama Bank" value={rekening.namaBank} />
+                  <DataItem label="No Rekening" value={rekening.nomorRekening} />
+                  <DataItem label="Status Rekening" value={rekening.status} />
+                  <div className="md:col-span-2">
+                    <DataItem label="Alamat Sesuai KTP" value={alamatKtp} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'akademik' && (
+              <>
+                <h3 className="text-lg font-bold text-gray-900">Pendidikan Tinggi</h3>
+                <div className="mt-6 grid gap-6 md:grid-cols-2">
+                  <DataItem label="Nama Universitas / Institusi" value={profile.namaUniversitas} />
+                  <DataItem label="Program Studi / Jurusan" value={profile.jurusan} />
+                  <DataItem label="Semester Aktif" value={profile.semesterAktif ? `Semester ${profile.semesterAktif}` : ''} />
+                  <DataItem label="IPK Terakhir" value={profile.ipk ? parseFloat(profile.ipk).toFixed(2) : ''} />
+                </div>
+              </>
+            )}
+
+            {activeTab === 'keluarga' && (
+              <>
+                <h3 className="text-lg font-bold text-gray-900">Keluarga & Wali</h3>
+                <div className="mt-6 grid gap-6 md:grid-cols-2">
+                  <DataItem label="Nama Ayah" value={profile.namaAyah} />
+                  <DataItem label="Pekerjaan Ayah" value={profile.pekerjaanAyah} />
+                  <DataItem label="Nama Ibu" value={profile.namaIbu} />
+                  <DataItem label="Pekerjaan Ibu" value={profile.pekerjaanIbu} />
+                  <div className="md:col-span-2">
+                    <DataItem label="Rata-rata Penghasilan Orang Tua / Bulan" value={profile.penghasilanOrangTua} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'dokumen' && (
+              <>
+                <h3 className="text-lg font-bold text-gray-900 mb-6">Berkas Persyaratan</h3>
+                <div className="space-y-4">
+                  <DocumentItem label="Transkrip Nilai Akademik" fileUrl={profile.fileTranskrip} />
+                  <DocumentItem label="Kartu Keluarga (KK)" fileUrl={profile.fileKk} />
+                  <DocumentItem label="Kartu Tanda Penduduk (KTP)" fileUrl={profile.fileKtp} />
+                </div>
+              </>
+            )}
           </div>
         </section>
       </div>

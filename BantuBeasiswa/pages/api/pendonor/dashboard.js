@@ -166,13 +166,20 @@ export default async function handler(req, res) {
     }
 
     // Pendaftar yang LULUS (perlu proses penyaluran)
-    const lulusTotal = pendaftaranList.filter(p => p.status === 'LULUS').length;
-    if (lulusTotal > 0) {
+    // Realtime check based on penyaluran_dana pending records
+    const { data: pendingTransfers } = await supabase
+      .from('penyaluran_dana')
+      .select('penyaluranId')
+      .eq('pendonorId', pendonorId)
+      .eq('status', 'pending');
+
+    const pendingCount = pendingTransfers?.length || 0;
+    if (pendingCount > 0) {
       pendingActions.push({
         id  : actionId++,
         type: 'success',
         icon: '✅',
-        text: `${lulusTotal} pendaftar dinyatakan lulus — segera proses penyaluran dana.`,
+        text: `${pendingCount} pendaftar dinyatakan lulus — segera proses penyaluran dana.`,
       });
     }
 

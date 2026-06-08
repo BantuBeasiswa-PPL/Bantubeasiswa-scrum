@@ -28,6 +28,20 @@ const C = {
   border: '#e2e8f0',
 };
 
+async function decryptQueueRekeningList(list) {
+  const { decryptRekeningRow } = await import('../../lib/rekeningCrypto');
+
+  return (list ?? []).map((item) => ({
+    ...item,
+    user: item.user
+      ? {
+          ...item.user,
+          rekening: (item.user.rekening ?? []).map(decryptRekeningRow),
+        }
+      : item.user,
+  }));
+}
+
 export default function DashboardPembayaran({ user, pendonorId, initialQueueList }) {
   const router = useRouter();
 
@@ -804,11 +818,12 @@ export async function getServerSideProps(context) {
           .order('pendaftaranId', { ascending: false });
 
       if (reFetchedList) {
+        const decryptedList = await decryptQueueRekeningList(reFetchedList);
         return {
           props: {
             user,
             pendonorId,
-            initialQueueList: reFetchedList,
+            initialQueueList: decryptedList,
           },
         };
       }
@@ -819,7 +834,7 @@ export async function getServerSideProps(context) {
     props: {
       user,
       pendonorId,
-      initialQueueList: pendaftaranList || [],
+      initialQueueList: await decryptQueueRekeningList(pendaftaranList || []),
     },
   };
 }

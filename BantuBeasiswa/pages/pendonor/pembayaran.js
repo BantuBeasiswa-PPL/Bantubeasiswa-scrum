@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '../../lib/db';
@@ -27,6 +27,25 @@ const STATUS_CONFIG = {
   diproses: { bg: '#f5f3ff', color: '#6d28d9', label: 'Diproses' },
 };
 
+async function decryptPenyaluranRekeningList(list) {
+  const { decryptRekeningRow } = await import('../../lib/rekeningCrypto');
+
+  return (list ?? []).map((item) => ({
+    ...item,
+    pendaftaran: item.pendaftaran
+      ? {
+          ...item.pendaftaran,
+          user: item.pendaftaran.user
+            ? {
+                ...item.pendaftaran.user,
+                rekening: (item.pendaftaran.user.rekening ?? []).map(decryptRekeningRow),
+              }
+            : item.pendaftaran.user,
+        }
+      : item.pendaftaran,
+  }));
+}
+
 function StatusBadge({ status }) {
   const s = STATUS_CONFIG[status] || { bg: '#f3f4f6', color: '#374151', label: status };
   return (
@@ -42,17 +61,15 @@ function StatusBadge({ status }) {
 export default function PembayaranDashboard({ user, pendonorId, initialPenyaluranList }) {
   const router = useRouter();
 
-  const [penyaluranList, setPenyaluranList] = useState(initialPenyaluranList || []);
+  const penyaluranList = useMemo(
+    () => initialPenyaluranList || [],
+    [initialPenyaluranList]
+  );
   const [selectedFilter, setSelectedFilter] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activePenyaluran, setActivePenyaluran] = useState(null);
-
-  // Sync state if initial props change
-  useEffect(() => {
-    setPenyaluranList(initialPenyaluranList || []);
-  }, [initialPenyaluranList]);
 
   // Refresh page data using Next.js routing
   const refreshData = () => {
@@ -432,7 +449,7 @@ export async function getServerSideProps(context) {
     props: {
       user,
       pendonorId,
-      initialPenyaluranList: penyaluranList || [],
+      initialPenyaluranList: await decryptPenyaluranRekeningList(penyaluranList || []),
     },
   };
 }

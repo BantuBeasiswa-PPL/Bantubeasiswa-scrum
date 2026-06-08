@@ -1,5 +1,6 @@
 import { getServerSupabase } from '../../../../lib/supabaseServer';
 import { verifyToken } from '../../../../lib/auth';
+import { decryptRekeningRow } from '../../../../lib/rekeningCrypto';
 
 /**
  * GET /api/pendonor/seleksi/list?beasiswaId=X
@@ -105,7 +106,7 @@ export default async function handler(req, res) {
         console.error('[api/pendonor/seleksi/list] rekening fetch error:', rekeningError);
       } else {
         rekeningByUserId = (rekeningList ?? []).reduce((acc, rekening) => {
-          if (!acc[rekening.userId]) acc[rekening.userId] = rekening;
+          if (!acc[rekening.userId]) acc[rekening.userId] = decryptRekeningRow(rekening);
           return acc;
         }, {});
       }
