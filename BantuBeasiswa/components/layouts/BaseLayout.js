@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import NotificationBell from '../NotificationBell';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useContrastMode } from '../../lib/useContrastMode';
@@ -146,10 +147,24 @@ export default function BaseLayout({ children, user, menuItems }) {
               item={item}
               isActive={
                 item.href === router.pathname ||
-                (item.href !== '/' && (
-                  router.pathname.startsWith(item.href + '/') ||
-                  router.pathname === item.href
-                ))
+                (item.href === '/mahasiswa/profil' && (
+                  router.pathname.startsWith('/mahasiswa/profil') ||
+                  router.pathname === '/mahasiswa/rekening-pencairan'
+                )) ||
+                (item.href === '/mahasiswa/pendaftaran' && (
+                  router.pathname.startsWith('/mahasiswa/status-pendaftaran') ||
+                  router.pathname === '/mahasiswa/daftar-ulang-rekening'
+                )) ||
+                (item.href === '/mahasiswa/cari' && (
+                  router.pathname.startsWith('/mahasiswa/daftar/') ||
+                  router.pathname.startsWith('/beasiswa/')
+                )) ||
+                (item.href !== '/' &&
+                 !item.href.endsWith('/dashboard') &&
+                 item.href !== '/mahasiswa/profil' &&
+                 item.href !== '/mahasiswa/pendaftaran' &&
+                 item.href !== '/mahasiswa/cari' &&
+                 router.pathname.startsWith(item.href))
               }
               onClose={() => setSidebarOpen(false)}
             />
@@ -302,6 +317,9 @@ export default function BaseLayout({ children, user, menuItems }) {
                 +
               </button>
             </div>
+
+            {/* Notification Bell */}
+            <NotificationBell userId={user?.id} />
 
             {/* User badge (desktop) */}
             <div

@@ -58,7 +58,7 @@ export default function StatusPendaftaran({ user }) {
   // Ambil id pendaftaran dari URL query: /mahasiswa/status-pendaftaran?id=<uuid>
   const pendaftaranId = router.query.id ?? null;
 
-  const { status, beasiswaInfo, createdAt, loading, error } =
+  const { status, beasiswaInfo, createdAt, penyaluranInfo, loading, error } =
     useStatusPendaftaran(pendaftaranId);
 
   // Mapping status → nomor step aktif
@@ -109,12 +109,13 @@ export default function StatusPendaftaran({ user }) {
 
         {/* ── ResultBanner (muncul hanya saat LULUS / DITOLAK) ── */}
         {!loading && isFinished && (
-          <ResultBanner
-            status={status}
-            judulBeasiswa={beasiswaInfo?.judul}
+          <ResultBanner 
+            status={status} 
+            judulBeasiswa={beasiswaInfo?.judul} 
             namaMahasiswa={user?.nama}
             nominal={beasiswaInfo?.nominal}
-            namaOrganisasi={beasiswaInfo?.pendonor?.statusOrganisasi}
+            namaOrganisasi={beasiswaInfo?.pendonor?.nama_organisasi}
+            penyaluranInfo={penyaluranInfo}
           />
         )}
 
@@ -144,7 +145,7 @@ export default function StatusPendaftaran({ user }) {
                   </span>
                   <span className="hidden md:inline-block w-1.5 h-1.5 bg-gray-300 rounded-full" />
                   <span className="text-gray-500">
-                    {beasiswaInfo?.pendonor?.statusOrganisasi ?? ''}
+                    {beasiswaInfo?.pendonor?.nama_organisasi ?? ''}
                   </span>
                   <span className="hidden md:inline-block w-1.5 h-1.5 bg-gray-300 rounded-full" />
                   <span>Daftar: {formatDate(createdAt)}</span>
@@ -251,7 +252,7 @@ export default function StatusPendaftaran({ user }) {
                   {PHASE_DETAILS[currentStep].description}
                 </div>
                 <div className="mt-6">
-                  <PhaseAction currentStep={currentStep} pendaftaranId={pendaftaranId} status={status} />
+                  <PhaseAction currentStep={currentStep} pendaftaranId={pendaftaranId} />
                 </div>
               </>
             )}
@@ -266,7 +267,7 @@ export default function StatusPendaftaran({ user }) {
               </div>
             ) : (
               <div className="space-y-4 text-sm">
-                <InfoRow label="Pendonor"  value={beasiswaInfo?.pendonor?.statusOrganisasi ?? '–'} />
+                <InfoRow label="Pendonor"  value={beasiswaInfo?.pendonor?.nama_organisasi ?? '–'} />
                 <InfoRow label="Beasiswa"  value={beasiswaInfo?.judul ?? '–'} />
                 <InfoRow label="Terdaftar" value={formatDate(createdAt)} />
                 <InfoRow
@@ -508,7 +509,7 @@ function InfoRow({ label, value }) {
   );
 }
 
-function PhaseAction({ currentStep, pendaftaranId, status }) {
+function PhaseAction({ currentStep, pendaftaranId }) {
   const router = useRouter();
 
   if (currentStep === 1)
@@ -543,24 +544,10 @@ function PhaseAction({ currentStep, pendaftaranId, status }) {
         Buka Tautan Seleksi
       </button>
     );
-  if (currentStep === 4 && status === 'LULUS')
+  if (currentStep === 4)
     return (
-      <button
-        id="btn-langkah-selanjutnya"
-        onClick={() => router.push('/mahasiswa/daftar-ulang-rekening')}
-        className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm"
-      >
-        Langkah Selanjutnya
-      </button>
-    );
-  if (currentStep === 4 && status === 'DITOLAK')
-    return (
-      <button
-        id="btn-cari-beasiswa-lain-ditolak"
-        onClick={() => router.push('/mahasiswa/cari')}
-        className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
-      >
-        Cari Beasiswa Lain
+      <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors shadow-sm">
+        Lihat Pengumuman Lengkap
       </button>
     );
   return null;

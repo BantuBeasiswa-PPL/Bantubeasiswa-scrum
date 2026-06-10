@@ -229,6 +229,7 @@ export default function DaftarUlangRekeningPage({
   lulusPendaftaran,
   batchYear,
   existingRekening,
+  allLulusList = [],
 }) {
   const fileInputRef = useRef(null);
   const router = useRouter();
@@ -644,24 +645,72 @@ export default function DaftarUlangRekeningPage({
                 </p>
               </div>
 
-              <div className="mt-5 space-y-3 text-sm">
+              <div className="mt-5 space-y-3 text-sm border-b border-gray-100 pb-5">
                 <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">Program</span>
-                  <span className="text-right font-semibold text-gray-800">
-                    {scholarshipTitle}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">Status</span>
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                    LULUS
-                  </span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">Kelengkapan</span>
+                  <span className="text-gray-500">Kelengkapan Form</span>
                   <span className="font-semibold text-gray-800">
                     {Object.keys(errors).length === 0 ? 'Lengkap' : 'Belum lengkap'}
                   </span>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <h3 className="text-xs uppercase font-extrabold tracking-wider text-gray-400 mb-3">Daftar Beasiswa Lulus</h3>
+                <div className="space-y-3">
+                  {allLulusList.map((pendaftaran) => {
+                    const b = pendaftaran.beasiswa || {};
+                    const bYear = new Date(
+                      pendaftaran.createdAt || pendaftaran.created_at || new Date().toISOString()
+                    ).getFullYear();
+                    const isCurrent = pendaftaran.pendaftaranId === lulusPendaftaran?.pendaftaranId;
+
+                    return (
+                      <div
+                        key={pendaftaran.pendaftaranId}
+                        className={`p-3 rounded-xl border text-xs leading-normal ${
+                          isCurrent
+                            ? 'border-blue-200 bg-blue-50/40 ring-1 ring-blue-100/50'
+                            : 'border-emerald-100 bg-emerald-50/20'
+                        }`}
+                      >
+                        <p className="font-bold text-gray-900 leading-tight">
+                          {b.judul || 'Beasiswa'}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          {b.pendonor?.statusOrganisasi || b.pendonor?.nama_organisasi || 'Pendonor'}
+                        </p>
+
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-gray-600 border-t border-gray-100 pt-2">
+                          <span>Batch {bYear}</span>
+                          <span className="font-semibold text-gray-700">
+                            {b.nominal
+                              ? new Intl.NumberFormat('id-ID', {
+                                  style: 'currency',
+                                  currency: 'IDR',
+                                  minimumFractionDigits: 0,
+                                }).format(b.nominal)
+                              : '—'}
+                          </span>
+                        </div>
+
+                        <div className="mt-2.5 flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+                            LULUS
+                          </span>
+                          {isCurrent ? (
+                            <span className="text-[10px] font-bold text-blue-600">Form Aktif</span>
+                          ) : (
+                            <Link
+                              href={`/mahasiswa/status-pendaftaran?id=${pendaftaran.pendaftaranId}`}
+                              className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition"
+                            >
+                              Detail →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -678,8 +727,12 @@ export async function getServerSideProps(context) {
 
   const { user } = auth.props;
   const profile = await getMahasiswaProfile(user);
-  const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
   const existingRekening = await getLatestRekening(profile.userId);
+
+  const { getAllLulusPendaftaran, getLatestLulusPendaftaran } = await import('@/lib/mahasiswaProfile');
+  const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
+  const allLulusList = await getAllLulusPendaftaran(profile.userId);
+
   const batchYear = new Date(
     lulusPendaftaran?.createdAt ||
       lulusPendaftaran?.created_at ||
@@ -690,7 +743,8 @@ export async function getServerSideProps(context) {
     props: {
       user,
       profile,
-      lulusPendaftaran,
+      lulusPendaftaran: lulusPendaftaran ? JSON.parse(JSON.stringify(lulusPendaftaran)) : null,
+      allLulusList: JSON.parse(JSON.stringify(allLulusList)),
       batchYear,
       existingRekening: existingRekening ?? null,
     },
