@@ -498,7 +498,6 @@ export default function PendonorPage({ user }) {
                         href={doc.downloadUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        download={doc.fileName || doc.jenis}
                         style={{
                           display: 'inline-block', padding: '8px 14px', borderRadius: '6px',
                           background: C.blue, color: C.white, fontSize: '12px', fontWeight: '600',
@@ -508,7 +507,9 @@ export default function PendonorPage({ user }) {
                         ⬇ Unduh / Lihat
                       </a>
                     ) : (
-                      <span style={{ fontSize: '12px', color: C.red }}>URL unduhan tidak tersedia</span>
+                      <span style={{ fontSize: '12px', color: C.red }}>
+                        File tidak ditemukan di storage — minta pendonor unggah ulang
+                      </span>
                     )}
                   </div>
                 ))}

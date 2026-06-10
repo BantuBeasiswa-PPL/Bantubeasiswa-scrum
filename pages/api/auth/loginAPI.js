@@ -63,27 +63,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Email atau password salah' });
   }
 
-<<<<<<< Updated upstream
-  if (role === 'pendonor') {
-    if (pendonorStatus === 'rejected') {
-      return res.status(401).json({
-        message: 'Akun Anda ditolak. Hubungi admin untuk informasi lebih lanjut.',
-        status : 'rejected',
-      });
-    }
-    if (pendonorStatus !== 'verified') {
-      return res.status(403).json({
-        status: 'pending',
-        notice: 'Akun Anda belum diverifikasi oleh admin. Silakan tunggu persetujuan admin sebelum masuk.',
-      });
-    }
-=======
   if (role === 'pendonor' && pendonorStatus === 'rejected') {
     return res.status(401).json({
       message: 'Akun Anda ditolak. Hubungi admin untuk informasi lebih lanjut.',
       status : 'rejected',
     });
->>>>>>> Stashed changes
   }
 
   const token = jwt.sign(
@@ -100,8 +84,6 @@ export default async function handler(req, res) {
     sameSite: 'lax',
   }));
 
-<<<<<<< Updated upstream
-=======
   if (role === 'pendonor' && pendonorStatus !== 'verified') {
     return res.status(200).json({
       message : 'Login berhasil',
@@ -111,7 +93,6 @@ export default async function handler(req, res) {
     });
   }
 
->>>>>>> Stashed changes
   return res.status(200).json({
     message : 'Login berhasil',
     redirect: redirectMap[role] || '/',

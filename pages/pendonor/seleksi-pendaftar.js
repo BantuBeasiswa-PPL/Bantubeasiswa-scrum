@@ -2,12 +2,8 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
-<<<<<<< Updated upstream
-import { withAuth } from '../../lib/auth';
-import { showSuccess, showError, showConfirm, showWarning } from '../../lib/swal';
-=======
 import { withPendonorAuth } from '../../lib/auth';
->>>>>>> Stashed changes
+import { showSuccess, showError, showConfirm, showWarning } from '../../lib/swal';
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 const C = {
