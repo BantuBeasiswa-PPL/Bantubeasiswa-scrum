@@ -1,5 +1,32 @@
 import BaseLayout from './BaseLayout';
 
+<<<<<<< Updated upstream
+const menuItems = [
+  {
+    label: 'Dashboard Pendonor',
+    href: '/pendonor/dashboard',
+  },
+  {
+    label: 'Profil Pendonor',
+    href: '/pendonor/profil',
+  },
+  {
+    label: 'Kelola Program',
+    href: '/pendonor/program',
+  },
+  {
+    label: 'Seleksi Pendaftar',
+    href: '/pendonor/seleksi-pendaftar',
+  },
+  {
+    label: 'Pembayaran Beasiswa',
+    href: '/pendonor/dashboard-pembayaran',
+  },
+  {
+    label: 'Dashboard Laporan',
+    href: '/pendonor/dashboard-laporan',
+  },
+=======
 const FULL_MENU = [
   { label: 'Dashboard Pendonor', href: '/pendonor/dashboard' },
   { label: 'Profil Pendonor', href: '/pendonor/profil' },
@@ -7,6 +34,7 @@ const FULL_MENU = [
   { label: 'Seleksi Pendaftar', href: '/pendonor/seleksi-pendaftar' },
   { label: 'Pembayaran Beasiswa', href: '/pendonor/pembayaran' },
   { label: 'Dashboard Laporan', href: '/pendonor/dashboard-laporan' },
+>>>>>>> Stashed changes
 ];
 
 const PENDING_MENU = [

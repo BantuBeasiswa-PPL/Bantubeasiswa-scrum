@@ -49,6 +49,11 @@ const BANK_OPTIONS = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
+const DOKUMEN_BUCKET = 'dokumen';
+const REKENING_QUERY_SCHEMAS = [
+  { name: 'snake', id: 'id', user: 'user_id' },
+  { name: 'legacy', id: 'rekeningId', user: 'userId' },
+];
 
 function getInitials(name = '') {
   return name
@@ -109,6 +114,97 @@ function validateValues(values) {
   return errors;
 }
 
+function isSupabaseSchemaError(error) {
+  if (!error) return false;
+  const message = `${error.message || ''} ${error.details || ''}`.toLowerCase();
+  return (
+    error.code === 'PGRST204' ||
+    error.code === '42703' ||
+    message.includes('schema cache') ||
+    message.includes('column') ||
+    message.includes('does not exist')
+  );
+}
+
+function getSafeFileExtension(file) {
+  const fromName = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (fromName === 'png') return 'png';
+  if (fromName === 'jpg' || fromName === 'jpeg') return 'jpg';
+  return file.type === 'image/png' ? 'png' : 'jpg';
+}
+
+function getStatusPendaftaranHref(pendaftaranId) {
+  return pendaftaranId
+    ? `/mahasiswa/status-pendaftaran?id=${pendaftaranId}`
+    : '/mahasiswa/status-pendaftaran';
+}
+
+async function findExistingRekening(userId) {
+  for (const schema of REKENING_QUERY_SCHEMAS) {
+    const { data, error } = await supabase
+      .from('rekening')
+      .select(`${schema.id}, ${schema.user}`)
+      .eq(schema.user, userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (!error) {
+      return data ? { id: data[schema.id], schema: schema.name } : null;
+    }
+    if (!isSupabaseSchemaError(error)) {
+      throw new Error(`Gagal mengecek data rekening: ${error.message}`);
+    }
+  }
+
+  return null;
+}
+
+async function uploadBukuTabungan(file, userId) {
+  const ext = getSafeFileExtension(file);
+  const filePath = `rekening/${userId}_${Date.now()}.${ext}`;
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from(DOKUMEN_BUCKET)
+    .upload(filePath, file, { contentType: file.type, upsert: false });
+
+  if (uploadError) {
+    throw new Error(`Gagal mengunggah foto buku tabungan: ${uploadError.message}`);
+  }
+
+  const uploadedPath = uploadData?.path || filePath;
+  const { data: urlData } = supabase.storage.from(DOKUMEN_BUCKET).getPublicUrl(uploadedPath);
+  const publicUrl = urlData?.publicUrl;
+
+  if (!publicUrl) {
+    throw new Error('Gagal membuat URL publik foto buku tabungan.');
+  }
+
+  return { path: uploadedPath, publicUrl };
+}
+
+async function removeUploadedBuku(path) {
+  if (!path) return;
+  await supabase.storage.from(DOKUMEN_BUCKET).remove([path]);
+}
+
+async function saveRekening(payload) {
+  const res = await fetch('/api/mahasiswa/rekening', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = json.detail ? ` (${json.detail})` : '';
+    const error = new Error((json.message || 'Gagal menyimpan data rekening.') + detail);
+    error.status = res.status;
+    error.requiresConfirmation = Boolean(json.requiresConfirmation);
+    throw error;
+  }
+
+  return json;
+}
+
 function FieldError({ children }) {
   if (!children) return null;
   return <p className="mt-2 text-sm font-medium text-red-600">{children}</p>;
@@ -133,13 +229,16 @@ export default function DaftarUlangRekeningPage({
   lulusPendaftaran,
   batchYear,
   existingRekening,
+  allLulusList = [],
 }) {
   const fileInputRef = useRef(null);
   const router = useRouter();
   const [dragActive, setDragActive] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitStep, setSubmitStep] = useState('');
   const [submitError, setSubmitError] = useState('');
+  const [toast, setToast] = useState('');
   const [touched, setTouched] = useState({});
   const [values, setValues] = useState({
     bankName: existingRekening?.namaBank || '',
@@ -154,7 +253,6 @@ export default function DaftarUlangRekeningPage({
   const nama = profile.nama || user.nama || 'Mahasiswa';
   const email = profile.email || user.email || '-';
   const scholarshipTitle = beasiswa?.judul || 'Beasiswa Pendidikan';
-  // Tipe beasiswa dari data riil DB — fallback bertingkat
   const scholarshipType =
     beasiswa?.tipe ||
     beasiswa?.jenis ||
@@ -172,6 +270,7 @@ export default function DaftarUlangRekeningPage({
   function updateValue(name, value) {
     setValues((current) => ({ ...current, [name]: value }));
     setSubmitted(false);
+    setToast('');
   }
 
   function handleAccountNumberChange(event) {
@@ -190,6 +289,7 @@ export default function DaftarUlangRekeningPage({
 
   function handleDrop(event) {
     event.preventDefault();
+    if (submitting || submitted) return;
     setDragActive(false);
     handleFile(event.dataTransfer.files?.[0] || null);
   }
@@ -204,44 +304,82 @@ export default function DaftarUlangRekeningPage({
       certified: true,
     });
     if (!isFormValid) return;
+
     setSubmitting(true);
+    setSubmitStep('Memeriksa data rekening...');
     setSubmitError('');
+    setToast('');
+
+    let uploadedPath = null;
+    let completed = false;
+
     try {
-      // Upload foto buku tabungan ke Storage (opsional — tidak memblokir submit)
-      let fotoBukuUrl = null;
-      if (values.proofFile) {
-        const ext = values.proofFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('rekening')
-          .upload(fileName, values.proofFile, { upsert: true });
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('rekening').getPublicUrl(uploadData.path);
-          fotoBukuUrl = urlData?.publicUrl ?? null;
+      const activeUserId = profile.userId || existingRekening?.userId || user.userId;
+      if (!activeUserId) {
+        throw new Error('Profil mahasiswa belum memuat user ID. Silakan login ulang.');
+      }
+
+      const existingFromDb = await findExistingRekening(activeUserId);
+      let confirmUpdate = Boolean(existingFromDb || existingRekening?.id || existingRekening?.nomorRekening);
+
+      if (confirmUpdate) {
+        const approved = window.confirm('Update data rekening yang sudah ada?');
+        if (!approved) {
+          setSubmitStep('');
+          setSubmitting(false);
+          return;
         }
       }
-      // Simpan data rekening ke database
-      const res = await fetch('/api/mahasiswa/rekening', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          namaBank:      values.bankName,
-          namaPemilik:   values.accountHolderName,
-          nomorRekening: values.accountNumber,
-          fotoBukuUrl,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        const detail = json.detail ? ` (${json.detail})` : '';
-        setSubmitError((json.message || 'Gagal menyimpan data rekening.') + detail);
-        return;
+
+      setSubmitStep('Mengunggah foto buku tabungan...');
+      const uploadResult = await uploadBukuTabungan(values.proofFile, activeUserId);
+      uploadedPath = uploadResult.path;
+
+      const payload = {
+        namaBank: values.bankName,
+        namaPemilik: values.accountHolderName,
+        nomorRekening: values.accountNumber,
+        fotoBukuUrl: uploadResult.publicUrl,
+        confirmUpdate,
+      };
+
+      setSubmitStep('Menyimpan data rekening...');
+      try {
+        await saveRekening(payload);
+      } catch (error) {
+        if (error.status === 409 && error.requiresConfirmation) {
+          const approved = window.confirm('Update data rekening yang sudah ada?');
+          if (!approved) {
+            await removeUploadedBuku(uploadedPath);
+            uploadedPath = null;
+            setSubmitStep('');
+            setSubmitting(false);
+            return;
+          }
+          confirmUpdate = true;
+          await saveRekening({ ...payload, confirmUpdate });
+        } else {
+          await removeUploadedBuku(uploadedPath);
+          uploadedPath = null;
+          throw error;
+        }
       }
+
+      const statusHref = getStatusPendaftaranHref(lulusPendaftaran?.pendaftaranId);
       setSubmitted(true);
-      setTimeout(() => router.push('/mahasiswa/profil'), 1500);
-    } catch {
-      setSubmitError('Terjadi kesalahan jaringan. Coba lagi.');
+      setToast('Data rekening berhasil disimpan. Mengalihkan ke halaman status pendaftaran...');
+      setSubmitStep('Berhasil. Mengalihkan...');
+      completed = true;
+      setTimeout(() => router.push(statusHref), 2000);
+    } catch (error) {
+      if (uploadedPath) {
+        await removeUploadedBuku(uploadedPath);
+      }
+      setSubmitError(error?.message || 'Terjadi kesalahan jaringan. Coba lagi.');
     } finally {
+      if (!completed) {
+        setSubmitStep('');
+      }
       setSubmitting(false);
     }
   }
@@ -259,6 +397,15 @@ export default function DaftarUlangRekeningPage({
           content="Form daftar ulang rekening bank mahasiswa lulus seleksi."
         />
       </Head>
+
+      {toast && (
+        <div
+          role="status"
+          className="fixed right-4 top-4 z-50 max-w-sm rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-700 shadow-lg"
+        >
+          {toast}
+        </div>
+      )}
 
       <div className="mx-auto max-w-6xl space-y-6">
         <section className="overflow-hidden rounded-2xl bg-blue-700 text-white shadow-sm">
@@ -319,7 +466,8 @@ export default function DaftarUlangRekeningPage({
                   value={values.bankName}
                   onChange={(event) => updateValue('bankName', event.target.value)}
                   onBlur={() => markTouched('bankName')}
-                  className={`w-full rounded-lg border bg-white px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
+                  disabled={submitting || submitted}
+                  className={`w-full rounded-lg border bg-white px-4 py-3 text-sm text-gray-800 outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 ${
                     getError('bankName') ? 'border-red-300' : 'border-gray-200'
                   }`}
                 >
@@ -343,8 +491,9 @@ export default function DaftarUlangRekeningPage({
                   value={values.accountHolderName}
                   onChange={(event) => updateValue('accountHolderName', event.target.value)}
                   onBlur={() => markTouched('accountHolderName')}
+                  disabled={submitting || submitted}
                   placeholder="Nama sesuai buku tabungan"
-                  className={`w-full rounded-lg border px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
+                  className={`w-full rounded-lg border px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 ${
                     getError('accountHolderName') ? 'border-red-300' : 'border-gray-200'
                   }`}
                 />
@@ -362,8 +511,9 @@ export default function DaftarUlangRekeningPage({
                   value={values.accountNumber}
                   onChange={handleAccountNumberChange}
                   onBlur={() => markTouched('accountNumber')}
+                  disabled={submitting || submitted}
                   placeholder="Masukkan nomor rekening"
-                  className={`w-full rounded-lg border px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 ${
+                  className={`w-full rounded-lg border px-4 py-3 text-sm text-gray-800 outline-none transition placeholder:text-gray-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 ${
                     getError('accountNumber') ? 'border-red-300' : 'border-gray-200'
                   }`}
                 />
@@ -380,10 +530,11 @@ export default function DaftarUlangRekeningPage({
                   onDrop={handleDrop}
                   onDragOver={(event) => {
                     event.preventDefault();
-                    setDragActive(true);
+                    if (!submitting && !submitted) setDragActive(true);
                   }}
                   onDragLeave={() => setDragActive(false)}
-                  className={`flex min-h-44 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition ${
+                  disabled={submitting || submitted}
+                  className={`flex min-h-44 w-full flex-col items-center justify-center rounded-xl border-2 border-dashed px-6 py-8 text-center transition disabled:cursor-not-allowed disabled:opacity-70 ${
                     dragActive
                       ? 'border-blue-500 bg-blue-50'
                       : getError('proofFile')
@@ -409,6 +560,7 @@ export default function DaftarUlangRekeningPage({
                   accept="image/png,image/jpeg"
                   className="hidden"
                   onChange={handleFileInput}
+                  disabled={submitting || submitted}
                 />
                 <FieldError>{getError('proofFile')}</FieldError>
               </div>
@@ -422,7 +574,8 @@ export default function DaftarUlangRekeningPage({
                       updateValue('certified', event.target.checked);
                       markTouched('certified');
                     }}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    disabled={submitting || submitted}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed"
                   />
                   <span className="text-sm leading-6 text-gray-700">
                     I certify that the information above is true and correct
@@ -434,7 +587,7 @@ export default function DaftarUlangRekeningPage({
 
             {submitted && (
               <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                ✅ Data rekening berhasil disimpan! Mengalihkan ke halaman profil...
+                Data rekening berhasil disimpan. Mengalihkan ke halaman status pendaftaran...
               </div>
             )}
             {submitError && (
@@ -450,17 +603,25 @@ export default function DaftarUlangRekeningPage({
               >
                 Kembali ke Profil
               </Link>
-              <button
-                type="submit"
-                disabled={!isFormValid || submitting}
-                className={`rounded-lg px-6 py-3 text-sm font-bold text-white transition ${
-                  isFormValid && !submitting
-                    ? 'bg-blue-700 hover:bg-blue-800'
-                    : 'cursor-not-allowed bg-gray-300'
-                }`}
-              >
-                {submitting ? 'Menyimpan...' : 'Confirm & Submit Data'}
-              </button>
+              <div className="flex flex-col items-stretch gap-2 sm:items-end">
+                {submitting && submitStep && (
+                  <p className="text-xs font-medium text-gray-500">{submitStep}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!isFormValid || submitting || submitted}
+                  className={`inline-flex items-center justify-center rounded-lg px-6 py-3 text-sm font-bold text-white transition ${
+                    isFormValid && !submitting && !submitted
+                      ? 'bg-blue-700 hover:bg-blue-800'
+                      : 'cursor-not-allowed bg-gray-300'
+                  }`}
+                >
+                  {submitting && (
+                    <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  )}
+                  {submitting ? 'Memproses...' : 'Confirm & Submit'}
+                </button>
+              </div>
             </div>
           </form>
 
@@ -484,24 +645,72 @@ export default function DaftarUlangRekeningPage({
                 </p>
               </div>
 
-              <div className="mt-5 space-y-3 text-sm">
+              <div className="mt-5 space-y-3 text-sm border-b border-gray-100 pb-5">
                 <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">Program</span>
-                  <span className="text-right font-semibold text-gray-800">
-                    {scholarshipTitle}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">Status</span>
-                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-                    LULUS
-                  </span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">Kelengkapan</span>
+                  <span className="text-gray-500">Kelengkapan Form</span>
                   <span className="font-semibold text-gray-800">
                     {Object.keys(errors).length === 0 ? 'Lengkap' : 'Belum lengkap'}
                   </span>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <h3 className="text-xs uppercase font-extrabold tracking-wider text-gray-400 mb-3">Daftar Beasiswa Lulus</h3>
+                <div className="space-y-3">
+                  {allLulusList.map((pendaftaran) => {
+                    const b = pendaftaran.beasiswa || {};
+                    const bYear = new Date(
+                      pendaftaran.createdAt || pendaftaran.created_at || new Date().toISOString()
+                    ).getFullYear();
+                    const isCurrent = pendaftaran.pendaftaranId === lulusPendaftaran?.pendaftaranId;
+
+                    return (
+                      <div
+                        key={pendaftaran.pendaftaranId}
+                        className={`p-3 rounded-xl border text-xs leading-normal ${
+                          isCurrent
+                            ? 'border-blue-200 bg-blue-50/40 ring-1 ring-blue-100/50'
+                            : 'border-emerald-100 bg-emerald-50/20'
+                        }`}
+                      >
+                        <p className="font-bold text-gray-900 leading-tight">
+                          {b.judul || 'Beasiswa'}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                          {b.pendonor?.statusOrganisasi || b.pendonor?.nama_organisasi || 'Pendonor'}
+                        </p>
+
+                        <div className="mt-2 flex items-center justify-between text-[11px] text-gray-600 border-t border-gray-100 pt-2">
+                          <span>Batch {bYear}</span>
+                          <span className="font-semibold text-gray-700">
+                            {b.nominal
+                              ? new Intl.NumberFormat('id-ID', {
+                                  style: 'currency',
+                                  currency: 'IDR',
+                                  minimumFractionDigits: 0,
+                                }).format(b.nominal)
+                              : '—'}
+                          </span>
+                        </div>
+
+                        <div className="mt-2.5 flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+                            LULUS
+                          </span>
+                          {isCurrent ? (
+                            <span className="text-[10px] font-bold text-blue-600">Form Aktif</span>
+                          ) : (
+                            <Link
+                              href={`/mahasiswa/status-pendaftaran?id=${pendaftaran.pendaftaranId}`}
+                              className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition"
+                            >
+                              Detail →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -518,8 +727,12 @@ export async function getServerSideProps(context) {
 
   const { user } = auth.props;
   const profile = await getMahasiswaProfile(user);
-  const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
   const existingRekening = await getLatestRekening(profile.userId);
+
+  const { getAllLulusPendaftaran, getLatestLulusPendaftaran } = await import('@/lib/mahasiswaProfile');
+  const lulusPendaftaran = await getLatestLulusPendaftaran(profile.userId);
+  const allLulusList = await getAllLulusPendaftaran(profile.userId);
+
   const batchYear = new Date(
     lulusPendaftaran?.createdAt ||
       lulusPendaftaran?.created_at ||
@@ -530,7 +743,8 @@ export async function getServerSideProps(context) {
     props: {
       user,
       profile,
-      lulusPendaftaran,
+      lulusPendaftaran: lulusPendaftaran ? JSON.parse(JSON.stringify(lulusPendaftaran)) : null,
+      allLulusList: JSON.parse(JSON.stringify(allLulusList)),
       batchYear,
       existingRekening: existingRekening ?? null,
     },

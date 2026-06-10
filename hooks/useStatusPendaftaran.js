@@ -17,7 +17,7 @@ export const STATUS_TO_STEP = {
  * Custom hook — fetch data awal + subscribe real-time update status pendaftaran.
  *
  * @param {string|null} pendaftaranId  UUID dari tabel pendaftaran
- * @returns {{ status, beasiswaInfo, createdAt, loading, error }}
+ * @returns {{ status, beasiswaInfo, createdAt, penyaluranInfo, loading, error }}
  *
  * Cara pakai:
  *   const { status, beasiswaInfo, loading, error } = useStatusPendaftaran(id);
@@ -26,6 +26,7 @@ export function useStatusPendaftaran(pendaftaranId) {
   const [status, setStatus] = useState(null);
   const [beasiswaInfo, setBeasiswaInfo] = useState(null);
   const [createdAt, setCreatedAt] = useState(null);
+  const [penyaluranInfo, setPenyaluranInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -42,8 +43,27 @@ export function useStatusPendaftaran(pendaftaranId) {
 
       const { data, error: fetchError } = await supabase
         .from('pendaftaran')
-        .select('status, createdAt, beasiswa(beasiswaId, judul, nominal, pendonor(statusOrganisasi))')
-        .eq('pendaftaranId', pendaftaranId)
+        .select(`
+          status, 
+          created_at, 
+          beasiswa (
+            id,
+            judul, 
+            nominal, 
+            pendonor (
+              nama_organisasi
+            )
+          ),
+          penyaluran_dana (
+            id,
+            status,
+            jumlah_dana,
+            bukti_transfer_url,
+            id_transaksi,
+            tanggal_penyaluran
+          )
+        `)
+        .eq('id', pendaftaranId)
         .single();
 
       if (!isMounted) return;
@@ -55,15 +75,30 @@ export function useStatusPendaftaran(pendaftaranId) {
       }
 
       setStatus(data.status);
-      setCreatedAt(data.createdAt);
+      setCreatedAt(data.created_at);
       setBeasiswaInfo(data.beasiswa ?? null);
+      
+      // Mapping snake_case dari DB ke camelCase jika diperlukan untuk kompatibilitas UI
+      if (data.penyaluran_dana?.[0]) {
+        const pd = data.penyaluran_dana[0];
+        setPenyaluranInfo({
+          penyaluranId: pd.id,
+          status: pd.status,
+          jumlahDana: pd.jumlah_dana,
+          buktiTransferUrl: pd.bukti_transfer_url,
+          idTransaksi: pd.id_transaksi,
+          tanggalPenyaluran: pd.tanggal_penyaluran
+        });
+      } else {
+        setPenyaluranInfo(null);
+      }
+      
       setLoading(false);
     }
 
     fetchInitialData();
 
     // ─── 2. Subscribe real-time UPDATE ───────────────────────────────────────
-    // Nama channel unik per pendaftaranId agar tidak bentrok jika ada banyak tab
     const channel = supabase
       .channel(`status-pendaftaran-${pendaftaranId}`)
       .on(
@@ -72,7 +107,7 @@ export function useStatusPendaftaran(pendaftaranId) {
           event: 'UPDATE',
           schema: 'public',
           table: 'pendaftaran',
-          filter: `pendaftaranId=eq.${pendaftaranId}`,
+          filter: `id=eq.${pendaftaranId}`,
         },
         (payload) => {
           if (isMounted) {
@@ -90,5 +125,5 @@ export function useStatusPendaftaran(pendaftaranId) {
     };
   }, [pendaftaranId]);
 
-  return { status, beasiswaInfo, createdAt, loading, error };
+  return { status, beasiswaInfo, createdAt, penyaluranInfo, loading, error };
 }

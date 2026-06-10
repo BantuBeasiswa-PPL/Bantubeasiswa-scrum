@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
+import { showWarning, showError } from '../../lib/swal';
 
 // ─── Color tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -96,7 +97,7 @@ export default function AdminLaporanGlobalPage({ user }) {
   // Generate PDF client side
   const handleExportPDF = async () => {
     if (displayedList.length === 0) {
-      alert('Tidak ada data untuk diekspor!');
+      await showWarning('Ekspor Gagal', 'Tidak ada data untuk diekspor!');
       return;
     }
 
@@ -154,7 +155,7 @@ export default function AdminLaporanGlobalPage({ user }) {
       doc.save(`laporan-global-penyaluran-${dateStr}.pdf`);
     } catch (e) {
       console.error('Error generating PDF:', e);
-      alert('Gagal menghasilkan PDF. Silakan coba lagi.');
+      await showError('Error', 'Gagal menghasilkan PDF. Silakan coba lagi.');
     } finally {
       setExporting(false);
     }
