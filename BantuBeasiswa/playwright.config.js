@@ -4,13 +4,19 @@ module.exports = defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // Satu retry lokal untuk menyerap flakiness kompilasi on-demand `next dev`
+  retries: process.env.CI ? 2 : 1,
   workers: 1, // Running sequentially to avoid local port/state conflicts
   reporter: 'list',
+  // Timeout per-test dinaikkan: navigasi pertama ke sebuah route memicu kompilasi
+  // on-demand Next.js dev yang bisa melebihi 30 dtk pada mesin yang lebih lambat.
+  timeout: 60 * 1000,
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    navigationTimeout: 45 * 1000,
+    actionTimeout: 15 * 1000,
   },
   projects: [
     {
