@@ -64,8 +64,8 @@ export default function BaseLayout({ children, user, menuItems }) {
   const [logoutLoading, setLogoutLoading] = useState(false);
   
   // Accessibility hooks
-  const { isHighContrast, toggle: toggleContrast } = useContrastMode(user?.id);
-  const { level, decrease: decreaseFont, increase: increaseFont, canDecrease, canIncrease } = useFontSize(user?.id);
+  const { isHighContrast, toggle: toggleContrast } = useContrastMode(user?.userId);
+  const { level, decrease: decreaseFont, increase: increaseFont, canDecrease, canIncrease } = useFontSize(user?.userId);
 
   async function handleLogout() {
     setLogoutLoading(true);
@@ -301,7 +301,7 @@ export default function BaseLayout({ children, user, menuItems }) {
             </div>
 
             {/* Notification Bell */}
-            <NotificationBell userId={user?.id} />
+            <NotificationBell userId={user?.userId} />
 
             {/* User badge (desktop) */}
             <div
