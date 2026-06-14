@@ -142,6 +142,7 @@ export default function PendonorDashboardPage({ user }) {
   const [stats,    setStats   ] = useState({ totalDana: 0, totalPendaftar: 0, programAktif: 0, kuotaTersisa: 0 });
   const [programs, setPrograms] = useState([]);
   const [loading,  setLoading ] = useState(true);
+  const [pendingActions, setPendingActions] = useState([]);
 
   // Data pendonor dari API (user.nama dari JWT sudah berisi statusOrganisasi)
   const [pendonorInfo, setPendonorInfo] = useState({
@@ -176,6 +177,7 @@ export default function PendonorDashboardPage({ user }) {
           const dash = await dashRes.json();
           setStats(dash.stats ?? {});
           setPrograms(dash.programs ?? []);
+          setPendingActions(dash.pendingActions ?? []);
         }
       } catch (err) {
         console.error('[dashboard] fetch error:', err);
@@ -227,17 +229,28 @@ export default function PendonorDashboardPage({ user }) {
             </p>
           </div>
 
-          {/* Tombol Tambah Program */}
-          <Link
-            href="/pendonor/program"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white shrink-0 transition-all hover:shadow-md active:scale-95"
-            style={{ backgroundColor: C.blue }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            Tambah Program
-          </Link>
+          {/* Tombol Aksi */}
+          <div className="flex items-center gap-3 shrink-0">
+            <Link
+              id="goto-pembayaran-btn"
+              href="/pendonor/dashboard-pembayaran"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border transition-all hover:bg-slate-50 active:scale-95"
+              style={{ color: C.blue, borderColor: C.blue }}
+            >
+              <span>💳</span>
+              Instruksi Pembayaran
+            </Link>
+            <Link
+              href="/pendonor/program"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white shrink-0 transition-all hover:shadow-md active:scale-95"
+              style={{ backgroundColor: C.blue }}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Tambah Program
+            </Link>
+          </div>
         </div>
 
         {/* ── Summary Cards ─────────────────────────────────────────────── */}
@@ -255,6 +268,55 @@ export default function PendonorDashboardPage({ user }) {
               ))
           }
         </div>
+
+        {/* ── Pending Actions (Tindakan Tertunda) ───────────────────────── */}
+        {!loading && pendingActions.length > 0 && (
+          <div className="mb-8 space-y-3">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Tindakan Tertunda
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pendingActions.map((action) => {
+                let bg = '#eff6ff'; // info (blue)
+                let text = '#1e40af';
+                let border = '#bfdbfe';
+                if (action.type === 'warning') {
+                  bg = '#fffbeb'; // warning (yellow)
+                  text = '#854d0e';
+                  border = '#fef08a';
+                } else if (action.type === 'success') {
+                  bg = '#f0fdf4'; // success (green)
+                  text = '#166534';
+                  border = '#bbf7d0';
+                }
+
+                const isPaymentAction = action.text.includes('lulus') || action.text.includes('penyaluran') || action.text.includes('transfer') || action.text.includes('pembayaran');
+
+                return (
+                  <div
+                    key={action.id}
+                    className="flex items-start justify-between gap-3 p-4 rounded-xl border transition-all hover:shadow-sm"
+                    style={{ backgroundColor: bg, color: text, borderColor: border }}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-lg shrink-0">{action.icon || '⚠️'}</span>
+                      <p className="text-sm font-medium leading-relaxed">{action.text}</p>
+                    </div>
+                    {isPaymentAction && (
+                      <Link
+                        id={`process-payment-action-${action.id}`}
+                        href="/pendonor/dashboard-pembayaran"
+                        className="text-xs font-bold underline shrink-0 hover:opacity-85"
+                      >
+                        Proses →
+                      </Link>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── Main Content: Tabel Program Beasiswa Aktif ────────────────── */}
         <div

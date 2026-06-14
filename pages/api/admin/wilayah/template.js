@@ -5,7 +5,7 @@ export default function handler(req, res) {
 
   // CSV header
   const header = ['provinsi', 'nama', 'tipe', 'mode', 'isAfirmasi', 'is3T', 'jenis_3t'];
-  
+
   // Data lengkap 62 wilayah 3T (dengan proper CSV encoding untuk nama yang punya koma)
   const data = [
     // ── SUMATERA UTARA
@@ -96,11 +96,11 @@ export default function handler(req, res) {
   // Build CSV with proper escaping - quote fields that might contain commas
   const csvLines = [
     header.join(','),
-    ...data.map(row => 
-      row.map(field => 
+    ...data.map(row =>
+      row.map(field =>
         // Quote fields that contain commas, quotes, or newlines
         (typeof field === 'string' && (field.includes(',') || field.includes('"') || field.includes('\n')))
-          ? `"${field.replace(/"/g, '""')}"` 
+          ? `"${field.replace(/"/g, '""')}"`
           : field
       ).join(',')
     )
@@ -110,6 +110,6 @@ export default function handler(req, res) {
   // Set response headers for CSV download
   res.setHeader('Content-Type', 'text/csv;charset=utf-8;');
   res.setHeader('Content-Disposition', 'attachment;filename=wilayah_3t_data.csv');
-  
+
   return res.status(200).send(csv);
 }

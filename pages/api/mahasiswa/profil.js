@@ -16,7 +16,19 @@ const PROFILE_COLUMNS = `
   noHandphone,
   provinsiKtpId,
   kabupatenKtpId,
-  alamatKtp
+  alamatKtp,
+  namaUniversitas,
+  jurusan,
+  semesterAktif,
+  ipk,
+  namaAyah,
+  pekerjaanAyah,
+  namaIbu,
+  pekerjaanIbu,
+  penghasilanOrangTua,
+  fileTranskrip,
+  fileKk,
+  fileKtp
 `;
 
 function cleanString(value) {
@@ -79,6 +91,18 @@ async function validatePayload(supabase, body) {
     provinsiKtpId: nullableNumber(body.provinsiKtpId),
     kabupatenKtpId: nullableNumber(body.kabupatenKtpId),
     alamatKtp: cleanString(body.alamatKtp) || null,
+    namaUniversitas: cleanString(body.namaUniversitas) || null,
+    jurusan: cleanString(body.jurusan) || null,
+    semesterAktif: nullableNumber(body.semesterAktif),
+    ipk: body.ipk !== undefined && body.ipk !== null && body.ipk !== '' ? Number(body.ipk) : null,
+    namaAyah: cleanString(body.namaAyah) || null,
+    pekerjaanAyah: cleanString(body.pekerjaanAyah) || null,
+    namaIbu: cleanString(body.namaIbu) || null,
+    pekerjaanIbu: cleanString(body.pekerjaanIbu) || null,
+    penghasilanOrangTua: cleanString(body.penghasilanOrangTua) || null,
+    fileTranskrip: cleanString(body.fileTranskrip) || null,
+    fileKk: cleanString(body.fileKk) || null,
+    fileKtp: cleanString(body.fileKtp) || null,
   };
 
   const errors = {};
@@ -105,6 +129,16 @@ async function validatePayload(supabase, body) {
   if (!payload.kabupatenKtpId) errors.kabupatenKtpId = 'Kabupaten/kota KTP wajib dipilih.';
   if (!payload.alamatKtp) errors.alamatKtp = 'Detail alamat KTP wajib diisi.';
   if (payload.alamatKtp && payload.alamatKtp.length < 5) errors.alamatKtp = 'Detail alamat minimal 5 karakter.';
+
+  // Optional field validations:
+  if (payload.ipk !== null) {
+    if (isNaN(payload.ipk) || payload.ipk < 0 || payload.ipk > 4) {
+      errors.ipk = 'IPK harus antara 0.00 – 4.00.';
+    }
+  }
+  if (Number.isNaN(payload.semesterAktif)) {
+    errors.semesterAktif = 'Semester aktif tidak valid.';
+  }
 
   if (Object.keys(errors).length) return { payload, errors };
 

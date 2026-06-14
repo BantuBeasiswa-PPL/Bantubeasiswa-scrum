@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import AdminLayout from '../../components/layouts/AdminLayout';
 import { withAuth } from '../../lib/auth';
+import { showSuccess, showError, showConfirm, showWarning } from '../../lib/swal';
 
 // ─── Color tokens (matching dashboard.js) ─────────────────────────────────────
 const C = {
@@ -105,12 +106,13 @@ export default function PendonorPage({ user }) {
         setPendonors(pendonors.map(p =>
           p.pendonorId === pendonorId ? { ...p, statusVerifikasi: 'verified' } : p
         ));
+        await showSuccess('Berhasil!', 'Pendonor berhasil diverifikasi.');
       } else {
         const result = await response.json();
-        alert('Error: ' + result.error);
+        await showError('Error', result.error);
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      await showError('Error', err.message);
     }
   };
 
@@ -139,7 +141,7 @@ export default function PendonorPage({ user }) {
 
   const handleRejectSubmit = async () => {
     if (selectedReason.length < 10) {
-      alert('Alasan penolakan minimal 10 karakter');
+      await showWarning('Perhatian', 'Alasan penolakan minimal 10 karakter');
       return;
     }
 
@@ -161,17 +163,25 @@ export default function PendonorPage({ user }) {
         ));
         setShowRejectModal(false);
         setRejectingId(null);
+        await showSuccess('Berhasil!', 'Pendonor berhasil ditolak.');
       } else {
         const result = await response.json();
-        alert('Error: ' + result.error);
+        await showError('Error', result.error);
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      await showError('Error', err.message);
     }
   };
 
   const handleRevoke = async (pendonorId) => {
-    if (!window.confirm('Yakin ingin mencabut verifikasi pendonor ini?')) {
+    const result = await showConfirm(
+      'Cabut Verifikasi?',
+      'Yakin ingin mencabut verifikasi pendonor ini?',
+      'Ya, Cabut',
+      'Batal',
+      true
+    );
+    if (!result.isConfirmed) {
       return;
     }
 
@@ -190,12 +200,13 @@ export default function PendonorPage({ user }) {
         setPendonors(pendonors.map(p =>
           p.pendonorId === pendonorId ? { ...p, statusVerifikasi: 'pending' } : p
         ));
+        await showSuccess('Berhasil!', 'Verifikasi pendonor berhasil dicabut.');
       } else {
         const result = await response.json();
-        alert('Error: ' + result.error);
+        await showError('Error', result.error);
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      await showError('Error', err.message);
     }
   };
 
@@ -487,7 +498,6 @@ export default function PendonorPage({ user }) {
                         href={doc.downloadUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        download={doc.fileName || doc.jenis}
                         style={{
                           display: 'inline-block', padding: '8px 14px', borderRadius: '6px',
                           background: C.blue, color: C.white, fontSize: '12px', fontWeight: '600',
@@ -497,7 +507,9 @@ export default function PendonorPage({ user }) {
                         ⬇ Unduh / Lihat
                       </a>
                     ) : (
-                      <span style={{ fontSize: '12px', color: C.red }}>URL unduhan tidak tersedia</span>
+                      <span style={{ fontSize: '12px', color: C.red }}>
+                        File tidak ditemukan di storage — minta pendonor unggah ulang
+                      </span>
                     )}
                   </div>
                 ))}

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Head from 'next/head';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
 import { withPendonorAuth } from '../../lib/auth';
+import { showError, showWarning } from '../../lib/swal';
 
 // ─── Color tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -130,7 +131,7 @@ export default function DashboardLaporanPage({ user }) {
   // Generate PDF client side
   const handleDownloadPDF = async () => {
     if (displayedList.length === 0) {
-      alert('Tidak ada data untuk diekspor!');
+      await showWarning('Perhatian', 'Tidak ada data untuk diekspor!');
       return;
     }
 
@@ -197,7 +198,7 @@ export default function DashboardLaporanPage({ user }) {
       doc.save(`laporan-rekap-program-${dateStr}.pdf`);
     } catch (e) {
       console.error('Error generating PDF:', e);
-      alert('Gagal menghasilkan PDF. Silakan coba lagi.');
+      await showError('Gagal!', 'Gagal menghasilkan PDF. Silakan coba lagi.');
     } finally {
       setExporting(false);
     }

@@ -53,6 +53,9 @@ export default function PendonorPage({ user }) {
   const [selectedReason, setSelectedReason] = useState('');
   const [rejectingId, setRejectingId] = useState(null);
   const [showRejectModal, setShowRejectModal] = useState(false);
+  const [showDokumenModal, setShowDokumenModal] = useState(false);
+  const [dokumenLoading, setDokumenLoading] = useState(false);
+  const [dokumenData, setDokumenData] = useState(null);
 
   const stats = {
     total: pendonors.length,
@@ -117,6 +120,23 @@ export default function PendonorPage({ user }) {
     setRejectingId(pendonorId);
     setSelectedReason('');
     setShowRejectModal(true);
+  };
+
+  const handleViewDokumen = async (pendonorId) => {
+    setShowDokumenModal(true);
+    setDokumenLoading(true);
+    setDokumenData(null);
+    try {
+      const res = await fetch(`/api/admin/pendonor/dokumen-verifikasi?pendonorId=${pendonorId}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Gagal memuat dokumen');
+      setDokumenData(data);
+    } catch (err) {
+      alert('Error: ' + err.message);
+      setShowDokumenModal(false);
+    } finally {
+      setDokumenLoading(false);
+    }
   };
 
   const handleRejectSubmit = async () => {
@@ -340,6 +360,22 @@ export default function PendonorPage({ user }) {
                     </td>
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => handleViewDokumen(pendonor.pendonorId)}
+                          title="Lihat dokumen verifikasi"
+                          style={{
+                            padding: '6px 10px',
+                            background: C.blue_light,
+                            color: C.white,
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                          }}
+                        >
+                          📄 Dokumen
+                        </button>
                         {pendonor.statusVerifikasi === 'pending' && (
                           <>
                             <button
@@ -412,6 +448,93 @@ export default function PendonorPage({ user }) {
           </div>
         )}
       </div>
+
+      {/* Dokumen Verifikasi Modal */}
+      {showDokumenModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+        }}>
+          <div style={{
+            background: C.white, borderRadius: '12px', padding: '28px',
+            maxWidth: '560px', width: '92%', maxHeight: '85vh', overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <h2 style={{ color: C.dark, marginBottom: '8px', fontSize: '18px', fontWeight: '700' }}>
+              Dokumen Verifikasi Pendonor
+            </h2>
+            {dokumenData?.pendonor && (
+              <p style={{ color: C.gray, fontSize: '14px', marginBottom: '16px' }}>
+                {dokumenData.pendonor.statusOrganisasi} · {dokumenData.pendonor.email}
+              </p>
+            )}
+
+            {dokumenLoading ? (
+              <p style={{ color: C.gray, fontSize: '14px', padding: '24px 0', textAlign: 'center' }}>
+                Memuat dokumen...
+              </p>
+            ) : dokumenData?.dokumen?.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <p style={{ fontSize: '13px', color: C.gray }}>
+                  Dokumen wajib terunggah: {dokumenData.uploadedWajib} / {dokumenData.totalWajib}
+                </p>
+                {dokumenData.dokumen.map((doc) => (
+                  <div
+                    key={doc.jenis}
+                    style={{
+                      border: '1px solid #e5e7eb', borderRadius: '8px', padding: '14px',
+                      background: '#fafafa',
+                    }}
+                  >
+                    <p style={{ fontWeight: '700', fontSize: '14px', color: C.dark, marginBottom: '4px' }}>
+                      {doc.label}
+                    </p>
+                    <p style={{ fontSize: '12px', color: C.gray, marginBottom: '8px' }}>
+                      Status: {doc.statusDokumen}
+                      {doc.updatedAt && ` · ${new Date(doc.updatedAt).toLocaleString('id-ID')}`}
+                    </p>
+                    {doc.downloadUrl ? (
+                      <a
+                        href={doc.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-block', padding: '8px 14px', borderRadius: '6px',
+                          background: C.blue, color: C.white, fontSize: '12px', fontWeight: '600',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        ⬇ Unduh / Lihat
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: '12px', color: C.red }}>
+                        File tidak ditemukan di storage — minta pendonor unggah ulang
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: C.gray, fontSize: '14px', padding: '16px 0' }}>
+                Belum ada dokumen yang diunggah oleh pendonor ini.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                onClick={() => { setShowDokumenModal(false); setDokumenData(null); }}
+                style={{
+                  padding: '10px 20px', background: C.gray_light, color: C.dark,
+                  border: '1px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer',
+                  fontWeight: '600', fontSize: '14px',
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reject Modal */}
       {showRejectModal && (
