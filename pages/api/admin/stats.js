@@ -1,5 +1,6 @@
 import { supabase } from '../../../lib/db';
 import { verifyToken } from '../../../lib/auth';
+import { hasAlamatKtpLengkap } from '../../../lib/mahasiswaProfile';
 
 /**
  * GET /api/admin/stats
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
     // Jalankan 4 query sekaligus (paralel)
     const [
       { count: totalBeasiswa,  error: e1 },
-      { count: totalPendaftar, error: e2 },
+      { data: userKtpRows,     error: e2 },
       { count: totalPendonor,  error: e3 },
       { count: totalWilayah3T, error: e4 },
     ] = await Promise.all([
@@ -30,10 +31,10 @@ export default async function handler(req, res) {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'aktif'),
 
-      // 2. Total semua pendaftaran
+      // 2. Mahasiswa dengan formulir alamat KTP lengkap
       supabase
-        .from('pendaftaran')
-        .select('*', { count: 'exact', head: true }),
+        .from('user')
+        .select('provinsiKtpId, kabupatenKtpId, alamatKtp'),
 
       // 3. Pendonor (account with role='pendonor')
       supabase
@@ -52,9 +53,11 @@ export default async function handler(req, res) {
       throw new Error('Query error');
     }
 
+    const totalPendaftar = (userKtpRows || []).filter(hasAlamatKtpLengkap).length;
+
     return res.status(200).json({
       totalBeasiswa : totalBeasiswa  ?? 0,
-      totalPendaftar: totalPendaftar ?? 0,
+      totalPendaftar,
       totalPendonor : totalPendonor  ?? 0,
       totalWilayah3T: totalWilayah3T ?? 0,
     });

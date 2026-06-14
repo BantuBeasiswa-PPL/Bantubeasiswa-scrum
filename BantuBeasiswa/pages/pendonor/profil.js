@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
-import { withAuth } from '../../lib/auth';
+import { withPendonorAuth } from '../../lib/auth';
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -79,7 +79,7 @@ function InfoCard({ label, value, icon }) {
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function ProfilPendonorPage({ user }) {
+export default function ProfilPendonorPage({ user, isPending }) {
   const [profil, setProfil]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
@@ -162,7 +162,7 @@ export default function ProfilPendonorPage({ user }) {
     return (
       <>
         <Head><title>Profil Pendonor · BantuBeasiswa</title></Head>
-        <PendonorLayout user={user}>
+        <PendonorLayout user={user} isPending={isPending}>
           <div className="mb-6">
             <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2" />
             <div className="h-4 w-64 bg-gray-100 rounded animate-pulse" />
@@ -184,7 +184,7 @@ export default function ProfilPendonorPage({ user }) {
         <meta name="description" content="Kelola profil pendonor BantuBeasiswa" />
       </Head>
 
-      <PendonorLayout user={user}>
+      <PendonorLayout user={user} isPending={isPending}>
 
         {/* ── Page Header ──────────────────────────────────────────────────── */}
         <div className="mb-6">
@@ -381,5 +381,5 @@ export default function ProfilPendonorPage({ user }) {
 
 // ─── SSR Auth Guard ───────────────────────────────────────────────────────────
 export async function getServerSideProps(context) {
-  return withAuth(context, 'pendonor');
+  return withPendonorAuth(context, { allowPending: true });
 }

@@ -5,6 +5,7 @@ import MahasiswaLayout from '../../components/layouts/MahasiswaLayout';
 import { withAuth } from '../../lib/auth';
 import { getServerSupabase } from '../../lib/supabaseServer';
 import { supabase } from '../../lib/db';
+import { showSuccess, showError, showConfirm } from '../../lib/swal';
 
 const C = {
   blue  : '#0056b3',
@@ -175,7 +176,14 @@ export default function BeasiswaFavoritPage({ user, initialBeasiswas }) {
   const [removingId, setRemovingId] = useState(null);
 
   const handleRemove = async (beasiswaId) => {
-    if (!window.confirm('Apakah Anda yakin ingin menghapus beasiswa ini dari daftar favorit?')) {
+    const result = await showConfirm(
+      'Hapus dari Favorit?',
+      'Apakah Anda yakin ingin menghapus beasiswa ini dari daftar favorit?',
+      'Ya, Hapus',
+      'Batal',
+      true
+    );
+    if (!result.isConfirmed) {
       return;
     }
 
@@ -202,9 +210,10 @@ export default function BeasiswaFavoritPage({ user, initialBeasiswas }) {
 
       // Hapus dari state lokal
       setBeasiswas(beasiswas.filter(b => b.beasiswaId !== beasiswaId));
+      await showSuccess('Berhasil!', 'Beasiswa telah dihapus dari daftar favorit Anda.');
     } catch (err) {
       console.error('Gagal menghapus dari favorit:', err);
-      alert('Gagal menghapus beasiswa dari favorit.');
+      await showError('Gagal!', 'Gagal menghapus beasiswa dari favorit.');
     } finally {
       setRemovingId(null);
     }

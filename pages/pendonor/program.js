@@ -3,6 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
 import { withPendonorAuth } from '../../lib/auth';
+import { showSuccess, showError, showConfirm } from '../../lib/swal';
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -480,7 +481,13 @@ export default function KelolaProgramPage({ user }) {
   };
 
   const handleSubmitApproval = async (beasiswa) => {
-    if (!confirm(`Ajukan program beasiswa "${beasiswa.judul}" ke admin untuk disetujui?`)) return;
+    const result = await showConfirm(
+      'Ajukan Persetujuan?',
+      `Ajukan program beasiswa "${beasiswa.judul}" ke admin untuk disetujui?`,
+      'Ya, Ajukan',
+      'Batal'
+    );
+    if (!result.isConfirmed) return;
 
     setSubmittingId(beasiswa.beasiswaId);
     try {
@@ -489,10 +496,10 @@ export default function KelolaProgramPage({ user }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Gagal mengajukan persetujuan');
-      alert('Berhasil diajukan! Program sedang menunggu review admin.');
+      await showSuccess('Berhasil!', 'Berhasil diajukan! Program sedang menunggu review admin.');
       await fetchBeasiswa();
     } catch (err) {
-      alert('Error: ' + err.message);
+      await showError('Error', err.message);
     } finally {
       setSubmittingId(null);
     }
@@ -501,23 +508,31 @@ export default function KelolaProgramPage({ user }) {
   const handleDelete = async (beasiswa) => {
     // Delete protection
     if (beasiswa.status === 'aktif') {
-      alert('Program yang sedang aktif tidak dapat dihapus. Tutup program terlebih dahulu.');
+      await showError('Gagal', 'Program yang sedang aktif tidak dapat dihapus. Tutup program terlebih dahulu.');
       return;
     }
     const applicants = getApplicantCount(beasiswa);
     if (applicants > 0) {
-      alert(`Program ini sudah memiliki ${applicants} pendaftar dan tidak dapat dihapus.`);
+      await showError('Gagal', `Program ini sudah memiliki ${applicants} pendaftar dan tidak dapat dihapus.`);
       return;
     }
 
-    if (!confirm(`Hapus program "${beasiswa.judul}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    const result = await showConfirm(
+      'Hapus Program?',
+      `Hapus program "${beasiswa.judul}"? Tindakan ini tidak dapat dibatalkan.`,
+      'Ya, Hapus',
+      'Batal',
+      true
+    );
+    if (!result.isConfirmed) return;
 
     try {
       const res = await fetch(`/api/pendonor/beasiswa/${beasiswa.beasiswaId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Gagal menghapus program');
+      await showSuccess('Berhasil!', 'Program beasiswa berhasil dihapus.');
       await fetchBeasiswa();
     } catch (err) {
-      alert('Error: ' + err.message);
+      await showError('Error', err.message);
     }
   };
 
