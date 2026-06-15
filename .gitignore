@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-results/
+/test-results/
 
 # next.js
 /.next/
@@ -47,3 +49,6 @@ agent.md
 agents.md
 *_PBI*_NOTES.md
 PBI*_NOTES.md
+
+# duplikat folder project (tidak disengaja, jangan push)
+/BantuBeasiswa/

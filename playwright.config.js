@@ -8,9 +8,16 @@ module.exports = defineConfig({
   workers: 1, // Running sequentially to avoid local port/state conflicts
   reporter: 'list',
   use: {
+    // Browser navigasi pakai 'localhost' agar cookie domain: 'localhost' terbaca
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Tampilkan browser GUI saat test berjalan
+    headless: false,
+    launchOptions: {
+      // Perlambat sedikit agar GUI terlihat; set 0 di CI
+      slowMo: process.env.CI ? 0 : 150,
+    },
   },
   projects: [
     {
@@ -20,8 +27,10 @@ module.exports = defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: true,
-    timeout: 120 * 1000, // Wait up to 2 mins for the dev server to boot
+    // Health-check pakai 127.0.0.1 (IPv4) agar Playwright tidak
+    // tersandung resolusi IPv6 (::1) di Windows
+    url: 'http://127.0.0.1:3000',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
   },
 });

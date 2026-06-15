@@ -10,7 +10,9 @@
     "ensure-bucket": "node scripts/ensureBucket.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
