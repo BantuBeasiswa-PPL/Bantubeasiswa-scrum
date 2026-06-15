@@ -5,7 +5,7 @@ const FULL_MENU = [
   { label: 'Profil Pendonor', href: '/pendonor/profil' },
   { label: 'Kelola Program', href: '/pendonor/program' },
   { label: 'Seleksi Pendaftar', href: '/pendonor/seleksi-pendaftar' },
-  { label: 'Pembayaran Beasiswa', href: '/pendonor/pembayaran' },
+  { label: 'Pembayaran Beasiswa', href: '/pendonor/dashboard-pembayaran' },
   { label: 'Dashboard Laporan', href: '/pendonor/dashboard-laporan' },
 ];
 

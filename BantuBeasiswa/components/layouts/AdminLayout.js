@@ -4,12 +4,10 @@ const menuItems = [
   {
     label: 'Dashboard Statistik',
     href: '/admin/dashboard',
-    icon: '📊',
   },
   {
     label: 'Dashboard Analitik',
     href: '/admin/dashboard-analitik',
-    icon: '📈',
   },
   {
     label: 'Kelola Data Wilayah',
