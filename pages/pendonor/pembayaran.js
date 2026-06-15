@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { supabase } from '../../lib/db';
 import { getServerSupabase } from '../../lib/supabaseServer';
-import { withPendonorAuth } from '../../lib/auth';
+import { withAuth } from '../../lib/auth';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
 import KonfirmasiTransferModal from '../../components/KonfirmasiTransferModal';
 
@@ -388,7 +388,7 @@ export default function PembayaranDashboard({ user, pendonorId, initialPenyalura
 }
 
 export async function getServerSideProps(context) {
-  const auth = await withPendonorAuth(context);
+  const auth = withAuth(context, 'pendonor');
   if (auth.redirect) return auth;
 
   const { user } = auth.props;

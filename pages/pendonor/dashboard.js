@@ -14,19 +14,17 @@ const C = {
 };
 
 
-// ─── Badge Tahap Seleksi ──────────────────────────────────────────────────────
-const TAHAP_STYLE = {
-  TERDAFTAR: { bg: '#eff6ff', color: '#1d4ed8', label: 'Terdaftar'  },
-  EXAM      : { bg: '#ede9fe', color: '#7c3aed', label: 'Ujian'      },
-  REVIEW    : { bg: '#fefce8', color: '#a16207', label: 'Review'     },
-  TOLAK     : { bg: '#fee2e2', color: '#b91c1c', label: 'Ditolak'    },
-  DITERIMA  : { bg: '#d1fae5', color: '#065f46', label: 'Diterima'   },
-  DITOLAK   : { bg: '#fee2e2', color: '#b91c1c', label: 'Ditolak'    },
-  LULUS     : { bg: '#d1fae5', color: '#065f46', label: 'Lulus ✓'    },
+// ─── Status Badge ────────────────────────────────────────────────────────────
+const STATUS_STYLE = {
+  draft   : { bg: '#f3f4f6', color: '#374151', label: 'Draft'     },
+  pending : { bg: '#fffbeb', color: '#b45309', label: 'Menunggu Persetujuan' },
+  aktif   : { bg: '#d1fae5', color: '#065f46', label: 'Aktif'     },
+  ditutup : { bg: '#fee2e2', color: '#b91c1c', label: 'Ditutup'   },
+  selesai : { bg: '#e0e7ff', color: '#3730a3', label: 'Selesai'   },
 };
 
-function TahapBadge({ tahap }) {
-  const s = TAHAP_STYLE[tahap] || { bg: '#f3f4f6', color: '#374151', label: tahap };
+function StatusBadge({ status }) {
+  const s = STATUS_STYLE[status] || STATUS_STYLE.draft;
   return (
     <span
       className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
@@ -345,7 +343,7 @@ export default function PendonorDashboardPage({ user }) {
               <thead>
                 <tr style={{ backgroundColor: '#f9fafb' }}>
                   <th className="text-left px-5 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Nama Program</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Tahap</th>
+                  <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Status</th>
                   <th className="text-right px-4 py-3 font-semibold text-xs uppercase tracking-wide" style={{ color: '#6b7280' }}>Pendaftar</th>
                   <th className="text-left px-4 py-3 font-semibold text-xs uppercase tracking-wide min-w-40" style={{ color: '#6b7280' }}>Kuota</th>
                 </tr>
@@ -370,7 +368,7 @@ export default function PendonorDashboardPage({ user }) {
                       style={{ borderColor: '#f3f4f6', backgroundColor: idx % 2 === 1 ? '#f9fafb' : C.white }}
                     >
                       <td className="px-5 py-3.5"><p className="font-medium leading-snug" style={{ color: C.dark }}>{prog.judul}</p></td>
-                      <td className="px-4 py-3.5"><TahapBadge tahap={prog.tahap} /></td>
+                      <td className="px-4 py-3.5"><StatusBadge status={prog.status} /></td>
                       <td className="px-4 py-3.5 text-right"><span className="font-semibold tabular-nums" style={{ color: C.blue }}>{(prog.pendaftar ?? 0).toLocaleString('id-ID')}</span></td>
                       <td className="px-4 py-3.5"><KuotaBar isi={prog.kuotaIsi ?? 0} total={prog.kuotaTotal ?? 0} /></td>
                     </tr>

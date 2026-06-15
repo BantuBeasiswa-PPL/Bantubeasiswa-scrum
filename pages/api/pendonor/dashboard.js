@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       .from('penyaluran_dana')
       .select('jumlahDana')
       .eq('pendonorId', pendonorId)
-      .eq('status', 'tersalurkan');
+      .in('status', ['confirmed', 'tersalurkan']);
 
     const totalDana = (penyaluranList ?? []).reduce(
       (sum, p) => sum + (p.jumlahDana ?? 0), 0
@@ -80,18 +80,20 @@ export default async function handler(req, res) {
     const programAktif   = (beasiswaList ?? []).filter(b => b.status === 'aktif').length;
     const totalPendaftar = pendaftaranList.length;
 
-    // Kuota tersisa = sum(kuota) - count(LULUS per beasiswa)
+    // Kuota tersisa = sum(kuota) - count(LULUS per beasiswa) [Hanya untuk program aktif]
     const lulusPerBeasiswa = {};
     pendaftaranList.forEach(p => {
       if (p.status === 'LULUS') {
         lulusPerBeasiswa[p.beasiswaId] = (lulusPerBeasiswa[p.beasiswaId] ?? 0) + 1;
       }
     });
-    const kuotaTersisa = (beasiswaList ?? []).reduce((sum, b) => {
-      const kuota    = b.kuota ?? 0;
-      const terpakai = lulusPerBeasiswa[b.beasiswaId] ?? 0;
-      return sum + Math.max(0, kuota - terpakai);
-    }, 0);
+    const kuotaTersisa = (beasiswaList ?? [])
+      .filter(b => b.status === 'aktif')
+      .reduce((sum, b) => {
+        const kuota    = b.kuota ?? 0;
+        const terpakai = lulusPerBeasiswa[b.beasiswaId] ?? 0;
+        return sum + Math.max(0, kuota - terpakai);
+      }, 0);
 
     // ── 5. Build program list (ambil 5 terbaru) ───────────────────────────
     // Group pendaftaran by beasiswaId

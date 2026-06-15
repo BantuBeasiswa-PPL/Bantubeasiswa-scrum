@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
-import { withPendonorAuth } from '../../lib/auth';
+import { withAuth } from '../../lib/auth';
 import { showSuccess, showError, showConfirm, showWarning } from '../../lib/swal';
 
 // ─── Color tokens ─────────────────────────────────────────────────────────────
@@ -861,5 +861,5 @@ export default function SeleksiPendaftarPage({ user }) {
 
 // ─── SSR Auth Guard ───────────────────────────────────────────────────────────
 export async function getServerSideProps(context) {
-  return withPendonorAuth(context);
+  return withAuth(context, 'pendonor');
 }
