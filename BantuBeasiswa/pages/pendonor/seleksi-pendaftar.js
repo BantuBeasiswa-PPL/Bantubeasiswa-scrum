@@ -78,6 +78,8 @@ export default function SeleksiPendaftarPage({ user }) {
 
   // ── Fetch all programs on load ──────────────────────────────────────────────
   useEffect(() => {
+    if (!router.isReady) return;
+
     async function fetchPrograms() {
       try {
         setLoadingPrograms(true);
@@ -106,7 +108,17 @@ export default function SeleksiPendaftarPage({ user }) {
       }
     }
     fetchPrograms();
-  }, [router.query.beasiswaId]);
+  }, [router.isReady]);
+
+  // Sync selectedProgramId when URL query changes
+  useEffect(() => {
+    if (!router.isReady) return;
+    const queryId = router.query.beasiswaId;
+    if (queryId) {
+      setSelectedProgramId(String(queryId));
+    }
+  }, [router.isReady, router.query.beasiswaId]);
+
 
   // ── Fetch applicants when selected program changes ──────────────────────────
   useEffect(() => {
