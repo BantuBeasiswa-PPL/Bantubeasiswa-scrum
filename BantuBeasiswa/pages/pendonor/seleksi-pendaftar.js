@@ -112,12 +112,16 @@ export default function SeleksiPendaftarPage({ user }) {
   useEffect(() => {
     if (!selectedProgramId) return;
 
+    let active = true;
+
     async function fetchApplicants() {
       try {
         setLoadingApplicants(true);
-        setErrorMsg('');
+        if (active) setErrorMsg('');
         const res = await fetch(`/api/pendonor/seleksi/list?beasiswaId=${selectedProgramId}`);
         const json = await res.json();
+        
+        if (!active) return;
         
         if (res.ok) {
           const list = json.data || [];
@@ -134,9 +138,11 @@ export default function SeleksiPendaftarPage({ user }) {
         }
       } catch (err) {
         console.error('Fetch applicants error:', err);
-        setErrorMsg('Terjadi kesalahan koneksi saat memuat daftar pendaftar.');
+        if (active) {
+          setErrorMsg('Terjadi kesalahan koneksi saat memuat daftar pendaftar.');
+        }
       } finally {
-        setLoadingApplicants(false);
+        if (active) setLoadingApplicants(false);
       }
     }
 
@@ -148,6 +154,10 @@ export default function SeleksiPendaftarPage({ user }) {
 
     fetchApplicants();
     setMobileShowDesk(false);
+
+    return () => {
+      active = false;
+    };
   }, [selectedProgramId]);
 
   // ── Handle Approve Document ──────────────────────────────────────────────────
