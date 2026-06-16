@@ -193,5 +193,60 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
       expect(confirmBody.penyaluranIds).toEqual([100]);
       expect(typeof confirmBody.buktiTransferUrl).toBe('string');
     });
+
+    // Helper: buka halaman pembayaran (data antrean diinjeksi via _next/data),
+    // lalu lacak apakah API confirm-batch sempat terpanggil.
+    async function bukaPembayaran(page, context) {
+      await loginAs(context, 'pendonor');
+      await page.route('**/api/pendonor/laporan', (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [], metaInfo: {} }) })
+      );
+      await page.route('**/_next/data/**/pendonor/dashboard-pembayaran.json*', (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(injectedPageData) })
+      );
+      const state = { confirmCalled: false };
+      await page.route('**/api/pendonor/pembayaran/confirm-batch', (route) => {
+        state.confirmCalled = true;
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: 'ok' }) });
+      });
+      await page.goto('/pendonor/dashboard-laporan');
+      await page.click('a:has-text("Pembayaran Beasiswa")');
+      await expect(page.locator('h1:has-text("Instruksi Pembayaran")')).toBeVisible();
+      return state;
+    }
+
+    test('TC-32-03: Format file tidak didukung → peringatan & batal unggah (validasi sisi klien)', async ({ page, context }) => {
+      const state = await bukaPembayaran(page, context);
+
+      // Unggah berkas bertipe tidak didukung (.txt). Validasi klien menolak SEBELUM upload.
+      await page.setInputFiles('input[type="file"]', {
+        name: 'catatan.txt',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('ini bukan gambar atau pdf'),
+      });
+
+      const swal = page.locator('.swal2-popup');
+      await expect(swal).toBeVisible();
+      await expect(swal).toContainText('Format file tidak didukung');
+      // Karena divalidasi di klien, API confirm-batch tidak boleh terpanggil
+      expect(state.confirmCalled).toBe(false);
+    });
+
+    test('TC-32-04: Ukuran file melebihi 5MB → peringatan & batal unggah (validasi sisi klien)', async ({ page, context }) => {
+      const state = await bukaPembayaran(page, context);
+
+      // Berkas PNG > 5MB. Batas ini hanya dijaga di klien (bucket Supabase tanpa file_size_limit).
+      const bigBuffer = Buffer.alloc(5 * 1024 * 1024 + 1024, 0);
+      await page.setInputFiles('input[type="file"]', {
+        name: 'bukti-besar.png',
+        mimeType: 'image/png',
+        buffer: bigBuffer,
+      });
+
+      const swal = page.locator('.swal2-popup');
+      await expect(swal).toBeVisible();
+      await expect(swal).toContainText('Ukuran file melebihi 5MB');
+      expect(state.confirmCalled).toBe(false);
+    });
   });
 });
