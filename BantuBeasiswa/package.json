@@ -10,7 +10,15 @@
     "ensure-bucket": "node scripts/ensureBucket.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:ui:pbi23": "playwright test e2e/pb13-pbi23-verifikasi-berkas.spec.js --ui",
+    "test:e2e:ui:pbi24": "playwright test e2e/pb13-pbi24-status-seleksi.spec.js --ui",
+    "test:e2e:headed:pbi23": "playwright test e2e/pb13-pbi23-verifikasi-berkas.spec.js --headed",
+    "test:e2e:headed:pbi24": "playwright test e2e/pb13-pbi24-status-seleksi.spec.js --headed",
+    "test:e2e:ui:pbi28": "playwright test e2e/pb16-pbi28-rekap-pembayaran.spec.js --ui",
+    "test:e2e:ui:pbi29": "playwright test e2e/pb16-pbi29-konfirmasi-transfer.spec.js --ui",
+    "test:e2e:headed:pbi28": "playwright test e2e/pb16-pbi28-rekap-pembayaran.spec.js --headed",
+    "test:e2e:headed:pbi29": "playwright test e2e/pb16-pbi29-konfirmasi-transfer.spec.js --headed"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
