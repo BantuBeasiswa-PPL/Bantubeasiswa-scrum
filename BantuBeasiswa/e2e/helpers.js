@@ -3,19 +3,28 @@ const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
-// Parse .env.local
+// Prefer environment variables (set via env-cmd) and fall back to .env.local if missing
 const envPath = path.resolve(__dirname, '../.env.local');
-const envContent = fs.readFileSync(envPath, 'utf8');
-const env = {};
-envContent.split('\n').forEach(line => {
-  const parts = line.split('=');
-  if (parts.length >= 2) {
-    env[parts[0].trim()] = parts.slice(1).join('=').trim();
-  }
-});
+let env = {};
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const parts = line.split('=');
+    if (parts.length >= 2) {
+      env[parts[0].trim()] = parts.slice(1).join('=').trim();
+    }
+  });
+}
 
-const JWT_SECRET = env.JWT_SECRET || 'eV9tlK8vFvaa8s62LZVh0ssNUfxzV2mN';
-const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+const JWT_SECRET = process.env.JWT_SECRET || env.JWT_SECRET || 'eV9tlK8vFvaa8s62LZVh0ssNUfxzV2mN';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  throw new Error('Supabase URL or service role key not found in environment. Please set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 function generateMockToken(role, extra = {}) {
   const payload = {

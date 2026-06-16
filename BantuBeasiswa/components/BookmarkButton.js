@@ -74,12 +74,15 @@ export default function BookmarkButton({ beasiswaId, userId }) {
 
         if (error) throw error;
       } else {
-        // Tambah ke favorit
+        // Tambah ke favorit — gunakan upsert untuk mencegah duplicate key errors
         const payload = format === 'camel'
           ? { userId, beasiswaId }
           : { user_id: userId, beasiswa_id: beasiswaId };
 
-        const { error } = await supabase.from('favorit').insert([payload]);
+        // onConflict dengan kolom unik untuk menghindari error 23505 jika sudah tersimpan
+        const { error } = await supabase.from('favorit').upsert([payload], {
+          onConflict: format === 'camel' ? ['userId', 'beasiswaId'] : ['user_id', 'beasiswa_id']
+        });
 
         if (error) throw error;
       }

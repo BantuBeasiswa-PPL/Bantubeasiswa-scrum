@@ -11,6 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
+    "test:e2e:with-env": "npx env-cmd -f .env.test npm run test:e2e",
     "test:e2e:ui:pbi23": "playwright test e2e/pb13-pbi23-verifikasi-berkas.spec.js --ui",
     "test:e2e:ui:pbi24": "playwright test e2e/pb13-pbi24-status-seleksi.spec.js --ui",
     "test:e2e:headed:pbi23": "playwright test e2e/pb13-pbi23-verifikasi-berkas.spec.js --headed",

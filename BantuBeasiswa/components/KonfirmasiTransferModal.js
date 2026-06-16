@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/db';
+import { supabase, getStorageBucket } from '../lib/db';
 
 const C = {
   blue: '#0056b3',
@@ -122,6 +122,23 @@ export default function KonfirmasiTransferModal({
     handleFile(e.dataTransfer.files?.[0] || null);
   }
 
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('Gagal membaca file'));
+          return;
+        }
+        const base64 = result.split(',')[1] ?? '';
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error('Gagal membaca file'));
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!file || !idTransaksi.trim() || !tanggalTransfer || !certified) {
@@ -150,35 +167,18 @@ export default function KonfirmasiTransferModal({
         return;
       }
 
-      // 2. Upload file bukti ke Supabase Storage
-      const ext = file.name.split('.').pop().toLowerCase();
-      const storagePath = `transfer/${pendonorId}_${penyaluran.penyaluranId}_${Date.now()}.${ext}`;
-
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('dokumen')
-        .upload(storagePath, file, { upsert: true });
-
-      if (uploadError) {
-        console.error('[Storage Upload Error]', uploadError);
-        throw new Error(`Gagal mengunggah file bukti transfer ke storage: ${uploadError.message}`);
-      }
-
-      // 3. Dapatkan URL Publik
-      const { data: urlData } = supabase.storage.from('dokumen').getPublicUrl(storagePath);
-      const publicUrl = urlData?.publicUrl;
-      if (!publicUrl) {
-        throw new Error('Gagal mendapatkan URL publik untuk file bukti transfer.');
-      }
-
-      // 4. Update data penyaluran + insert notifikasi melalui API route
+      // 2. Upload file bukti transfer via server-side API to avoid storage RLS on client
+      const fileBase64 = await fileToBase64(file);
       const response = await fetch('/api/pendonor/pembayaran/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           penyaluranId: penyaluran.penyaluranId,
-          buktiTransferUrl: publicUrl,
           idTransaksi: idTransaksi.trim(),
           tanggalPenyaluran: tanggalTransfer,
+          buktiTransferFile: fileBase64,
+          buktiTransferFileName: file.name,
+          buktiTransferMimeType: file.type,
         }),
       });
 
