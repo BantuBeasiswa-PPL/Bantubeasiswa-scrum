@@ -45,25 +45,25 @@ export function useStatusPendaftaran(pendaftaranId) {
         .from('pendaftaran')
         .select(`
           status, 
-          created_at, 
+          createdAt, 
           beasiswa (
-            id,
+            beasiswaId,
             judul, 
             nominal, 
             pendonor (
-              nama_organisasi
+              statusOrganisasi
             )
           ),
           penyaluran_dana (
-            id,
+            penyaluranId,
             status,
-            jumlah_dana,
-            bukti_transfer_url,
-            id_transaksi,
-            tanggal_penyaluran
+            jumlahDana,
+            buktiTransferUrl,
+            idTransaksi,
+            tanggalPenyaluran
           )
         `)
-        .eq('id', pendaftaranId)
+        .eq('pendaftaranId', pendaftaranId)
         .single();
 
       if (!isMounted) return;
@@ -75,19 +75,33 @@ export function useStatusPendaftaran(pendaftaranId) {
       }
 
       setStatus(data.status);
-      setCreatedAt(data.created_at);
-      setBeasiswaInfo(data.beasiswa ?? null);
+      setCreatedAt(data.createdAt);
       
-      // Mapping snake_case dari DB ke camelCase jika diperlukan untuk kompatibilitas UI
+      // Normalisasi beasiswa agar support field camelCase dan snake_case demi backward compatibility
+      if (data.beasiswa) {
+        const b = data.beasiswa;
+        setBeasiswaInfo({
+          ...b,
+          id: b.beasiswaId,
+          pendonor: b.pendonor ? {
+            ...b.pendonor,
+            nama_organisasi: b.pendonor.statusOrganisasi,
+          } : null
+        });
+      } else {
+        setBeasiswaInfo(null);
+      }
+      
+      // Mapping snake_case ke camelCase untuk kompatibilitas UI
       if (data.penyaluran_dana?.[0]) {
         const pd = data.penyaluran_dana[0];
         setPenyaluranInfo({
-          penyaluranId: pd.id,
+          penyaluranId: pd.penyaluranId,
           status: pd.status,
-          jumlahDana: pd.jumlah_dana,
-          buktiTransferUrl: pd.bukti_transfer_url,
-          idTransaksi: pd.id_transaksi,
-          tanggalPenyaluran: pd.tanggal_penyaluran
+          jumlahDana: pd.jumlahDana,
+          buktiTransferUrl: pd.buktiTransferUrl,
+          idTransaksi: pd.idTransaksi,
+          tanggalPenyaluran: pd.tanggalPenyaluran
         });
       } else {
         setPenyaluranInfo(null);
@@ -107,7 +121,7 @@ export function useStatusPendaftaran(pendaftaranId) {
           event: 'UPDATE',
           schema: 'public',
           table: 'pendaftaran',
-          filter: `id=eq.${pendaftaranId}`,
+          filter: `pendaftaranId=eq.${pendaftaranId}`,
         },
         (payload) => {
           if (isMounted) {
