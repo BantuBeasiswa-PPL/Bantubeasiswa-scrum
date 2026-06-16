@@ -1,10 +1,11 @@
 import { getServerSupabase } from '../../../../lib/supabaseServer';
 import { verifyToken } from '../../../../lib/auth';
+import { getStorageBucket } from '../../../../lib/db';
 
 /**
  * POST /api/pendonor/pembayaran/confirm
  * Melakukan konfirmasi penyaluran dana dengan menyertakan bukti transfer dan ID transaksi.
- * Body: { penyaluranId, buktiTransferUrl, idTransaksi, tanggalPenyaluran }
+ * Body: { penyaluranId, buktiTransferUrl?, buktiTransferFile?, buktiTransferFileName?, buktiTransferMimeType?, idTransaksi, tanggalPenyaluran }
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -36,9 +37,18 @@ export default async function handler(req, res) {
     }
 
     // 3. Ambil dan validasi request body
-    const { penyaluranId, buktiTransferUrl, idTransaksi, tanggalPenyaluran } = req.body || {};
-    if (!penyaluranId || !buktiTransferUrl || !idTransaksi || !tanggalPenyaluran) {
-      return res.status(400).json({ message: 'Semua kolom (penyaluranId, buktiTransferUrl, idTransaksi, tanggalPenyaluran) wajib diisi' });
+    const {
+      penyaluranId,
+      buktiTransferUrl,
+      buktiTransferFile,
+      buktiTransferFileName,
+      buktiTransferMimeType,
+      idTransaksi,
+      tanggalPenyaluran,
+    } = req.body || {};
+
+    if (!penyaluranId || !idTransaksi || !tanggalPenyaluran) {
+      return res.status(400).json({ message: 'Semua kolom (penyaluranId, idTransaksi, tanggalPenyaluran) wajib diisi' });
     }
 
     const penyaluranIdInt = parseInt(penyaluranId, 10);
@@ -75,12 +85,51 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Penyaluran sudah dikonfirmasi sebelumnya' });
     }
 
+    let finalBuktiTransferUrl = buktiTransferUrl;
+
+    if (!finalBuktiTransferUrl) {
+      if (!buktiTransferFile || !buktiTransferFileName || !buktiTransferMimeType) {
+        return res.status(400).json({ message: 'File bukti transfer wajib diunggah ketika buktiTransferUrl tidak disediakan' });
+      }
+
+      const bucket = getStorageBucket();
+      const ext = typeof buktiTransferFileName === 'string' && buktiTransferFileName.includes('.')
+        ? buktiTransferFileName.split('.').pop().toLowerCase()
+        : 'bin';
+      const safeExt = /^[a-z0-9]+$/i.test(ext) ? ext : 'bin';
+      const storagePath = `transfer/${pendonorId}_${penyaluranIdInt}_${Date.now()}.${safeExt}`;
+      let buffer;
+      try {
+        buffer = Buffer.from(String(buktiTransferFile), 'base64');
+      } catch (error) {
+        return res.status(400).json({ message: 'Format file bukti transfer tidak valid' });
+      }
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(storagePath, buffer, {
+          contentType: buktiTransferMimeType,
+          upsert: true,
+        });
+
+      if (uploadError) {
+        console.error('[api/pendonor/pembayaran/confirm] storage upload error:', uploadError);
+        return res.status(500).json({ message: `Gagal mengunggah bukti transfer: ${uploadError.message}` });
+      }
+
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
+      finalBuktiTransferUrl = urlData?.publicUrl;
+      if (!finalBuktiTransferUrl) {
+        return res.status(500).json({ message: 'Gagal mendapatkan URL publik untuk bukti transfer.' });
+      }
+    }
+
     // 6. Update status dan detail transfer secara atomik
     const { data: updatedRows, error: updateError } = await supabase
       .from('penyaluran_dana')
       .update({
         status: 'confirmed',
-        buktiTransferUrl,
+        buktiTransferUrl: finalBuktiTransferUrl,
         idTransaksi,
         tanggalPenyaluran,
         updatedAt: new Date().toISOString()

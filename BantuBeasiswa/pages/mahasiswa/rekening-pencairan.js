@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
-import { supabase } from '@/lib/db';
+import { supabase, getStorageBucket } from '@/lib/db';
 import {
   getLatestRekening,
   getMahasiswaProfile,
@@ -22,7 +22,6 @@ const BANK_OPTIONS = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
-const DOKUMEN_BUCKET = 'dokumen';
 
 function getInitials(name = '') {
   return name.split(' ').filter(Boolean).slice(0, 2)
@@ -126,17 +125,18 @@ export default function RekeningPencairanPage({ user, profile, existingRekening,
 
       let fotoBukuUrl = existingRekening?.fotoBukuUrl || null;
       if (values.proofFile) {
+        const bucket = getStorageBucket();
         const ext = getSafeFileExtension(values.proofFile);
         const filePath = `rekening/${activeUserId}_${Date.now()}.${ext}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(DOKUMEN_BUCKET)
+          .from(bucket)
           .upload(filePath, values.proofFile, { contentType: values.proofFile.type, upsert: false });
         if (uploadError) {
           throw new Error(`Gagal mengunggah foto buku tabungan: ${uploadError.message}`);
         }
 
-        const { data: urlData } = supabase.storage
-          .from(DOKUMEN_BUCKET)
+        const { data: urlData } = await supabase.storage
+          .from(bucket)
           .getPublicUrl(uploadData?.path || filePath);
         if (!urlData?.publicUrl) {
           throw new Error('Gagal membuat URL publik foto buku tabungan.');

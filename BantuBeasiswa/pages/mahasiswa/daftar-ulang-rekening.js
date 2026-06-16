@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
-import { supabase } from '@/lib/db';
+import { supabase, getStorageBucket } from '@/lib/db';
 import {
   getLatestLulusPendaftaran,
   getLatestRekening,
@@ -49,7 +49,6 @@ const BANK_OPTIONS = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
-const DOKUMEN_BUCKET = 'dokumen';
 const REKENING_QUERY_SCHEMAS = [
   { name: 'snake', id: 'id', user: 'user_id' },
   { name: 'legacy', id: 'rekeningId', user: 'userId' },

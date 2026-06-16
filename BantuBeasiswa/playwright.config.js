@@ -25,7 +25,7 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: 'npx env-cmd -f .env.test npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: true,
     timeout: 120 * 1000, // Wait up to 2 mins for the dev server to boot
