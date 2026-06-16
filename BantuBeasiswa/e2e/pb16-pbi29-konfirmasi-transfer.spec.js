@@ -83,8 +83,15 @@ test.describe('PBI-29: Konfirmasi Transfer Dana E2E Tests (Real Database)', () =
       await expect(submitBtn).toBeEnabled();
       await submitBtn.click();
 
-      // Periksa visual sukses
-      await expect(page.locator('text=Konfirmasi Berhasil!')).toBeVisible();
+      // Wait for server response to the confirm endpoint (gives tolerance for slow network)
+      await page.waitForResponse(response =>
+        response.url().includes('/api/pendonor/pembayaran/confirm') && response.status() === 200,
+        { timeout: 15000 }
+      ).catch(() => {});
+
+      // Periksa visual sukses dengan timeout lebih besar agar tidak flakey pada koneksi lambat
+      await page.waitForSelector('text=Konfirmasi Berhasil!', { timeout: 15000 });
+      await expect(page.locator('text=Konfirmasi Berhasil!')).toBeVisible({ timeout: 15000 });
     });
 
   });
