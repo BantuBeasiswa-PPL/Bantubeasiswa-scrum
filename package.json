@@ -10,7 +10,11 @@
     "ensure-bucket": "node scripts/ensureBucket.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:demo": "set SLOWMO=800&& set HEADED=1&& playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:db": "set DB_TEST=1&& playwright test e2e/db",
+    "test:e2e:db:demo": "set DB_TEST=1&& set SLOWMO=800&& set HEADED=1&& playwright test e2e/db"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

@@ -96,7 +96,7 @@ test.describe('PBI-40 & PBI-41: Admin Kelola Beasiswa E2E Tests', () => {
     });
   });
 
-  test('TC-UI-01 & TC-UI-02: Harus merender list beasiswa dan stat cards secara akurat', async ({ page }) => {
+  test('TC-40-01: Harus merender list beasiswa dan stat cards secara akurat', async ({ page }) => {
     // Navigasi ke halaman kelola beasiswa admin
     await page.goto('/admin/beasiswa');
 
@@ -112,7 +112,7 @@ test.describe('PBI-40 & PBI-41: Admin Kelola Beasiswa E2E Tests', () => {
     await expect(page.locator('text=PT Sinar Sejahtera')).toBeVisible();
   });
 
-  test('TC-UI-03 & TC-UI-04: Harus dapat mencari dan memfilter beasiswa berdasarkan status', async ({ page }) => {
+  test('TC-40-02 & TC-40-03: Harus dapat mencari dan memfilter beasiswa berdasarkan status', async ({ page }) => {
     await page.goto('/admin/beasiswa');
 
     // Cari berdasarkan judul beasiswa
@@ -130,7 +130,7 @@ test.describe('PBI-40 & PBI-41: Admin Kelola Beasiswa E2E Tests', () => {
     await expect(page.locator('text=Beasiswa Unggulan Prestasi')).not.toBeVisible();
   });
 
-  test('TC-UI-05 & TC-API-04: Harus dapat menyetujui (approve) beasiswa status pending', async ({ page }) => {
+  test('TC-41-01: Harus dapat menyetujui (approve) beasiswa status pending', async ({ page }) => {
     let patchPayload = null;
 
     // Mock PATCH API untuk approve beasiswa
@@ -172,7 +172,7 @@ test.describe('PBI-40 & PBI-41: Admin Kelola Beasiswa E2E Tests', () => {
     expect(patchPayload).toEqual({ action: 'approve' });
   });
 
-  test('TC-UI-06 & TC-API-05: Harus dapat menolak (reject) beasiswa dengan menyertakan alasan', async ({ page }) => {
+  test('TC-41-02: Harus dapat menolak (reject) beasiswa dengan menyertakan alasan', async ({ page }) => {
     let rejectPayload = null;
 
     // Mock PATCH API untuk reject beasiswa
@@ -220,7 +220,7 @@ test.describe('PBI-40 & PBI-41: Admin Kelola Beasiswa E2E Tests', () => {
     });
   });
 
-  test('TC-UI-08 & TC-API-08: Harus dapat menghapus beasiswa secara permanen dengan menyertakan alasan', async ({ page }) => {
+  test('TC-41-03: Harus dapat menghapus beasiswa secara permanen dengan menyertakan alasan', async ({ page }) => {
     let deletePayload = null;
 
     // Mock DELETE API beasiswa
