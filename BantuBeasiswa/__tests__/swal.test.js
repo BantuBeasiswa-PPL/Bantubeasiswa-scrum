@@ -58,7 +58,7 @@ describe('SweetAlert2 Helper Wrappers', () => {
   test('showConfirm danger mode should apply red button class', async () => {
     await showConfirm('Hapus', 'Hapus?', 'Hapus', 'Batal', true);
     const lastCall = Swal.fire.mock.calls[0][0];
-    expect(lastCall.customClass.confirmButton).toContain('bg-red-650');
+    expect(lastCall.customClass.confirmButton).toContain('bg-red-600');
   });
 
   test('showConfirm normal mode should apply blue button class', async () => {

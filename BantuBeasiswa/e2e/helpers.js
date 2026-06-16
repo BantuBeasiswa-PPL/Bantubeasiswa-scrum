@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'bantubeasiswa_secret_key_ppl_2026_ganti_ini';
+const JWT_SECRET = process.env.JWT_SECRET || 'eV9tlK8vFvaa8s62LZVh0ssNUfxzV2mN';
 
 function generateMockToken(role, extra = {}) {
   const payload = {
