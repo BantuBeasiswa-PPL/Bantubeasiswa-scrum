@@ -264,7 +264,7 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
               Unduh Surat Kelulusan
             </button>
 
-            <Link href="/mahasiswa/daftar-ulang">
+            <Link href="/mahasiswa/daftar-ulang-rekening">
               <span className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-2xl text-base font-black shadow-xl hover:shadow-emerald-500/30 transition-all flex items-center gap-2 cursor-pointer">
                 Langkah Selanjutnya
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
