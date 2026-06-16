@@ -32,6 +32,13 @@ test.describe('PBI-28: Rekap Antrean & Ekspor Pembayaran E2E Tests (Real Databas
     await expect(page).toHaveURL(/.*\/login/);
   });
 
+  // TC-PB16-010: Proteksi hak akses oleh mahasiswa pada halaman rekap pembayaran
+  test('TC-PB16-010: Proteksi hak akses oleh mahasiswa pada halaman rekap pembayaran', async ({ page, context }) => {
+    await loginAs(context, 'mahasiswa');
+    await page.goto('/pendonor/dashboard-pembayaran');
+    await expect(page).toHaveURL(/.*\/login/);
+  });
+
   test.describe('Akses Terverifikasi Pendonor', () => {
 
     test.beforeEach(async ({ context }) => {
@@ -104,6 +111,26 @@ test.describe('PBI-28: Rekap Antrean & Ekspor Pembayaran E2E Tests (Real Databas
 
       // TC-PB16-008: Expected XLSX filename format
       expect(download.suggestedFilename()).toMatch(/data-penerima-\d{4}-\d{2}-\d{2}\.xlsx/);
+    });
+
+    // TC-PB16-011: Memfilter dan mencari penerima beasiswa pada tabel rekap pembayaran
+    test('TC-PB16-011: Memfilter dan mencari penerima beasiswa pada tabel rekap pembayaran', async ({ page }) => {
+      await page.goto('/pendonor/dashboard-pembayaran');
+
+      const searchInput = page.locator('input[placeholder="Cari nama mahasiswa / program..."]');
+      await searchInput.fill(testData.mhsUser.nama);
+      await expect(page.locator(`text=${testData.mhsUser.nama}`)).toBeVisible();
+
+      await searchInput.fill('Nama Yang Tidak Mungkin Ada');
+      await expect(page.locator('text=Antrean Kosong')).toBeVisible();
+
+      await searchInput.fill('');
+
+      await page.click('button:has-text("Verified")');
+      await expect(page.locator('text=Antrean Kosong')).toBeVisible();
+
+      await page.click('button:has-text("Pending")');
+      await expect(page.locator(`text=${testData.mhsUser.nama}`)).toBeVisible();
     });
 
   });

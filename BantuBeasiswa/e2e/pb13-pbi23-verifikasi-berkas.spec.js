@@ -95,5 +95,20 @@ test.describe('PBI-23: Dashboard Verifikasi Berkas Pendaftar E2E Tests (Real Dat
       await expect(page.locator('text=Belum Ada Pendaftar')).toBeVisible();
     });
 
+    // TC-PB13-015: Memilih program beasiswa lain dari dropdown memperbarui daftar pendaftar
+    test('TC-PB13-015: Memilih program beasiswa lain dari dropdown memperbarui daftar pendaftar', async ({ page }) => {
+      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswaEmpty.beasiswaId}`);
+
+      // Expect empty state first
+      await expect(page.locator('text=Belum Ada Pendaftar')).toBeVisible();
+
+      // Switch to non-empty program
+      await page.selectOption('#scholarship-program-select', String(testData.beasiswa.beasiswaId));
+      
+      // Expect applicant info is now loaded and visible
+      const queueItem = page.locator(`#queue-item-${testData.pendaftaran.pendaftaranId}`);
+      await expect(queueItem).toBeVisible();
+    });
+
   });
 });

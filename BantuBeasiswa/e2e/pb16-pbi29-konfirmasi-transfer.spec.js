@@ -50,5 +50,42 @@ test.describe('PBI-29: Konfirmasi Transfer Dana E2E Tests (Real Database)', () =
       await expect(modal).not.toBeVisible();
     });
 
+    // TC-PB16-011: Mengonfirmasi transfer dengan mengunggah bukti dan mengisi data transaksi secara lengkap
+    test('TC-PB16-011: Mengonfirmasi transfer dengan mengunggah bukti dan mengisi data transaksi secara lengkap', async ({ page }) => {
+      await page.goto('/pendonor/dashboard-pembayaran');
+
+      const initiateBtn = page.locator(`#initiate-btn-${testData.pendaftaran.pendaftaranId}`);
+      await expect(initiateBtn).toBeVisible();
+      await initiateBtn.click();
+
+      const modal = page.locator('[role="dialog"]');
+      await expect(modal).toBeVisible();
+
+      // Isi ID Transaksi
+      await page.fill('#id-transaksi', 'TRX9988776655');
+
+      // Isi Tanggal Transfer
+      await page.fill('#tanggal-transfer', '2026-06-16');
+
+      // Upload file bukti transfer (dummy content)
+      const fileInput = modal.locator('input[type="file"]');
+      await fileInput.setInputFiles({
+        name: 'bukti_transfer.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from('dummy-image-content'),
+      });
+
+      // Centang checkbox verifikasi
+      await page.check('input[type="checkbox"]');
+
+      // Submit form
+      const submitBtn = page.locator('button:has-text("Konfirmasi & Simpan")');
+      await expect(submitBtn).toBeEnabled();
+      await submitBtn.click();
+
+      // Periksa visual sukses
+      await expect(page.locator('text=Konfirmasi Berhasil!')).toBeVisible();
+    });
+
   });
 });

@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loginAs, createRealDbTestData, cleanRealDbTestData } = require('./helpers');
+const { loginAs, createRealDbTestData, cleanRealDbTestData, supabase } = require('./helpers');
 
 /**
  * PB-13 — Kelola Proses Seleksi & Verifikasi Berkas (PBI-24)
@@ -25,6 +25,17 @@ test.describe('PBI-24: Update Status & Seleksi Berkas E2E Tests (Real Database)'
   test.describe('Akses Terverifikasi Pendonor', () => {
 
     test.beforeEach(async ({ context }) => {
+      // Reset statuses in live DB to prevent test cross-contamination
+      await supabase
+        .from('pendaftaran')
+        .update({ status: 'TERDAFTAR' })
+        .in('pendaftaranId', [testData.pendaftaran.pendaftaranId, testData.pendaftaran2.pendaftaranId]);
+
+      await supabase
+        .from('dokumen')
+        .update({ statusDokumen: 'MENUNGGU', rejectionReason: null })
+        .in('pendaftaranId', [testData.pendaftaran.pendaftaranId, testData.pendaftaran2.pendaftaranId]);
+
       await loginAs(context, 'pendonor', {
         userId: testData.pendonorId,
         accountId: testData.pendonorAccountId
@@ -133,6 +144,78 @@ test.describe('PBI-24: Update Status & Seleksi Berkas E2E Tests (Real Database)'
 
       // Status should update to Ditolak
       await expect(page.locator('text=Status Pendaftaran saat ini: Ditolak')).toBeVisible();
+    });
+
+    // TC-PB13-011: Meminta revisi berkas pendaftaran dengan konfirmasi
+    test('TC-PB13-011: Meminta revisi berkas pendaftaran dengan konfirmasi', async ({ page }) => {
+      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+
+      const queueItem = page.locator(`#queue-item-${testData.pendaftaran.pendaftaranId}`);
+      await queueItem.click();
+
+      const revisionBtn = page.locator('#request-revision-btn');
+      await expect(revisionBtn).toBeVisible();
+      await revisionBtn.click();
+
+      await page.click('button:has-text("Ya")');
+      await page.click('button:has-text("OK")');
+
+      await expect(page.locator('text=Status Pendaftaran saat ini: Review')).toBeVisible();
+    });
+
+    // TC-PB13-012: Batch Verify semua berkas dan meloloskan pendaftaran dengan konfirmasi
+    test('TC-PB13-012: Batch Verify semua berkas dan meloloskan pendaftaran dengan konfirmasi', async ({ page }) => {
+      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+
+      const queueItem2 = page.locator(`#queue-item-${testData.pendaftaran2.pendaftaranId}`);
+      await queueItem2.click();
+
+      const batchVerifyBtn = page.locator('#batch-verify-registration-btn');
+      await expect(batchVerifyBtn).toBeVisible();
+      await batchVerifyBtn.click();
+
+      await page.click('button:has-text("Ya")');
+      await page.click('button:has-text("OK")');
+
+      await expect(page.locator('text=Status Pendaftaran saat ini: Lulus')).toBeVisible();
+    });
+
+    // TC-PB13-013: Membatalkan tindakan verify pendaftaran pada dialog konfirmasi
+    test('TC-PB13-013: Membatalkan tindakan verify pendaftaran pada dialog konfirmasi', async ({ page }) => {
+      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+
+      const queueItem = page.locator(`#queue-item-${testData.pendaftaran.pendaftaranId}`);
+      await queueItem.click();
+
+      const verifyBtn = page.locator('#verify-registration-btn');
+      await expect(verifyBtn).toBeVisible();
+      await verifyBtn.click();
+
+      const swalConfirm = page.locator('.swal2-popup');
+      await expect(swalConfirm).toBeVisible();
+      await page.click('button:has-text("Batal")');
+
+      await expect(swalConfirm).not.toBeVisible();
+      await expect(page.locator('text=Status Pendaftaran saat ini: Lulus')).not.toBeVisible();
+    });
+
+    // TC-PB13-014: Membatalkan tindakan reject pendaftaran pada dialog konfirmasi
+    test('TC-PB13-014: Membatalkan tindakan reject pendaftaran pada dialog konfirmasi', async ({ page }) => {
+      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+
+      const queueItem = page.locator(`#queue-item-${testData.pendaftaran.pendaftaranId}`);
+      await queueItem.click();
+
+      const rejectBtn = page.locator('#reject-registration-btn');
+      await expect(rejectBtn).toBeVisible();
+      await rejectBtn.click();
+
+      const swalConfirm = page.locator('.swal2-popup');
+      await expect(swalConfirm).toBeVisible();
+      await page.click('button:has-text("Batal")');
+
+      await expect(swalConfirm).not.toBeVisible();
+      await expect(page.locator('text=Status Pendaftaran saat ini: Ditolak')).not.toBeVisible();
     });
 
   });
