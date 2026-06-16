@@ -41,7 +41,7 @@ test.describe('PBI-30 & PBI-31: Mahasiswa Tutorial & Favorit E2E Tests', () => {
     });
   });
 
-  test('TC-01: Navigasi Perjalanan Admin/Mahasiswa (Stepper 4 Stepper)', async ({ page, context }) => {
+  test('TC-30-01: Navigasi Administrative Journey (Stepper 4 langkah)', async ({ page, context }) => {
     // Login terlebih dahulu agar tidak diredirect ke /login oleh SSR guard
     await loginAs(context, 'mahasiswa');
 
@@ -79,7 +79,7 @@ test.describe('PBI-30 & PBI-31: Mahasiswa Tutorial & Favorit E2E Tests', () => {
     await expect(page.locator('text=Preparation — Persiapan Dokumen')).toBeVisible();
   });
 
-  test('TC-02: Unduh Template Dokumen & Kategori Filter', async ({ page, context }) => {
+  test('TC-30-02: Unduh Template Dokumen & Filter Kategori', async ({ page, context }) => {
     // Login terlebih dahulu agar tidak diredirect ke /login oleh SSR guard
     await loginAs(context, 'mahasiswa');
 
@@ -116,7 +116,7 @@ test.describe('PBI-30 & PBI-31: Mahasiswa Tutorial & Favorit E2E Tests', () => {
     await expect(docxLink).toHaveAttribute('href', /.*supabase.*sktm-template.docx.*/);
   });
 
-  test('TC-03: Bookmark Tanpa Login (Redirect ke Login)', async ({ page }) => {
+  test('TC-31-01: Bookmark Tanpa Login (Redirect ke Login)', async ({ page }) => {
     // 1. Pastikan status Guest (tidak login / tidak ada session cookie)
     // 2. Mock Supabase query check bookmark
     await page.route('**/rest/v1/favorit*', async (route) => {
@@ -138,7 +138,7 @@ test.describe('PBI-30 & PBI-31: Mahasiswa Tutorial & Favorit E2E Tests', () => {
     await expect(page).toHaveURL(/.*\/login/);
   });
 
-  test('TC-04: Optimistic Toggle Bookmark', async ({ page, context }) => {
+  test('TC-31-02: Optimistic Toggle Bookmark', async ({ page, context }) => {
     // 1. Login sebagai mahasiswa
     await loginAs(context, 'mahasiswa');
 
@@ -196,7 +196,7 @@ test.describe('PBI-30 & PBI-31: Mahasiswa Tutorial & Favorit E2E Tests', () => {
     await expect.poll(() => deleteCount).toBe(1);
   });
 
-  test('TC-05: Hapus dari Daftar Favorit di Halaman Favorit', async ({ page, context }) => {
+  test('TC-31-03: Hapus dari Daftar Favorit di Halaman Favorit', async ({ page, context }) => {
     // 1. Login sebagai mahasiswa
     await loginAs(context, 'mahasiswa');
 
@@ -287,7 +287,7 @@ test.describe('PBI-30 & PBI-31: Mahasiswa Tutorial & Favorit E2E Tests', () => {
     await expect(page.locator('text=Beasiswa Indonesia Pintar')).not.toBeVisible();
   });
 
-  test('TC-06: Validasi Unique Bookmark (Constraint Handling)', async ({ page, context }) => {
+  test('TC-31-04: Validasi Unique Bookmark (Constraint Handling)', async ({ page, context }) => {
     // 1. Login sebagai mahasiswa
     await loginAs(context, 'mahasiswa');
 

@@ -18,7 +18,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
   // ─────────────────────────────────────────────────────────────────────────
   // FR-22 — Laporan Rekapitulasi (PDF)
   // ─────────────────────────────────────────────────────────────────────────
-  test.describe('FR-22: Laporan Rekapitulasi Penyaluran', () => {
+  test.describe('PBI-33 (FR-22): Laporan Rekapitulasi Penyaluran', () => {
     const mockLaporan = {
       data: [
         {
@@ -51,7 +51,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
       });
     }
 
-    test('TC-PB18-01: Merender ringkasan stat & tabel rekap dari API', async ({ page, context }) => {
+    test('TC-33-01: Merender ringkasan stat & tabel rekap dari API', async ({ page, context }) => {
       await loginAs(context, 'pendonor');
       await mockLaporanApi(page);
 
@@ -68,7 +68,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
       await expect(page.getByRole('cell', { name: 'Beasiswa Ekonomi Harapan' })).toBeVisible();
     });
 
-    test('TC-PB18-02: Memfilter rekap berdasarkan status penyaluran', async ({ page, context }) => {
+    test('TC-33-02: Memfilter rekap berdasarkan status penyaluran', async ({ page, context }) => {
       await loginAs(context, 'pendonor');
       await mockLaporanApi(page);
       await page.goto('/pendonor/dashboard-laporan');
@@ -79,7 +79,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
       await expect(page.getByRole('cell', { name: 'Beasiswa Ekonomi Harapan' })).not.toBeVisible();
     });
 
-    test('TC-PB18-03: Mencari rekap berdasarkan nama program', async ({ page, context }) => {
+    test('TC-33-03: Mencari rekap berdasarkan nama program', async ({ page, context }) => {
       await loginAs(context, 'pendonor');
       await mockLaporanApi(page);
       await page.goto('/pendonor/dashboard-laporan');
@@ -89,7 +89,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
       await expect(page.getByRole('cell', { name: 'Beasiswa Garuda Nusantara' })).not.toBeVisible();
     });
 
-    test('TC-PB18-04: Tombol "Download PDF" memicu unduhan file rekap', async ({ page, context }) => {
+    test('TC-33-04: Tombol "Download PDF" memicu unduhan file rekap', async ({ page, context }) => {
       await loginAs(context, 'pendonor');
       await mockLaporanApi(page);
       await page.goto('/pendonor/dashboard-laporan');
@@ -102,7 +102,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
       expect(download.suggestedFilename()).toMatch(/laporan-rekap-program-\d{4}-\d{2}-\d{2}\.pdf/);
     });
 
-    test('TC-PB18-05: Tanpa data → empty state & tombol unduh nonaktif', async ({ page, context }) => {
+    test('TC-33-05: Tanpa data → empty state & tombol unduh nonaktif', async ({ page, context }) => {
       await loginAs(context, 'pendonor');
       await mockLaporanApi(page, { data: [], metaInfo: { namaPendonor: 'Yayasan Bakti Pertiwi', tanggalGenerate: '10 Juni 2026' } });
       await page.goto('/pendonor/dashboard-laporan');
@@ -115,7 +115,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
   // ─────────────────────────────────────────────────────────────────────────
   // FR-21 — Konfirmasi Penyaluran Dana (unggah bukti transfer batch)
   // ─────────────────────────────────────────────────────────────────────────
-  test.describe('FR-21: Konfirmasi Batch Penyaluran', () => {
+  test.describe('PBI-32 (FR-21): Konfirmasi Batch Penyaluran', () => {
     // Antrean penerima LULUS dengan rekening + penyaluran berstatus pending.
     const injectedPageData = {
       pageProps: {
@@ -144,7 +144,7 @@ test.describe('PB-18 (PBI-32 & PBI-33): Penyaluran Dana Pendonor E2E Tests', () 
       __N_SSP: true,
     };
 
-    test('TC-PB18-06: Unggah bukti transfer batch memanggil API confirm-batch & menampilkan sukses', async ({ page, context }) => {
+    test('TC-32-01 & TC-32-02: Menampilkan antrean & unggah bukti transfer batch memanggil API confirm-batch', async ({ page, context }) => {
       await loginAs(context, 'pendonor');
 
       // Halaman singgahan (dashboard-laporan) → kosongkan API laporan

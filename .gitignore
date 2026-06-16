@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# tapi template test boleh di-commit (tanpa kunci rahasia)
+!.env.test.example
+
+# dump DATA produksi (berisi data user asli/PII) — JANGAN di-commit
+database/seed_current.sql
+# scaffolding Supabase CLI (berisi ref/linkage lokal)
+/supabase/.temp/
 
 # vercel
 .vercel
