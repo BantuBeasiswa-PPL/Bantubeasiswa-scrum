@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --webpack",
+    "dev:test": "node scripts/dev-test.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -14,7 +15,9 @@
     "test:e2e:demo": "set SLOWMO=800&& set HEADED=1&& playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:db": "set DB_TEST=1&& playwright test e2e/db",
-    "test:e2e:db:demo": "set DB_TEST=1&& set SLOWMO=800&& set HEADED=1&& playwright test e2e/db"
+    "test:e2e:db:demo": "set DB_TEST=1&& set SLOWMO=800&& set HEADED=1&& playwright test e2e/db",
+    "test:e2e:db:ui": "set DB_TEST=1&& playwright test e2e/db --ui",
+    "test:e2e:db:ui:keep": "set DB_TEST=1&& set KEEP_DATA=1&& playwright test e2e/db --ui"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

@@ -1,38 +1,30 @@
 const { test, expect } = require('@playwright/test');
 const { admin } = require('./_db');
-const { makeSeeder, uniqEmail } = require('./seed');
+const { makeSeeder } = require('./seed');
 
 /**
  * REAL-DB · PB-19 (PBI-34 & PBI-35) — Registrasi Akun Mandiri.
- * Form di-submit sungguhan → API menulis ke DB. Diverifikasi langsung ke tabel
- * account/user/pendonor. Jalankan: npm run test:e2e:db
+ * Data input TETAP. Password akun = "123456" (kecuali register pendonor yang
+ * formnya wajib >= 8 karakter -> pakai "12345678"). Jalankan: npm run test:e2e:db
  */
 test.describe('REAL-DB · PB-19 · Registrasi Akun Mandiri', () => {
   let seeder;
-  const createdEmails = []; // akun yang dibuat lewat app → dibersihkan manual
+  const PASS = '123456';
+  const PASS_PENDONOR = '12345678'; // form pendonor wajib >= 8 karakter
 
-  test.beforeEach(() => {
-    seeder = makeSeeder();
-  });
-
-  test.afterEach(async () => {
-    for (const email of createdEmails) {
-      await admin.from('account').delete().eq('email', email); // cascade ke user/pendonor
-    }
-    createdEmails.length = 0;
-    await seeder.cleanup();
-  });
+  test.beforeEach(() => { seeder = makeSeeder(); });
+  test.afterEach(async () => { await seeder.cleanup(); });
 
   // ── Registrasi Mahasiswa ────────────────────────────────────────────────────
   test('TC-19-01: register mahasiswa valid → tersimpan di tabel account & user', async ({ page }) => {
-    const email = uniqEmail('mhs');
-    createdEmails.push(email);
+    const email = 'budi.mahasiswa@bantubeasiswa.test';
+    await seeder.resetEmail(email);
 
     await page.goto('/register/mahasiswa');
     await page.fill('#nama', 'Budi Santoso');
     await page.fill('#email', email);
-    await page.fill('#password', 'rahasia123');
-    await page.fill('#confirmPassword', 'rahasia123');
+    await page.fill('#password', PASS);
+    await page.fill('#confirmPassword', PASS);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/login\?registered=true/);
 
@@ -43,13 +35,14 @@ test.describe('REAL-DB · PB-19 · Registrasi Akun Mandiri', () => {
   });
 
   test('TC-19-02: password ≠ konfirmasi → validasi klien, tak ada baris di DB', async ({ page }) => {
-    const email = uniqEmail('mhs');
+    const email = 'andi.mahasiswa@bantubeasiswa.test';
+    await seeder.resetEmail(email);
 
     await page.goto('/register/mahasiswa');
-    await page.fill('#nama', 'Budi');
+    await page.fill('#nama', 'Andi Pratama');
     await page.fill('#email', email);
-    await page.fill('#password', 'rahasia123');
-    await page.fill('#confirmPassword', 'beda456');
+    await page.fill('#password', PASS);
+    await page.fill('#confirmPassword', '654321');
     await page.click('button[type="submit"]');
 
     await expect(page.locator('div[role="alert"]')).toContainText('Password dan Konfirmasi Password tidak cocok');
@@ -58,14 +51,14 @@ test.describe('REAL-DB · PB-19 · Registrasi Akun Mandiri', () => {
   });
 
   test('TC-19-03: email sudah ada di DB → ditolak, tidak ada duplikat', async ({ page }) => {
-    const email = uniqEmail('mhs');
+    const email = 'terdaftar@bantubeasiswa.test';
     await seeder.account({ role: 'mahasiswa', email }); // sudah ada di DB
 
     await page.goto('/register/mahasiswa');
-    await page.fill('#nama', 'Budi');
+    await page.fill('#nama', 'Budi Santoso');
     await page.fill('#email', email);
-    await page.fill('#password', 'rahasia123');
-    await page.fill('#confirmPassword', 'rahasia123');
+    await page.fill('#password', PASS);
+    await page.fill('#confirmPassword', PASS);
     await page.click('button[type="submit"]');
 
     await expect(page.locator('div[role="alert"]')).toContainText('Email sudah terdaftar');
@@ -75,16 +68,16 @@ test.describe('REAL-DB · PB-19 · Registrasi Akun Mandiri', () => {
 
   // ── Registrasi Pendonor ─────────────────────────────────────────────────────
   test('TC-19-04: register pendonor valid → tersimpan di account & pendonor', async ({ page }) => {
-    const email = uniqEmail('pendonor');
-    createdEmails.push(email);
+    const email = 'yayasan.bakti@bantubeasiswa.test';
+    await seeder.resetEmail(email);
 
     await page.goto('/register/pendonor');
     await page.fill('#namaOrganisasi', 'Yayasan Bakti Pertiwi');
     await page.fill('#email', email);
     await page.fill('#kontak', '08123456789');
     await page.fill('#alamat', 'Jl. Merdeka No. 1, Jakarta');
-    await page.fill('#password', 'passw0rd8');
-    await page.fill('#confirmPassword', 'passw0rd8');
+    await page.fill('#password', PASS_PENDONOR);
+    await page.fill('#confirmPassword', PASS_PENDONOR);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/login\?registered=true/);
 
@@ -96,15 +89,16 @@ test.describe('REAL-DB · PB-19 · Registrasi Akun Mandiri', () => {
   });
 
   test('TC-19-05: password pendonor < 8 karakter → validasi klien', async ({ page }) => {
-    const email = uniqEmail('pendonor');
+    const email = 'pendonor.pendek@bantubeasiswa.test';
+    await seeder.resetEmail(email);
 
     await page.goto('/register/pendonor');
     await page.fill('#namaOrganisasi', 'Yayasan Bakti Pertiwi');
     await page.fill('#email', email);
     await page.fill('#kontak', '08123456789');
-    await page.fill('#alamat', 'Jakarta');
-    await page.fill('#password', 'short');
-    await page.fill('#confirmPassword', 'short');
+    await page.fill('#alamat', 'Jl. Merdeka No. 1, Jakarta');
+    await page.fill('#password', PASS); // 123456 = 6 karakter (< 8)
+    await page.fill('#confirmPassword', PASS);
     await page.click('button[type="submit"]');
 
     await expect(page.locator('div[role="alert"]')).toContainText('Password harus minimal 8 karakter');
@@ -113,15 +107,16 @@ test.describe('REAL-DB · PB-19 · Registrasi Akun Mandiri', () => {
   });
 
   test('TC-19-06: konfirmasi password pendonor berbeda → validasi klien', async ({ page }) => {
-    const email = uniqEmail('pendonor');
+    const email = 'pendonor.beda@bantubeasiswa.test';
+    await seeder.resetEmail(email);
 
     await page.goto('/register/pendonor');
     await page.fill('#namaOrganisasi', 'Yayasan Bakti Pertiwi');
     await page.fill('#email', email);
     await page.fill('#kontak', '08123456789');
-    await page.fill('#alamat', 'Jakarta');
-    await page.fill('#password', 'passw0rd8');
-    await page.fill('#confirmPassword', 'passw0rd9');
+    await page.fill('#alamat', 'Jl. Merdeka No. 1, Jakarta');
+    await page.fill('#password', PASS_PENDONOR);
+    await page.fill('#confirmPassword', '87654321');
     await page.click('button[type="submit"]');
 
     await expect(page.locator('div[role="alert"]')).toContainText('Password dan konfirmasi password tidak cocok');
