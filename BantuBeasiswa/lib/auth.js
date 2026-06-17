@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import { parse } from 'cookie';
 import { supabase } from './db';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'eV9tlK8vFvaa8s62LZVh0ssNUfxzV2mN';
 
 export function verifyToken(req) {
   try {

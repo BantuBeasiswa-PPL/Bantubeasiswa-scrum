@@ -22,9 +22,10 @@ test.describe('PBI-28: Rekap Antrean & Ekspor Pembayaran E2E Tests (Real Databas
     testData = await createRealDbTestDataPB16();
   });
 
-  test.afterAll(async () => {
-    await cleanRealDbTestDataPB16(testData);
-  });
+  // Data is kept after tests for user inspection; cleaned up automatically at the start of the next run
+  // test.afterAll(async () => {
+  //   await cleanRealDbTestDataPB16(testData);
+  // });
 
   // TC-PB16-009: Proteksi akses tanpa login pada halaman rekap pembayaran
   test('TC-PB16-009: Proteksi akses tanpa login pada halaman rekap pembayaran', async ({ page }) => {
@@ -54,19 +55,26 @@ test.describe('PBI-28: Rekap Antrean & Ekspor Pembayaran E2E Tests (Real Databas
     // TC-PB16-004: Menyembunyikan penerima yang belum melengkapi data rekening
     test('TC-PB16-001 hingga 004: Verifikasi Tampilan Dashboard & Rekap Tabel', async ({ page }) => {
       await page.goto('/pendonor/dashboard-pembayaran');
+      await page.locator('h1').waitFor({ state: 'visible' });
 
-      await expect(page.locator('h1')).toContainText('Instruksi Pembayaran');
+      const h1 = page.locator('h1');
+      await h1.waitFor({ state: 'visible' });
+      await expect(h1).toContainText('Instruksi Pembayaran');
 
       // TC-PB16-002: Queue Total should display 1 (since only 1 valid applicant was seeded for this donor)
       const queueCard = page.locator('p', { hasText: 'Queue Total' }).locator('..');
+      await queueCard.waitFor({ state: 'visible' });
       await expect(queueCard.locator('text=1 Penerima')).toBeVisible();
 
       // TC-PB16-003: Total Amount Pending = Rp 5.000.000
       const pendingCard = page.locator('p', { hasText: 'Total Amount Pending' }).locator('..');
+      await pendingCard.waitFor({ state: 'visible' });
       await expect(pendingCard.locator('text=Rp 5.000.000')).toBeVisible();
 
       // TC-PB16-001: Check table rows
-      await expect(page.locator(`text=${testData.mhsUser.nama}`)).toBeVisible();
+      const mhsNameText = page.locator(`text=${testData.mhsUser.nama}`);
+      await mhsNameText.waitFor({ state: 'visible' });
+      await expect(mhsNameText).toBeVisible();
 
       // Bank info verified
       await expect(page.locator('text=BCA')).toBeVisible();
@@ -76,8 +84,10 @@ test.describe('PBI-28: Rekap Antrean & Ekspor Pembayaran E2E Tests (Real Databas
     // TC-PB16-006 & TC-PB16-007: Ekspor CSV dan Verifikasi format Rupiah
     test('TC-PB16-006 & TC-PB16-007: Ekspor CSV dan Verifikasi format Rupiah', async ({ page }) => {
       await page.goto('/pendonor/dashboard-pembayaran');
+      await page.locator('h1').waitFor({ state: 'visible' });
 
       const exportCsvBtn = page.locator('#export-csv-btn');
+      await exportCsvBtn.waitFor({ state: 'visible' });
       await expect(exportCsvBtn).toBeVisible();
 
       // Capture download event
@@ -100,8 +110,10 @@ test.describe('PBI-28: Rekap Antrean & Ekspor Pembayaran E2E Tests (Real Databas
     // TC-PB16-008: Ekspor data ke format Excel
     test('TC-PB16-008: Ekspor data ke format Excel', async ({ page }) => {
       await page.goto('/pendonor/dashboard-pembayaran');
+      await page.locator('h1').waitFor({ state: 'visible' });
 
       const exportExcelBtn = page.locator('#export-excel-btn');
+      await exportExcelBtn.waitFor({ state: 'visible' });
       await expect(exportExcelBtn).toBeVisible();
 
       // Capture download event
@@ -116,8 +128,10 @@ test.describe('PBI-28: Rekap Antrean & Ekspor Pembayaran E2E Tests (Real Databas
     // TC-PB16-011: Memfilter dan mencari penerima beasiswa pada tabel rekap pembayaran
     test('TC-PB16-011: Memfilter dan mencari penerima beasiswa pada tabel rekap pembayaran', async ({ page }) => {
       await page.goto('/pendonor/dashboard-pembayaran');
+      await page.locator('h1').waitFor({ state: 'visible' });
 
       const searchInput = page.locator('input[placeholder="Cari nama mahasiswa / program..."]');
+      await searchInput.waitFor({ state: 'visible' });
       await searchInput.fill(testData.mhsUser.nama);
       await expect(page.locator(`text=${testData.mhsUser.nama}`)).toBeVisible();
 

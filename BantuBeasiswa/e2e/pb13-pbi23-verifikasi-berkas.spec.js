@@ -1,5 +1,5 @@
 const { test, expect } = require('@playwright/test');
-const { loginAs, createRealDbTestData, cleanRealDbTestData } = require('./helpers');
+const { loginAs, createRealDbTestData, cleanRealDbTestData, gotoSeleksiPendaftar } = require('./helpers');
 
 /**
  * PB-13 — Kelola Proses Seleksi & Verifikasi Berkas (PBI-23)
@@ -20,9 +20,10 @@ test.describe('PBI-23: Dashboard Verifikasi Berkas Pendaftar E2E Tests (Real Dat
     testData = await createRealDbTestData();
   });
 
-  test.afterAll(async () => {
-    await cleanRealDbTestData(testData);
-  });
+  // Data is kept after tests for user inspection; cleaned up automatically at the start of the next run
+  // test.afterAll(async () => {
+  //   await cleanRealDbTestData(testData);
+  // });
 
   // TC-PB13-009: Proteksi hak akses tanpa login
   test('TC-PB13-009: Proteksi hak akses tanpa login', async ({ page }) => {
@@ -47,13 +48,17 @@ test.describe('PBI-23: Dashboard Verifikasi Berkas Pendaftar E2E Tests (Real Dat
     });
 
     // TC-PB13-001: Menampilkan daftar pendaftar di sidebar kanan secara otomatis
+    // TC-PB13-001: Menampilkan daftar pendaftar di sidebar kanan secara otomatis
     test('TC-PB13-001: Menampilkan daftar pendaftar di sidebar kanan secara otomatis', async ({ page }) => {
-      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+      await gotoSeleksiPendaftar(page, testData.beasiswa.beasiswaId);
 
-      await expect(page.locator('h1')).toContainText('Verifikasi Berkas Pendaftar');
+      const h1 = page.locator('h1');
+      await h1.waitFor({ state: 'visible' });
+      await expect(h1).toContainText('Verifikasi Berkas Pendaftar');
       
       // Sidebar should display applicant info
       const queueItem = page.locator(`#queue-item-${testData.pendaftaran.pendaftaranId}`);
+      await queueItem.waitFor({ state: 'visible' });
       await expect(queueItem).toBeVisible();
       await expect(queueItem.locator(`text=${testData.mhsUser.nama}`)).toBeVisible();
       await expect(queueItem.locator('text=Terdaftar')).toBeVisible();
@@ -61,10 +66,12 @@ test.describe('PBI-23: Dashboard Verifikasi Berkas Pendaftar E2E Tests (Real Dat
 
     // TC-PB13-002: Menampilkan detail pendaftar terpilih di panel tengah tanpa reload
     test('TC-PB13-002: Menampilkan detail pendaftar terpilih di panel tengah tanpa reload', async ({ page }) => {
-      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+      await gotoSeleksiPendaftar(page, testData.beasiswa.beasiswaId);
 
       // First applicant should be auto-selected
-      await expect(page.locator('h2', { hasText: testData.mhsUser.nama })).toBeVisible();
+      const mhsHeading = page.locator('h2', { hasText: testData.mhsUser.nama });
+      await mhsHeading.waitFor({ state: 'visible' });
+      await expect(mhsHeading).toBeVisible();
       await expect(page.locator(`text=ID Pendaftaran: #${testData.pendaftaran.pendaftaranId}`)).toBeVisible();
       await expect(page.locator(`text=${testData.mhsUser.email}`)).toBeVisible();
 
@@ -75,10 +82,11 @@ test.describe('PBI-23: Dashboard Verifikasi Berkas Pendaftar E2E Tests (Real Dat
 
     // TC-PB13-003: Membuka berkas dokumen di tab baru
     test('TC-PB13-003: Membuka berkas dokumen di tab baru', async ({ page }) => {
-      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+      await gotoSeleksiPendaftar(page, testData.beasiswa.beasiswaId);
 
       const ktpDoc = testData.docs.find(d => d.jenis === 'ktp');
       const ktpViewBtn = page.locator(`#view-doc-btn-ktp-${ktpDoc.dokumenId}`);
+      await ktpViewBtn.waitFor({ state: 'visible' });
       await expect(ktpViewBtn).toBeVisible();
       await expect(ktpViewBtn).toHaveAttribute('target', '_blank');
       await expect(ktpViewBtn).toHaveAttribute('href', /.*dokumen\/ktp_nadhif\.pdf/);
@@ -86,27 +94,36 @@ test.describe('PBI-23: Dashboard Verifikasi Berkas Pendaftar E2E Tests (Real Dat
 
     // TC-PB13-008: Menampilkan informasi jika beasiswa tidak memiliki pendaftar
     test('TC-PB13-008: Menampilkan informasi jika beasiswa tidak memiliki pendaftar', async ({ page }) => {
-      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswa.beasiswaId}`);
+      await gotoSeleksiPendaftar(page, testData.beasiswa.beasiswaId);
 
       // Switch to empty program
+      const selectDropdown = page.locator('#scholarship-program-select');
+      await selectDropdown.waitFor({ state: 'visible' });
       await page.selectOption('#scholarship-program-select', String(testData.beasiswaEmpty.beasiswaId));
       
       // Wait and expect empty state message
-      await expect(page.locator('text=Belum Ada Pendaftar')).toBeVisible();
+      const emptyStateText = page.locator('text=Belum Ada Pendaftar');
+      await emptyStateText.waitFor({ state: 'visible' });
+      await expect(emptyStateText).toBeVisible();
     });
 
     // TC-PB13-015: Memilih program beasiswa lain dari dropdown memperbarui daftar pendaftar
     test('TC-PB13-015: Memilih program beasiswa lain dari dropdown memperbarui daftar pendaftar', async ({ page }) => {
-      await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${testData.beasiswaEmpty.beasiswaId}`);
+      await gotoSeleksiPendaftar(page, testData.beasiswaEmpty.beasiswaId);
 
       // Expect empty state first
-      await expect(page.locator('text=Belum Ada Pendaftar')).toBeVisible();
+      const emptyStateText = page.locator('text=Belum Ada Pendaftar');
+      await emptyStateText.waitFor({ state: 'visible' });
+      await expect(emptyStateText).toBeVisible();
 
       // Switch to non-empty program
+      const selectDropdown = page.locator('#scholarship-program-select');
+      await selectDropdown.waitFor({ state: 'visible' });
       await page.selectOption('#scholarship-program-select', String(testData.beasiswa.beasiswaId));
       
       // Expect applicant info is now loaded and visible
       const queueItem = page.locator(`#queue-item-${testData.pendaftaran.pendaftaranId}`);
+      await queueItem.waitFor({ state: 'visible' });
       await expect(queueItem).toBeVisible();
     });
 
