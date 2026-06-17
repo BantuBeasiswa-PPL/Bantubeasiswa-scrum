@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
-// Prefer environment variables (set via env-cmd) and fall back to .env.local if missing
-const envPath = path.resolve(__dirname, '../.env.local');
+// Prefer environment variables (set via env-cmd) and fall back to .env.test if missing
+const envPath = path.resolve(__dirname, '../.env.test');
 let env = {};
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
@@ -44,14 +44,100 @@ async function loginAs(context, role, extra = {}) {
     {
       name: 'token',
       value: token,
-      domain: 'localhost',
+      domain: '127.0.0.1',
       path: '/',
     }
   ]);
 }
 
+async function cleanAllOldE2ETestData() {
+  try {
+    // 1. Get test users
+    const [u1, u2, u3] = await Promise.all([
+      supabase.from('user').select('userId').like('email', 'test_mhs%'),
+      supabase.from('user').select('userId').like('email', 'test_mhs2%'),
+      supabase.from('user').select('userId').like('email', 'test_mhs_pb16%')
+    ]);
+    const userIds = [
+      ...(u1.data || []).map(u => u.userId),
+      ...(u2.data || []).map(u => u.userId),
+      ...(u3.data || []).map(u => u.userId)
+    ];
+
+    // 2. Get test beasiswa
+    const [b1, b2, b3] = await Promise.all([
+      supabase.from('beasiswa').select('beasiswaId').like('judul', 'Beasiswa E2E Test%'),
+      supabase.from('beasiswa').select('beasiswaId').like('judul', 'Beasiswa Kosong E2E Test%'),
+      supabase.from('beasiswa').select('beasiswaId').like('judul', 'Beasiswa E2E Test PB16%')
+    ]);
+    const beasiswaIds = [
+      ...(b1.data || []).map(b => b.beasiswaId),
+      ...(b2.data || []).map(b => b.beasiswaId),
+      ...(b3.data || []).map(b => b.beasiswaId)
+    ];
+
+    // 3. Get test accounts
+    const [a1, a2, a3, a4] = await Promise.all([
+      supabase.from('account').select('accountId').like('email', 'test_mhs%'),
+      supabase.from('account').select('accountId').like('email', 'test_mhs2%'),
+      supabase.from('account').select('accountId').like('email', 'test_donor%'),
+      supabase.from('account').select('accountId').like('email', 'test_mhs_pb16%')
+    ]);
+    const accountIds = [
+      ...(a1.data || []).map(a => a.accountId),
+      ...(a2.data || []).map(a => a.accountId),
+      ...(a3.data || []).map(a => a.accountId),
+      ...(a4.data || []).map(a => a.accountId)
+    ];
+
+    // 4. Perform deletes in order of foreign key dependencies
+    if (beasiswaIds.length > 0 || userIds.length > 0) {
+      let pQuery1 = [];
+      let pQuery2 = [];
+      if (beasiswaIds.length > 0) {
+        const { data } = await supabase.from('pendaftaran').select('pendaftaranId').in('beasiswaId', beasiswaIds);
+        pQuery1 = data || [];
+      }
+      if (userIds.length > 0) {
+        const { data } = await supabase.from('pendaftaran').select('pendaftaranId').in('userId', userIds);
+        pQuery2 = data || [];
+      }
+      const pendaftaranIds = [
+        ...pQuery1.map(p => p.pendaftaranId),
+        ...pQuery2.map(p => p.pendaftaranId)
+      ];
+
+      if (pendaftaranIds.length > 0) {
+        await supabase.from('dokumen').delete().in('pendaftaranId', pendaftaranIds);
+        await supabase.from('penyaluran_dana').delete().in('pendaftaranId', pendaftaranIds);
+      }
+    }
+
+    if (beasiswaIds.length > 0) {
+      await supabase.from('penyaluran_dana').delete().in('beasiswaId', beasiswaIds);
+      await supabase.from('pendaftaran').delete().in('beasiswaId', beasiswaIds);
+      await supabase.from('beasiswa').delete().in('beasiswaId', beasiswaIds);
+    }
+
+    if (userIds.length > 0) {
+      await supabase.from('pendaftaran').delete().in('userId', userIds);
+      await supabase.from('notifikasi').delete().in('userId', userIds);
+      await supabase.from('rekening').delete().in('userId', userIds);
+      await supabase.from('user').delete().in('userId', userIds);
+    }
+
+    if (accountIds.length > 0) {
+      await supabase.from('pendonor').delete().in('accountId', accountIds);
+      await supabase.from('account').delete().in('accountId', accountIds);
+    }
+  } catch (err) {
+    console.error('Failed to clean old E2E test data:', err);
+  }
+}
+
 // Penyiapan data tes Supabase untuk PB-13 (PBI-23 & PBI-24)
 async function createRealDbTestData() {
+  await cleanAllOldE2ETestData();
   const randomSuffix = Math.floor(Math.random() * 1000000);
   const mhsEmail = `test_mhs_${randomSuffix}@mail.com`;
 
@@ -283,6 +369,7 @@ async function cleanRealDbTestData(data) {
 
 // Penyiapan data tes Supabase untuk PB-16 (PBI-28 & PBI-29)
 async function createRealDbTestDataPB16() {
+  await cleanAllOldE2ETestData();
   const randomSuffix = Math.floor(Math.random() * 1000000);
   const mhsEmail = `test_mhs_pb16_${randomSuffix}@mail.com`;
   
@@ -428,6 +515,19 @@ async function cleanRealDbTestDataPB16(data) {
   }
 }
 
+async function gotoSeleksiPendaftar(page, beasiswaId) {
+  await page.goto(`/pendonor/seleksi-pendaftar?beasiswaId=${beasiswaId}`);
+  // Wait for loading skeleton to disappear to ensure DOM is fully rendered before query
+  await page.waitForFunction(() => {
+    return !document.querySelector('.animate-pulse');
+  }, { timeout: 15000 }).catch(() => {});
+  
+  await page.waitForFunction(() => {
+    const el = document.getElementById('scholarship-program-select');
+    return !!(el && el.offsetHeight > 0);
+  }, { timeout: 5000 }).catch(() => {});
+}
+
 module.exports = {
   generateMockToken,
   loginAs,
@@ -435,5 +535,7 @@ module.exports = {
   cleanRealDbTestData,
   createRealDbTestDataPB16,
   cleanRealDbTestDataPB16,
+  gotoSeleksiPendaftar,
   supabase
 };
+

@@ -12,7 +12,7 @@ module.exports = defineConfig({
   // on-demand Next.js dev yang bisa melebihi 30 dtk pada mesin yang lebih lambat.
   timeout: 60 * 1000,
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://127.0.0.1:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     navigationTimeout: 45 * 1000,
@@ -26,7 +26,7 @@ module.exports = defineConfig({
   ],
   webServer: {
     command: 'npx env-cmd -f .env.test npm run dev',
-    url: 'http://localhost:3000',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: true,
     timeout: 120 * 1000, // Wait up to 2 mins for the dev server to boot
   },

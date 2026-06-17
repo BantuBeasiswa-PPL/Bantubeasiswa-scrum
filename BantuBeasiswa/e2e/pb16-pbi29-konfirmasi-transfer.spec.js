@@ -15,9 +15,10 @@ test.describe('PBI-29: Konfirmasi Transfer Dana E2E Tests (Real Database)', () =
     testData = await createRealDbTestDataPB16();
   });
 
-  test.afterAll(async () => {
-    await cleanRealDbTestDataPB16(testData);
-  });
+  // Data is kept after tests for user inspection; cleaned up automatically at the start of the next run
+  // test.afterAll(async () => {
+  //   await cleanRealDbTestDataPB16(testData);
+  // });
 
   test.describe('Akses Terverifikasi Pendonor', () => {
 
@@ -31,8 +32,10 @@ test.describe('PBI-29: Konfirmasi Transfer Dana E2E Tests (Real Database)', () =
     // TC-PB16-005: Membuka modal konfirmasi transfer individu
     test('TC-PB16-005: Membuka modal konfirmasi transfer individu', async ({ page }) => {
       await page.goto('/pendonor/dashboard-pembayaran');
+      await page.locator('h1').waitFor({ state: 'visible' });
 
       const initiateBtn = page.locator(`#initiate-btn-${testData.pendaftaran.pendaftaranId}`);
+      await initiateBtn.waitFor({ state: 'visible' });
       await expect(initiateBtn).toBeVisible();
 
       // Click Initiate
@@ -40,6 +43,7 @@ test.describe('PBI-29: Konfirmasi Transfer Dana E2E Tests (Real Database)', () =
 
       // Check modal open
       const modal = page.locator('[role="dialog"]');
+      await modal.waitFor({ state: 'visible' });
       await expect(modal).toBeVisible();
       await expect(modal.locator('text=BCA')).toBeVisible();
       await expect(modal.locator(`text=${testData.rekening.nomorRekening}`)).toBeVisible();
@@ -53,12 +57,15 @@ test.describe('PBI-29: Konfirmasi Transfer Dana E2E Tests (Real Database)', () =
     // TC-PB16-011: Mengonfirmasi transfer dengan mengunggah bukti dan mengisi data transaksi secara lengkap
     test('TC-PB16-011: Mengonfirmasi transfer dengan mengunggah bukti dan mengisi data transaksi secara lengkap', async ({ page }) => {
       await page.goto('/pendonor/dashboard-pembayaran');
+      await page.locator('h1').waitFor({ state: 'visible' });
 
       const initiateBtn = page.locator(`#initiate-btn-${testData.pendaftaran.pendaftaranId}`);
+      await initiateBtn.waitFor({ state: 'visible' });
       await expect(initiateBtn).toBeVisible();
       await initiateBtn.click();
 
       const modal = page.locator('[role="dialog"]');
+      await modal.waitFor({ state: 'visible' });
       await expect(modal).toBeVisible();
 
       // Isi ID Transaksi
@@ -90,8 +97,9 @@ test.describe('PBI-29: Konfirmasi Transfer Dana E2E Tests (Real Database)', () =
       ).catch(() => {});
 
       // Periksa visual sukses dengan timeout lebih besar agar tidak flakey pada koneksi lambat
-      await page.waitForSelector('text=Konfirmasi Berhasil!', { timeout: 15000 });
-      await expect(page.locator('text=Konfirmasi Berhasil!')).toBeVisible({ timeout: 15000 });
+      const successMsg = page.locator('text=Konfirmasi Berhasil!');
+      await successMsg.waitFor({ state: 'visible', timeout: 15000 });
+      await expect(successMsg).toBeVisible({ timeout: 15000 });
     });
 
   });
