@@ -162,8 +162,8 @@ export default function RekeningPencairanPage({ user, profile, existingRekening,
       }
       setSaved(true);
       setEditMode(false);
-    } catch {
-      setSubmitError('Terjadi kesalahan jaringan. Coba lagi.');
+    } catch (error) {
+      setSubmitError(error?.message || 'Terjadi kesalahan jaringan. Coba lagi.');
     } finally {
       setSubmitting(false);
     }
