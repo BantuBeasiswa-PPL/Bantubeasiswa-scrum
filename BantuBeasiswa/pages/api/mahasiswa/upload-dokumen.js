@@ -9,7 +9,7 @@ export const config = {
   },
 };
 
-const VALID_TYPES = ['transkrip', 'kk', 'ktp'];
+const VALID_TYPES = ['transkrip', 'kk', 'ktp', 'rekening'];
 const VALID_MIMES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
 
 export default async function handler(req, res) {

@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npx env-cmd -f .env.test next dev --webpack",
-    "build": "npx env-cmd -f .env.test next build",
-    "start": "npx env-cmd -f .env.test next start",
+    "dev": "next dev --webpack",
+    "build": "next build",
+    "start": "next start",
     "lint": "eslint",
     "ensure-bucket": "npx env-cmd -f .env.test node scripts/ensureBucket.js",
     "test": "npx env-cmd -f .env.test jest",
