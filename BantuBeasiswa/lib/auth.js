@@ -1,5 +1,13 @@
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
 import { parse } from 'cookie';
+
+const testingEnvPath = path.resolve(process.cwd(), '.env.testing');
+if (fs.existsSync(testingEnvPath)) {
+  dotenv.config({ path: testingEnvPath, override: true });
+}
 
 const JWT_SECRET = process.env.JWT_SECRET;
 

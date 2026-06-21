@@ -7,13 +7,29 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "ensure-bucket": "node scripts/ensureBucket.js"
+    "ensure-bucket": "node scripts/ensureBucket.js",
+    "test:e2e:pb07": "playwright test e2e/mahasiswa-pendaftaran-pb07.spec.js",
+    "test:e2e:pb08": "playwright test e2e/mahasiswa-dokumen-upload-pb08.spec.js",
+    "test:e2e:pb14": "playwright test -c playwright.pb14.config.js",
+    "test:e2e:pb21": "playwright test e2e/mahasiswa-notifikasi-pb21.spec.js",
+    "test:e2e:ui:pb07:pause": "set E2E_DEBUG_PAUSE=1&& playwright test e2e/mahasiswa-pendaftaran-pb07.spec.js --ui",
+    "test:e2e:ui:pb08:pause": "set E2E_DEBUG_PAUSE=1&& playwright test e2e/mahasiswa-dokumen-upload-pb08.spec.js --ui",
+    "test:e2e:ui:pb14:pause": "set E2E_DEBUG_PAUSE=1&& playwright test -c playwright.pb14.config.js --ui",
+    "test:e2e:ui:pb21:pause": "set E2E_DEBUG_PAUSE=1&& playwright test e2e/mahasiswa-notifikasi-pb21.spec.js --ui",
+    "test:e2e:ui:pb14": "playwright test -c playwright.pb14.config.js --ui",
+    "test:e2e:ui:pb21": "playwright test e2e/mahasiswa-notifikasi-pb21.spec.js --ui",
+    "test:e2e:show:pb14": "set E2E_VISUAL_HOLD_MS=15000&& playwright test -c playwright.pb14.config.js --headed",
+    "test:e2e:debug:pb07": "set E2E_DEBUG_PAUSE=1&& playwright test e2e/mahasiswa-pendaftaran-pb07.spec.js --debug",
+    "test:e2e:debug:pb08": "set E2E_DEBUG_PAUSE=1&& playwright test e2e/mahasiswa-dokumen-upload-pb08.spec.js --debug",
+    "test:e2e:debug:pb14": "set E2E_DEBUG_PAUSE=1&& playwright test -c playwright.pb14.config.js --debug",
+    "test:e2e:debug:pb21": "set E2E_DEBUG_PAUSE=1&& playwright test e2e/mahasiswa-notifikasi-pb21.spec.js --debug"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
     "bcryptjs": "^3.0.3",
     "cookie": "^1.1.1",
+    "dotenv": "^17.4.2",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
@@ -25,6 +41,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",

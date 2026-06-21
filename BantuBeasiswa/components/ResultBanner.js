@@ -25,7 +25,14 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
   const isLulus = status === 'LULUS';
 
   return (
-    <div className="w-full animate-fade-in-premium">
+    <div
+      className={`w-full animate-fade-in-premium ${isLulus ? 'result-banner--lulus' : 'result-banner--ditolak'}`}
+      role="alert"
+      aria-live="polite"
+      data-testid="result-banner"
+      data-result-status={status}
+      data-result-tone={isLulus ? 'blue' : 'red'}
+    >
       <style>{`
         @keyframes fadeInPremium {
           from {
@@ -43,25 +50,25 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
       `}</style>
 
       {isLulus ? (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#1e40af] p-8 md:p-10 shadow-[0_20px_50px_rgba(37,99,235,0.3)] text-white border border-blue-400/20">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#1e40af] p-8 md:p-12 shadow-[0_20px_50px_rgba(37,99,235,0.3)] text-white border border-blue-400/20">
           {/* Enhanced decorative elements */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full blur-[100px] opacity-20 -mr-20 -mt-20 pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-400 rounded-full blur-[80px] opacity-20 -ml-20 -mb-20 pointer-events-none" />
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
               {/* Check Circle Icon with Ring */}
               <div className="relative">
                 <div className="absolute inset-0 bg-emerald-400 blur-xl opacity-40 animate-pulse" />
-                <div className="relative w-20 h-20 rounded-full bg-white flex items-center justify-center text-emerald-600 shrink-0 shadow-2xl border-4 border-emerald-100">
+                <div className="relative w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center text-white shrink-0 shadow-2xl border-4 border-emerald-100/50">
                   <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" />
                   </svg>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] bg-emerald-500 text-white rounded-full shadow-[0_0_15px_rgba(16,185,129,0.4)]">
                     Candidate Verified
                   </span>
@@ -70,7 +77,7 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                   </span>
                 </div>
 
-                <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
+                <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
                   Selamat, {namaMahasiswa || 'Pendaftar'}!<br />
                   <span className="text-blue-100">Anda Dinyatakan Lulus.</span>
                 </h2>
@@ -82,11 +89,11 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
             </div>
 
             {/* Program Info Card */}
-            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-inner w-full md:w-auto min-w-[280px]">
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20 shadow-inner w-full lg:w-auto min-w-[300px]">
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-8">
                   <span className="text-blue-200 text-xs font-bold uppercase tracking-wider">Program</span>
-                  <span className="font-bold text-sm truncate max-w-[150px]">{judulBeasiswa || 'Beasiswa'}</span>
+                  <span className="font-bold text-sm truncate max-w-[180px]">{judulBeasiswa || 'Beasiswa'}</span>
                 </div>
                 <div className="flex items-center justify-between gap-8">
                   <span className="text-blue-200 text-xs font-bold uppercase tracking-wider">Nominal</span>
@@ -126,19 +133,19 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
           </div>
         </div>
       ) : (
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#dc2626] via-[#b91c1c] to-[#991b1b] p-8 md:p-10 shadow-[0_20px_50px_rgba(220,38,38,0.3)] text-white border border-red-400/20">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#dc2626] via-[#b91c1c] to-[#991b1b] p-8 md:p-12 shadow-[0_20px_50px_rgba(220,38,38,0.3)] text-white border border-red-400/20">
           <div className="absolute top-0 right-0 w-96 h-96 bg-red-400 rounded-full blur-[100px] opacity-20 -mr-20 -mt-20 pointer-events-none" />
 
           <div className="flex flex-col gap-8 relative z-10">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-              <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-red-600 shrink-0 shadow-2xl border-4 border-red-100">
+              <div className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center text-white shrink-0 shadow-2xl border-4 border-red-100/50">
                 <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
 
               <div className="space-y-2">
-                <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
+                <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
                   Terima Kasih Atas Partisipasi Anda
                 </h2>
                 <p className="text-lg text-red-50/80 max-w-2xl leading-relaxed">
@@ -166,7 +173,7 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                   Review Tim Panitia
                 </h3>
                 <p className="text-red-50 leading-relaxed italic text-lg font-medium">
-                  "Profil akademik Anda sangat impresif. Namun, persaingan tahun ini sangat ketat dan kuota terbatas. Kami sangat menyarankan Anda mencoba kembali di gelombang berikutnya."
+                  &quot;Profil akademik Anda sangat impresif. Namun, persaingan tahun ini sangat ketat dan kuota terbatas. Kami sangat menyarankan Anda mencoba kembali di gelombang berikutnya.&quot;
                 </p>
               </div>
             )}

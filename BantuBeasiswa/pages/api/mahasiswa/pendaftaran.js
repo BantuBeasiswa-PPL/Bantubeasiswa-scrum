@@ -1,4 +1,4 @@
-import { supabase } from '../../../lib/db';
+import { getServerSupabase } from '../../../lib/supabaseServer';
 import { verifyToken } from '../../../lib/auth';
 import { normalizeMahasiswaPendaftaranRow } from '../../../lib/mahasiswaPendaftaranRow';
 
@@ -10,6 +10,7 @@ import { normalizeMahasiswaPendaftaranRow } from '../../../lib/mahasiswaPendafta
  */
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end();
+  const supabase = getServerSupabase();
 
   const decoded = verifyToken(req);
   if (!decoded || decoded.role !== 'mahasiswa') {
@@ -32,10 +33,14 @@ export default async function handler(req, res) {
     return res.status(401).json({ message: 'Profil mahasiswa tidak ditemukan.' });
   }
 
-  const { data, error } = await supabase
+  const { pendaftaranId } = req.query;
+  const pendaftaranIdInt = parseInt(Array.isArray(pendaftaranId) ? pendaftaranId[0] : pendaftaranId, 10);
+
+  let query = supabase
     .from('pendaftaran')
     .select(`
       pendaftaranId,
+      userId,
       status,
       createdAt,
       beasiswaId,
@@ -45,8 +50,15 @@ export default async function handler(req, res) {
         pendonor ( statusOrganisasi )
       )
     `)
-    .eq('userId', userId)
     .order('createdAt', { ascending: false });
+
+  if (!Number.isNaN(pendaftaranIdInt) && pendaftaranIdInt > 0) {
+    query = query.eq('pendaftaranId', pendaftaranIdInt).limit(1);
+  } else {
+    query = query.eq('userId', userId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('[GET /api/mahasiswa/pendaftaran]', error);
