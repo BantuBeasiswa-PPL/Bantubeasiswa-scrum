@@ -1,4 +1,12 @@
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+
+const testingEnvPath = path.resolve(process.cwd(), '.env.testing');
+if (fs.existsSync(testingEnvPath)) {
+  dotenv.config({ path: testingEnvPath, override: true });
+}
 
 /**
  * Client Supabase untuk route API / getServerSideProps.

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useStatusPendaftaran, STATUS_TO_STEP } from '@/hooks/useStatusPendaftaran';
@@ -56,7 +56,11 @@ function SkeletonBlock({ className = '' }) {
 export default function StatusPendaftaran({ user }) {
   const router = useRouter();
   // Ambil id pendaftaran dari URL query: /mahasiswa/status-pendaftaran?id=<uuid>
-  const pendaftaranId = router.query.id ?? null;
+  const pendaftaranId = useMemo(() => {
+    const rawId = router.query.id;
+    if (Array.isArray(rawId)) return rawId[0] ?? null;
+    return rawId ?? null;
+  }, [router.query.id]);
 
   const { status, beasiswaInfo, createdAt, loading, error } =
     useStatusPendaftaran(pendaftaranId);
@@ -317,7 +321,7 @@ function DokumenBermasalahSection({ pendaftaranId }) {
   const fileInputRefs = useRef({});
 
   // ── Fetch dokumen ─────────────────────────────────────────────────────────
-  const fetchDokumen = async () => {
+  const fetchDokumen = useCallback(async () => {
     if (!pendaftaranId) return;
     try {
       setLoadingDok(true);
@@ -326,9 +330,9 @@ function DokumenBermasalahSection({ pendaftaranId }) {
       if (res.ok) setDokumenList(json.data ?? []);
     } catch { /* silent */ }
     finally { setLoadingDok(false); }
-  };
+  }, [pendaftaranId]);
 
-  useEffect(() => { fetchDokumen(); }, [pendaftaranId]);
+  useEffect(() => { fetchDokumen(); }, [fetchDokumen]);
 
   // Filter hanya yang bermasalah (statusDokumen = 'FALSE')
   const bermasalah = dokumenList.filter(d => d.statusDokumen === 'FALSE');

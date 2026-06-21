@@ -25,7 +25,14 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
   const isLulus = status === 'LULUS';
 
   return (
-    <div className="w-full animate-fade-in-premium">
+    <div
+      className={`w-full animate-fade-in-premium ${isLulus ? 'result-banner--lulus' : 'result-banner--ditolak'}`}
+      role="alert"
+      aria-live="polite"
+      data-testid="result-banner"
+      data-result-status={status}
+      data-result-tone={isLulus ? 'blue' : 'red'}
+    >
       <style>{`
         @keyframes fadeInPremium {
           from {
@@ -166,7 +173,7 @@ export default function ResultBanner({ status, judulBeasiswa, namaMahasiswa, nom
                   Review Tim Panitia
                 </h3>
                 <p className="text-red-50 leading-relaxed italic text-lg font-medium">
-                  "Profil akademik Anda sangat impresif. Namun, persaingan tahun ini sangat ketat dan kuota terbatas. Kami sangat menyarankan Anda mencoba kembali di gelombang berikutnya."
+                  &quot;Profil akademik Anda sangat impresif. Namun, persaingan tahun ini sangat ketat dan kuota terbatas. Kami sangat menyarankan Anda mencoba kembali di gelombang berikutnya.&quot;
                 </p>
               </div>
             )}

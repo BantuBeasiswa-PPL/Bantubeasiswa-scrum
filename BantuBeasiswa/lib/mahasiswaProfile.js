@@ -25,22 +25,24 @@ export function normalizeMahasiswaProfile(row, fallback = {}) {
     tentangSaya: source.tentangSaya ?? source.tentang_saya ?? '',
     nik: source.nik ?? '',
     jenisKelamin: source.jenisKelamin ?? source.jenis_kelamin ?? '',
-    provinsiLahirId: source.provinsiLahirId ?? source.provinsi_lahir_id ?? null,
-    kotaLahirWilayahId: source.kotaLahirWilayahId ?? source.kota_lahir_wilayah_id ?? null,
-    tanggalLahir: source.tanggalLahir ?? source.tanggal_lahir ?? '',
+    provinsiLahirId: source.provinsiLahirId ?? source.provinsi_lahir_id ?? fallback.provinsiLahirId ?? null,
+    kotaLahirWilayahId: source.kotaLahirWilayahId ?? source.kota_lahir_wilayah_id ?? fallback.kotaLahirWilayahId ?? null,
+    tanggalLahir: source.tanggalLahir ?? source.tanggal_lahir ?? fallback.tanggalLahir ?? '',
     noHandphone:
       source.noHandphone ??
       source.no_handphone ??
       source.handphone ??
       source.telepon ??
+      fallback.noHandphone ??
       '',
-    provinsiKtpId: source.provinsiKtpId ?? source.provinsi_ktp_id ?? null,
-    kabupatenKtpId: source.kabupatenKtpId ?? source.kabupaten_ktp_id ?? null,
-    alamatKtp: source.alamatKtp ?? source.alamat_ktp ?? '',
+    provinsiKtpId: source.provinsiKtpId ?? source.provinsi_ktp_id ?? fallback.provinsiKtpId ?? null,
+    kabupatenKtpId: source.kabupatenKtpId ?? source.kabupaten_ktp_id ?? fallback.kabupatenKtpId ?? null,
+    alamatKtp: source.alamatKtp ?? source.alamat_ktp ?? fallback.alamatKtp ?? '',
     alamat:
       source.alamat ??
       source.alamatTempatTinggal ??
       source.alamat_tempat_tinggal ??
+      fallback.alamat ??
       '',
   };
 }
