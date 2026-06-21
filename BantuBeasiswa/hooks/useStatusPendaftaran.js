@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/db';
 
 /**
- * Mapping status DB → nomor step stepper (1-4).
+ * Mapping status DB -> nomor step stepper (1-4).
  * LULUS dan DITOLAK sama-sama di step 4 (Keputusan Akhir).
  */
 export const STATUS_TO_STEP = {
@@ -14,13 +14,10 @@ export const STATUS_TO_STEP = {
 };
 
 /**
- * Custom hook — fetch data awal + subscribe real-time update status pendaftaran.
+ * Custom hook - fetch data awal + subscribe real-time update status pendaftaran.
  *
- * @param {string|null} pendaftaranId  UUID dari tabel pendaftaran
+ * @param {string|null} pendaftaranId UUID dari tabel pendaftaran
  * @returns {{ status, beasiswaInfo, createdAt, loading, error }}
- *
- * Cara pakai:
- *   const { status, beasiswaInfo, loading, error } = useStatusPendaftaran(id);
  */
 export function useStatusPendaftaran(pendaftaranId) {
   const [status, setStatus] = useState(null);
@@ -30,44 +27,51 @@ export function useStatusPendaftaran(pendaftaranId) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Jangan fetch kalau id belum tersedia (Next.js router hydration)
     if (!pendaftaranId) return;
 
     let isMounted = true;
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    // ─── 1. Fetch data awal ───────────────────────────────────────────────────
     async function fetchInitialData() {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('pendaftaran')
-<<<<<<< Updated upstream
-        .select('status, createdAt, beasiswa(beasiswaId, judul, nominal, pendonor(statusOrganisasi))')
-        .eq('pendaftaranId', pendaftaranId)
-=======
-        .select('status, created_at, beasiswa(judul, nominal, pendonor(nama_organisasi))')
-        .eq('id', pendaftaranId)
->>>>>>> Stashed changes
-        .single();
+      let lastError = null;
 
-      if (!isMounted) return;
+      for (let attempt = 1; attempt <= 8; attempt += 1) {
+        const response = await fetch(`/api/mahasiswa/pendaftaran?pendaftaranId=${pendaftaranId}`);
+        const payload = await response.json();
+        const rows = Array.isArray(payload) ? payload : payload ? [payload] : [];
+        const data = rows.find(row => String(row.pendaftaranId) === String(pendaftaranId)) ?? rows[0] ?? null;
 
-      if (fetchError) {
-        setError(fetchError.message);
-        setLoading(false);
-        return;
+        if (!isMounted) return;
+
+        if (!response.ok) {
+          lastError = payload?.message || 'Gagal mengambil data pendaftaran.';
+          break;
+        }
+
+        if (data) {
+          setStatus(data.status);
+          setCreatedAt(data.createdAt ?? data.created_at ?? null);
+          setBeasiswaInfo(data.beasiswa ?? null);
+          setLoading(false);
+          return;
+        }
+
+        lastError = 'Data pendaftaran tidak ditemukan.';
+        if (attempt < 8) {
+          await sleep(500);
+        }
       }
 
-      setStatus(data.status);
-      setCreatedAt(data.created_at);
-      setBeasiswaInfo(data.beasiswa ?? null);
+      if (!isMounted) return;
+      setError(lastError || 'Data pendaftaran tidak ditemukan.');
       setLoading(false);
     }
 
     fetchInitialData();
 
-    // ─── 2. Subscribe real-time UPDATE ───────────────────────────────────────
     const channel = supabase
       .channel(`status-pendaftaran-${pendaftaranId}`)
       .on(
@@ -76,7 +80,7 @@ export function useStatusPendaftaran(pendaftaranId) {
           event: 'UPDATE',
           schema: 'public',
           table: 'pendaftaran',
-          filter: `id=eq.${pendaftaranId}`,
+          filter: `pendaftaranId=eq.${pendaftaranId}`,
         },
         (payload) => {
           if (isMounted) {
@@ -86,8 +90,6 @@ export function useStatusPendaftaran(pendaftaranId) {
       )
       .subscribe();
 
-    // ─── 3. Cleanup — dipanggil React saat unmount / pendaftaranId berubah ───
-    // Ini yang mencegah memory leak dan "state update on unmounted component"
     return () => {
       isMounted = false;
       supabase.removeChannel(channel);

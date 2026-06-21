@@ -4,6 +4,14 @@ import { supabase } from '@/lib/supabaseClient';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
 
+const normalizeNotification = (row) => ({
+  id: row?.notifikasiId ?? row?.id ?? null,
+  userId: row?.userId ?? row?.user_id ?? null,
+  pesan: row?.pesan ?? '',
+  isRead: row?.isRead ?? row?.is_read ?? false,
+  createdAt: row?.createdAt ?? row?.created_at ?? null,
+});
+
 // ─── Relative time formatter ─────────────────────────────────────────────────
 const formatWaktu = (timestamp) => {
   const diff = Date.now() - new Date(timestamp).getTime();
@@ -66,7 +74,7 @@ function NotifRow({ notif, onClick }) {
       id={`notif-${notif.id}`}
       onClick={() => onClick(notif)}
       className={`flex gap-5 p-6 cursor-pointer transition-all duration-200 group border-b border-gray-50 last:border-0 ${
-        !notif.is_read
+        !notif.isRead
           ? 'bg-blue-50/40 hover:bg-blue-50/70'
           : 'bg-white hover:bg-gray-50/80'
       }`}
@@ -74,7 +82,7 @@ function NotifRow({ notif, onClick }) {
       {/* Icon */}
       <div
         className={`mt-0.5 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105 ${
-          !notif.is_read
+          !notif.isRead
             ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md shadow-blue-200'
             : 'bg-gray-100 text-gray-400'
         }`}
@@ -90,31 +98,31 @@ function NotifRow({ notif, onClick }) {
         <div className="flex items-center justify-between gap-2 mb-2">
           <span
             className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
-              !notif.is_read
+              !notif.isRead
                 ? 'bg-blue-100 text-blue-700'
                 : 'bg-gray-100 text-gray-400'
             }`}
           >
-            {!notif.is_read && (
+            {!notif.isRead && (
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block" />
             )}
-            {notif.is_read ? 'Terbaca' : 'Baru'}
+            {notif.isRead ? 'Terbaca' : 'Baru'}
           </span>
           <span className="text-xs text-gray-400 whitespace-nowrap flex items-center gap-1">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            {formatWaktu(notif.created_at)}
+            {formatWaktu(notif.createdAt)}
           </span>
         </div>
 
         {/* Message */}
-        <p className={`text-sm leading-relaxed ${!notif.is_read ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
+        <p className={`text-sm leading-relaxed ${!notif.isRead ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
           {notif.pesan}
         </p>
 
         {/* Click hint */}
-        {!notif.is_read && (
+        {!notif.isRead && (
           <p className="mt-1.5 text-[11px] text-blue-400 group-hover:text-blue-500 transition-colors">
             Klik untuk tandai dibaca
           </p>
@@ -137,10 +145,10 @@ export default function NotifikasiPage({ user }) {
     const { data, error } = await supabase
       .from('notifikasi')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .eq('userId', userId)
+      .order('createdAt', { ascending: false });
 
-    if (!error) setNotifications(data || []);
+    if (!error) setNotifications((data || []).map(normalizeNotification));
     setLoading(false);
   }, [userId]);
 
@@ -158,10 +166,10 @@ export default function NotifikasiPage({ user }) {
           event: 'INSERT',
           schema: 'public',
           table: 'notifikasi',
-          filter: `user_id=eq.${userId}`,
+          filter: `userId=eq.${userId}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new, ...prev]);
+          setNotifications((prev) => [normalizeNotification(payload.new), ...prev]);
         }
       )
       .subscribe();
@@ -171,33 +179,33 @@ export default function NotifikasiPage({ user }) {
 
   // ── Mark single notification as read ──────────────────────────────────────
   const handleNotifClick = async (notif) => {
-    if (notif.is_read) return;
+    if (notif.isRead) return;
 
     // Optimistic update
     setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
+      prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
     );
 
     await supabase
       .from('notifikasi')
-      .update({ is_read: true })
-      .eq('id', notif.id);
+      .update({ isRead: true })
+      .eq('notifikasiId', notif.id);
   };
 
   // ── Mark all as read ──────────────────────────────────────────────────────
   const handleMarkAllAsRead = async () => {
     // Optimistic update
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
 
     await supabase
       .from('notifikasi')
-      .update({ is_read: true })
-      .eq('user_id', userId)
-      .eq('is_read', false);
+      .update({ isRead: true })
+      .eq('userId', userId)
+      .eq('isRead', false);
   };
 
-  const hasUnread = notifications.some((n) => !n.is_read);
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const hasUnread = notifications.some((n) => !n.isRead);
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <MahasiswaLayout user={user}>
