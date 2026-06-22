@@ -18,6 +18,8 @@ function makeSeeder() {
   const trackedEmails = []; // akun yang dibuat APP (register) untuk dibersihkan
   const provinsiIds = [];
   const wilayahIds = [];
+  const tutorialIds = []; // tabel tutorial tidak terkait account, dilacak terpisah
+  const tutorialJuduls = []; // tutorial yang dibuat APP (admin tambah) -> dibersihkan by judul
 
   async function insert(table, row, pk) {
     const { data, error } = await admin.from(table).insert([row]).select(pk).single();
@@ -83,6 +85,19 @@ function makeSeeder() {
       return await insert('favorit', { userId, beasiswaId }, 'favoritId');
     },
 
+    async tutorial({ judul, konten = '<p>Konten panduan tutorial.</p>' }) {
+      await admin.from('tutorial').delete().eq('judul', judul); // idempotent
+      const id = await insert('tutorial', { judul, konten }, 'tutorialId');
+      tutorialIds.push(id);
+      return id;
+    },
+
+    // Untuk test "admin tambah tutorial": bersihkan judul (kalau ada sisa) + tandai utk cleanup.
+    async resetTutorial(judul) {
+      await admin.from('tutorial').delete().eq('judul', judul);
+      tutorialJuduls.push(judul);
+    },
+
     async provinsi({ nama = 'DKI Jakarta', isAfirmasi = false } = {}) {
       const id = await insert('provinsi', { nama, isAfirmasi }, 'provinsiId');
       provinsiIds.push(id);
@@ -103,10 +118,14 @@ function makeSeeder() {
       for (const email of trackedEmails) await admin.from('account').delete().eq('email', email);
       for (const id of wilayahIds) await admin.from('wilayah').delete().eq('wilayahId', id);
       for (const id of provinsiIds) await admin.from('provinsi').delete().eq('provinsiId', id);
+      for (const id of tutorialIds) await admin.from('tutorial').delete().eq('tutorialId', id);
+      for (const judul of tutorialJuduls) await admin.from('tutorial').delete().eq('judul', judul);
       accountIds.length = 0;
       trackedEmails.length = 0;
       wilayahIds.length = 0;
       provinsiIds.length = 0;
+      tutorialIds.length = 0;
+      tutorialJuduls.length = 0;
     },
   };
 

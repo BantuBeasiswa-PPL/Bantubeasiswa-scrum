@@ -31,7 +31,9 @@ module.exports = defineConfig({
   ],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // DB mode dapat 1 retry: kompilasi route Next di .next kadang kena EPERM (OneDrive
+  // mengunci file) yang sifatnya transien -> retry biasanya langsung lolos.
+  retries: process.env.CI ? 2 : (DB_TEST ? 1 : 0),
   workers: 1, // Running sequentially to avoid local port/state conflicts
   reporter: 'list',
   use: {
