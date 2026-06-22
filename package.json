@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "dev:test": "node scripts/dev-test.js",
+    "seed:demo": "node scripts/seed-demo-accounts.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -114,3 +114,80 @@ test.describe('REAL-DB · PB-17 · Tutorial Administrasi & Bookmark', () => {
     await expect(page.locator('button[title="Hapus dari Favorit"]')).toBeVisible();
   });
 });
+
+/**
+ * PBI-30 dari POV ADMIN — Admin mengelola konten tutorial (tambah/edit/hapus)
+ * di /tutorial-administrasi, tersimpan ke tabel `tutorial` via /api/admin/tutorial.
+ */
+test.describe('REAL-DB · PB-17 · Tutorial Administrasi (Admin)', () => {
+  let seeder;
+  const TITLE_INPUT = 'input[placeholder="Contoh: Cara Membuat SKTM"]';
+
+  test.beforeEach(async ({ context }) => {
+    seeder = makeSeeder();
+    await loginAs(context, 'admin');
+  });
+
+  test.afterEach(async () => { await seeder.cleanup(); });
+
+  test('TC-30-03: Admin menambah tutorial baru → tersimpan di tabel tutorial', async ({ page }) => {
+    const judul = 'Panduan Membuat KIP-K';
+    await seeder.resetTutorial(judul);
+
+    await page.goto('/tutorial-administrasi');
+    await page.click('button:has-text("Tambah Tutorial Baru")');
+    await page.fill(TITLE_INPUT, judul);
+    await page.fill('#admin-content-textarea', '<h2>Langkah</h2><p>Datang ke kelurahan membawa KTP & KK.</p>');
+    await page.click('button:has-text("Simpan Panduan Baru")');
+
+    await expect(page.locator('text=Tutorial berhasil ditambahkan')).toBeVisible();
+
+    const { data } = await admin.from('tutorial').select('judul, konten').eq('judul', judul).single();
+    expect(data).toBeTruthy();
+    expect(data.konten).toContain('Datang ke kelurahan');
+  });
+
+  test('TC-30-04: Admin mengedit tutorial → perubahan tersimpan di DB', async ({ page }) => {
+    const judul = 'Panduan Surat Domisili';
+    const judulBaru = 'Panduan Surat Domisili (Diperbarui)';
+    const tutorialId = await seeder.tutorial({ judul, konten: '<p>Versi lama.</p>' });
+
+    await page.goto('/tutorial-administrasi');
+    const card = page.locator('article', { hasText: judul });
+    await card.locator('button[title="Edit Panduan"]').click();
+
+    await page.fill(TITLE_INPUT, judulBaru);
+    await page.click('button:has-text("Simpan Perubahan")');
+    await expect(page.locator('text=Tutorial berhasil diperbarui')).toBeVisible();
+
+    const { data } = await admin.from('tutorial').select('judul').eq('tutorialId', tutorialId).single();
+    expect(data.judul).toBe(judulBaru);
+  });
+
+  test('TC-30-05: Admin menghapus tutorial → baris hilang dari DB', async ({ page }) => {
+    const judul = 'Panduan Membuat SKTM';
+    const tutorialId = await seeder.tutorial({ judul, konten: '<p>Akan dihapus.</p>' });
+
+    await page.goto('/tutorial-administrasi');
+    const card = page.locator('article', { hasText: judul });
+    await card.locator('button[title="Hapus Panduan"]').click();
+
+    const swal = page.locator('.swal2-popup');
+    await expect(swal).toBeVisible();
+    await swal.locator('button:has-text("Ya, Hapus")').click();
+    await expect(page.locator('.swal2-popup:has-text("Berhasil!")')).toBeVisible();
+
+    const { data } = await admin.from('tutorial').select('tutorialId').eq('tutorialId', tutorialId).maybeSingle();
+    expect(data).toBeNull();
+  });
+
+  test('TC-30-06: Validasi judul wajib diisi saat tambah tutorial', async ({ page }) => {
+    await page.goto('/tutorial-administrasi');
+    await page.click('button:has-text("Tambah Tutorial Baru")');
+    await page.fill(TITLE_INPUT, '   ');
+    await page.fill('#admin-content-textarea', '<p>Ada konten.</p>');
+    await page.click('button:has-text("Simpan Panduan Baru")');
+
+    await expect(page.locator('text=Judul wajib diisi')).toBeVisible();
+  });
+});
