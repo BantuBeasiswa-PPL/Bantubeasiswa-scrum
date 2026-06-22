@@ -54,3 +54,7 @@ agent.md
 agents.md
 *_PBI*_NOTES.md
 PBI*_NOTES.md
+
+# Playwright test results
+/test-results/
+/bantubeasiswa/test-results/

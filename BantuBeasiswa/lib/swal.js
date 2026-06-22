@@ -5,10 +5,11 @@ const isClient = typeof window !== 'undefined';
 /**
  * Helper to show custom styled SweetAlert2 popups
  */
-export const showAlert = (options) => {
+export const showAlert = (options = {}) => {
   if (!isClient) return Promise.resolve({});
 
-  const isDanger = options.isDanger || false;
+  // Extract isDanger and customClass to avoid passing unknown params to SweetAlert2
+  const { isDanger = false, customClass: userCustomClass = {}, ...rest } = options;
 
   const confirmBtnClass = isDanger
     ? 'px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition-all mx-1.5 cursor-pointer outline-none border-none'
@@ -23,10 +24,10 @@ export const showAlert = (options) => {
       htmlContainer: 'text-sm text-slate-600 leading-relaxed mb-4',
       confirmButton: confirmBtnClass,
       cancelButton: cancelBtnClass,
-      ...options.customClass
+      ...userCustomClass
     },
     buttonsStyling: false,
-    ...options
+    ...rest
   });
 };
 

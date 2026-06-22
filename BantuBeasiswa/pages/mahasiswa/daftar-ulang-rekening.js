@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
-import { supabase } from '@/lib/db';
+import { supabase, getStorageBucket } from '@/lib/db';
 import {
   getLatestLulusPendaftaran,
   getLatestRekening,
@@ -49,7 +49,6 @@ const BANK_OPTIONS = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
-const DOKUMEN_BUCKET = 'dokumen';
 const REKENING_QUERY_SCHEMAS = [
   { name: 'snake', id: 'id', user: 'user_id' },
   { name: 'legacy', id: 'rekeningId', user: 'userId' },
@@ -160,30 +159,44 @@ async function findExistingRekening(userId) {
 }
 
 async function uploadBukuTabungan(file, userId) {
-  const ext = getSafeFileExtension(file);
-  const filePath = `rekening/${userId}_${Date.now()}.${ext}`;
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from(DOKUMEN_BUCKET)
-    .upload(filePath, file, { contentType: file.type, upsert: false });
+  const fileToBase64 = (f) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result;
+        if (typeof result !== 'string') {
+          reject(new Error('Gagal membaca file'));
+          return;
+        }
+        const base64 = result.split(',')[1] ?? '';
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error('Gagal membaca file'));
+      reader.readAsDataURL(f);
+    });
 
-  if (uploadError) {
-    throw new Error(`Gagal mengunggah foto buku tabungan: ${uploadError.message}`);
+  const base64 = await fileToBase64(file);
+  const response = await fetch('/api/mahasiswa/upload-dokumen', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jenis: 'rekening',
+      fileBase64: base64,
+      mimeType: file.type,
+      fileName: file.name,
+    }),
+  });
+
+  const responseData = await response.json();
+  if (!response.ok) {
+    throw new Error(responseData.message || 'Gagal mengunggah foto buku tabungan.');
   }
 
-  const uploadedPath = uploadData?.path || filePath;
-  const { data: urlData } = supabase.storage.from(DOKUMEN_BUCKET).getPublicUrl(uploadedPath);
-  const publicUrl = urlData?.publicUrl;
-
-  if (!publicUrl) {
-    throw new Error('Gagal membuat URL publik foto buku tabungan.');
-  }
-
-  return { path: uploadedPath, publicUrl };
+  return { path: null, publicUrl: responseData.publicUrl };
 }
 
 async function removeUploadedBuku(path) {
-  if (!path) return;
-  await supabase.storage.from(DOKUMEN_BUCKET).remove([path]);
+  // No-op to avoid client-side delete RLS issues
 }
 
 async function saveRekening(payload) {

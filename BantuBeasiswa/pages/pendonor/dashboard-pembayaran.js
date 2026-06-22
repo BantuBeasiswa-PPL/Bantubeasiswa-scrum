@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { supabase } from '../../lib/db';
+import { supabase, getStorageBucket } from '../../lib/db';
 import { getServerSupabase } from '../../lib/supabaseServer';
 import { withAuth } from '../../lib/auth';
 import PendonorLayout from '../../components/layouts/PendonorLayout';
@@ -86,8 +86,9 @@ export default function DashboardPembayaran({ user, pendonorId, initialQueueList
       const ext = file.name.split('.').pop().toLowerCase();
       const storagePath = `transfer/batch_${pendonorId}_${Date.now()}.${ext}`;
 
+      const bucket = getStorageBucket();
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('dokumen')
+        .from(bucket)
         .upload(storagePath, file, { upsert: true });
 
       if (uploadError) {
@@ -95,7 +96,7 @@ export default function DashboardPembayaran({ user, pendonorId, initialQueueList
       }
 
       // 2. Get Public URL
-      const { data: urlData } = supabase.storage.from('dokumen').getPublicUrl(storagePath);
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(storagePath);
       const publicUrl = urlData?.publicUrl;
       if (!publicUrl) {
         throw new Error('Gagal mendapatkan URL bukti transfer.');

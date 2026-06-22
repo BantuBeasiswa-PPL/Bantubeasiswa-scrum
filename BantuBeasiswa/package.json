@@ -7,10 +7,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "ensure-bucket": "node scripts/ensureBucket.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
+    "ensure-bucket": "npx env-cmd -f .env.test node scripts/ensureBucket.js",
+    "test": "npx env-cmd -f .env.test jest",
+    "test:watch": "npx env-cmd -f .env.test jest --watch",
+    "test:e2e": "npx env-cmd -f .env.test playwright test",
+    "test:e2e:with-env": "npx env-cmd -f .env.test npm run test:e2e",
+    "test:e2e:ui:pbi23": "npx env-cmd -f .env.test playwright test e2e/pb13-pbi23-verifikasi-berkas.spec.js --ui",
+    "test:e2e:ui:pbi24": "npx env-cmd -f .env.test playwright test e2e/pb13-pbi24-status-seleksi.spec.js --ui",
+    "test:e2e:headed:pbi23": "npx env-cmd -f .env.test playwright test e2e/pb13-pbi23-verifikasi-berkas.spec.js --headed",
+    "test:e2e:headed:pbi24": "npx env-cmd -f .env.test playwright test e2e/pb13-pbi24-status-seleksi.spec.js --headed",
+    "test:e2e:ui:pbi28": "npx env-cmd -f .env.test playwright test e2e/pb16-pbi28-rekap-pembayaran.spec.js --ui",
+    "test:e2e:ui:pbi29": "npx env-cmd -f .env.test playwright test e2e/pb16-pbi29-konfirmasi-transfer.spec.js --ui",
+    "test:e2e:headed:pbi28": "npx env-cmd -f .env.test playwright test e2e/pb16-pbi28-rekap-pembayaran.spec.js --headed",
+    "test:e2e:headed:pbi29": "npx env-cmd -f .env.test playwright test e2e/pb16-pbi29-konfirmasi-transfer.spec.js --headed"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

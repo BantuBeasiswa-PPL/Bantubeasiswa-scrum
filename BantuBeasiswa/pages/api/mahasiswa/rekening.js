@@ -1,5 +1,5 @@
 import { verifyToken } from '@/lib/auth';
-import { decryptRekeningNumber, encryptRekeningNumber } from '@/lib/rekeningCrypto';
+import { decryptRekeningNumber, decryptRekeningNumberSafe, encryptRekeningNumber } from '@/lib/rekeningCrypto';
 import { getServerSupabase } from '@/lib/supabaseServer';
 
 const REKENING_SCHEMAS = [
@@ -129,7 +129,7 @@ async function getDuplicateRekening(supabase, schema, nomorBersih) {
   }
 
   const duplicate = (data ?? []).find((rekening) => (
-    decryptRekeningNumber(rekening[schema.number]) === nomorBersih
+    decryptRekeningNumberSafe(rekening[schema.number]) === nomorBersih
   ));
 
   return { data: duplicate ?? null };

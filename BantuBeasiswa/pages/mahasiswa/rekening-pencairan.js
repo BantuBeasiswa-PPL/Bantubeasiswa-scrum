@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import MahasiswaLayout from '@/components/layouts/MahasiswaLayout';
 import { withAuth } from '@/lib/auth';
-import { supabase } from '@/lib/db';
+import { supabase, getStorageBucket } from '@/lib/db';
 import {
   getLatestRekening,
   getMahasiswaProfile,
@@ -22,7 +22,6 @@ const BANK_OPTIONS = [
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg'];
-const DOKUMEN_BUCKET = 'dokumen';
 
 function getInitials(name = '') {
   return name.split(' ').filter(Boolean).slice(0, 2)
@@ -126,22 +125,34 @@ export default function RekeningPencairanPage({ user, profile, existingRekening,
 
       let fotoBukuUrl = existingRekening?.fotoBukuUrl || null;
       if (values.proofFile) {
-        const ext = getSafeFileExtension(values.proofFile);
-        const filePath = `rekening/${activeUserId}_${Date.now()}.${ext}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from(DOKUMEN_BUCKET)
-          .upload(filePath, values.proofFile, { contentType: values.proofFile.type, upsert: false });
-        if (uploadError) {
-          throw new Error(`Gagal mengunggah foto buku tabungan: ${uploadError.message}`);
-        }
+        const fileToBase64 = (f) =>
+          new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const s = reader.result;
+              const idx = s.indexOf(',');
+              resolve(idx >= 0 ? s.slice(idx + 1) : s);
+            };
+            reader.onerror = () => reject(reader.error || new Error('Gagal membaca file'));
+            reader.readAsDataURL(f);
+          });
 
-        const { data: urlData } = supabase.storage
-          .from(DOKUMEN_BUCKET)
-          .getPublicUrl(uploadData?.path || filePath);
-        if (!urlData?.publicUrl) {
-          throw new Error('Gagal membuat URL publik foto buku tabungan.');
+        const base64 = await fileToBase64(values.proofFile);
+        const uploadRes = await fetch('/api/mahasiswa/upload-dokumen', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jenis: 'rekening',
+            fileBase64: base64,
+            mimeType: values.proofFile.type,
+            fileName: values.proofFile.name,
+          }),
+        });
+        const uploadJson = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadJson.message || 'Gagal mengunggah foto buku tabungan.');
         }
-        fotoBukuUrl = urlData.publicUrl;
+        fotoBukuUrl = uploadJson.publicUrl;
       }
 
       const res = await fetch('/api/mahasiswa/rekening', {
@@ -162,8 +173,8 @@ export default function RekeningPencairanPage({ user, profile, existingRekening,
       }
       setSaved(true);
       setEditMode(false);
-    } catch {
-      setSubmitError('Terjadi kesalahan jaringan. Coba lagi.');
+    } catch (error) {
+      setSubmitError(error?.message || 'Terjadi kesalahan jaringan. Coba lagi.');
     } finally {
       setSubmitting(false);
     }
