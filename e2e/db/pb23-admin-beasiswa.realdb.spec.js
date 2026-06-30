@@ -98,4 +98,74 @@ test.describe('REAL-DB · PB-23 · Kelola Program Beasiswa oleh Admin', () => {
     const { data } = await admin.from('beasiswa').select('beasiswaId').eq('beasiswaId', beasiswaId).maybeSingle();
     expect(data).toBeNull();
   });
+
+  // ── PBI-40 Alternatif ────────────────────────────────────────────────────────
+  test('TC-40-03: pencarian beasiswa tidak ditemukan → empty state', async ({ page }) => {
+    await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: JUDUL_PENDING, status: 'pending' });
+
+    await page.goto('/admin/beasiswa');
+    await expect(page.locator(`text=${JUDUL_PENDING}`)).toBeVisible();
+
+    // Ketik kata kunci yang tidak cocok
+    const search = page.locator('input[placeholder="Cari beasiswa atau pendonor..."]');
+    await search.fill('XYZXYZ');
+    await expect(page.locator('text=Tidak Ada Program Beasiswa')).toBeVisible();
+    await expect(page.locator(`text=${JUDUL_PENDING}`)).not.toBeVisible();
+  });
+
+  // ── PBI-41 Exception Test Cases ──────────────────────────────────────────────
+  test('TC-41-04: reject tanpa alasan → tombol submit tidak aktif (exception)', async ({ page }) => {
+    const beasiswaId = await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: JUDUL_PENDING, status: 'pending' });
+    await page.goto('/admin/beasiswa');
+
+    const row = page.locator(`tr:has-text("${JUDUL_PENDING}")`);
+    await row.locator('button[title="Tolak Program"]').click();
+
+    // Modal terbuka, textarea kosong → submit button disabled
+    const modal = page.locator('text=Tolak Pengajuan Beasiswa').locator('xpath=../..');
+    await expect(modal).toBeVisible();
+    const submitBtn = modal.locator('button[type="submit"]');
+    await expect(submitBtn).toBeDisabled();
+
+    // Verifikasi status di DB tetap pending (tidak berubah)
+    const { data } = await admin.from('beasiswa').select('status').eq('beasiswaId', beasiswaId).single();
+    expect(data.status).toBe('pending');
+  });
+
+  test('TC-41-05: hapus tanpa alasan → tombol submit tidak aktif (exception)', async ({ page }) => {
+    const beasiswaId = await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: JUDUL_HAPUS, status: 'aktif' });
+    await page.goto('/admin/beasiswa');
+
+    const row = page.locator(`tr:has-text("${JUDUL_HAPUS}")`);
+    await row.locator('button[title="Hapus Program"]').click();
+
+    // Modal terbuka, textarea kosong → submit button disabled
+    const modal = page.locator('text=Hapus Program Beasiswa').locator('xpath=../..');
+    await expect(modal).toBeVisible();
+    const submitBtn = modal.locator('button[type="submit"]');
+    await expect(submitBtn).toBeDisabled();
+
+    // Verifikasi beasiswa tetap ada di DB (tidak terhapus)
+    const { data } = await admin.from('beasiswa').select('beasiswaId').eq('beasiswaId', beasiswaId).maybeSingle();
+    expect(data).toBeTruthy();
+  });
+
+  // ── PBI-41 Alternatif ────────────────────────────────────────────────────────
+  test('TC-41-06: membatalkan approve beasiswa → status tetap pending di DB', async ({ page }) => {
+    const beasiswaId = await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: JUDUL_PENDING, status: 'pending' });
+    await page.goto('/admin/beasiswa');
+
+    const row = page.locator(`tr:has-text("${JUDUL_PENDING}")`);
+    await row.locator('button[title="Setujui Program"]').click();
+
+    const swal = page.locator('.swal2-popup');
+    await expect(swal).toBeVisible();
+    // Klik Batal (bukan "Ya, Setujui")
+    await swal.locator('button:has-text("Batal")').click();
+    await expect(swal).not.toBeVisible();
+
+    // Verifikasi status di DB tetap pending
+    const { data } = await admin.from('beasiswa').select('status').eq('beasiswaId', beasiswaId).single();
+    expect(data.status).toBe('pending');
+  });
 });

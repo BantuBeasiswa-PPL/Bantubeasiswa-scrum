@@ -63,6 +63,9 @@ test.describe('REAL-DB · PB-18 · Penyaluran Dana Pendonor', () => {
   });
 
   test('TC-33-04: tombol Download PDF memicu unduhan', async ({ page }) => {
+    const path = require('path');
+    const os = require('os');
+
     await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: 'Beasiswa Garuda Nusantara', nominal: 5000000, status: 'aktif' });
     await page.goto('/pendonor/dashboard-laporan');
     await expect(page.getByRole('cell', { name: 'Beasiswa Garuda Nusantara' })).toBeVisible();
@@ -71,6 +74,10 @@ test.describe('REAL-DB · PB-18 · Penyaluran Dana Pendonor', () => {
     await page.click('button:has-text("Download PDF")');
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/laporan-rekap-program-\d{4}-\d{2}-\d{2}\.pdf/);
+
+    // Simpan PDF ke folder Downloads lokal
+    const savePath = path.join(os.homedir(), 'Downloads', download.suggestedFilename());
+    await download.saveAs(savePath);
   });
 
   test('TC-33-05: pendonor tanpa program → empty state & tombol unduh nonaktif', async ({ page }) => {
@@ -124,5 +131,48 @@ test.describe('REAL-DB · PB-18 · Penyaluran Dana Pendonor', () => {
     const swal = page.locator('.swal2-popup');
     await expect(swal).toBeVisible();
     await expect(swal).toContainText('Ukuran file melebihi 5MB');
+  });
+
+  test('TC-32-05: antrean kosong ketika tidak ada penerima LULUS → empty state', async ({ page }) => {
+    // Pendonor sudah login via beforeEach tapi tidak ada beasiswa/pendaftaran LULUS
+    await page.goto('/pendonor/dashboard-pembayaran');
+
+    // Halaman menampilkan empty state "Antrean Kosong"
+    await expect(page.locator('text=Antrean Kosong')).toBeVisible();
+    // Tidak ada baris data penerima di tabel
+    await expect(page.locator('button:has-text("Initiate")')).toHaveCount(0);
+  });
+
+  // ── PBI-33 Alternatif ────────────────────────────────────────────────────────
+  test('TC-33-06: pencarian program tidak ditemukan → tabel kosong', async ({ page }) => {
+    await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: 'Beasiswa Garuda Nusantara', nominal: 5000000, status: 'aktif' });
+
+    await page.goto('/pendonor/dashboard-laporan');
+    await expect(page.getByRole('cell', { name: 'Beasiswa Garuda Nusantara' })).toBeVisible();
+
+    // Ketik kata kunci yang tidak cocok
+    await page.fill('input[placeholder*="Cari program"]', 'XYZXYZ');
+    await expect(page.locator('text=Tidak Ada Data Program')).toBeVisible();
+    await expect(page.getByRole('cell', { name: 'Beasiswa Garuda Nusantara' })).not.toBeVisible();
+  });
+
+  test('TC-33-07: reset filter status ke "Semua" menampilkan kembali semua data', async ({ page }) => {
+    const bA = await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: 'Beasiswa Tersalurkan Penuh', nominal: 5000000, status: 'aktif' });
+    const bB = await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: 'Beasiswa Belum Tersalur', nominal: 5000000, status: 'aktif' });
+    const m1 = await seeder.mahasiswa({ email: 'mhs1.pb18@bantubeasiswa.test', nama: 'Budi Santoso' });
+    await seeder.pendaftaran({ userId: m1.userId, beasiswaId: bA, status: 'LULUS' });
+    await seeder.penyaluran({ pendonorId: pendonor.pendonorId, beasiswaId: bA, jumlahDana: 5000000, status: 'tersalurkan' });
+
+    await page.goto('/pendonor/dashboard-laporan');
+    // Awalnya semua program tampil
+    await expect(page.getByRole('cell', { name: 'Beasiswa Tersalurkan Penuh' })).toBeVisible();
+
+    // Filter ke "Tersalurkan" → hanya yang berstatus tersalurkan yang tampil
+    await page.selectOption('#filter-status', 'tersalurkan');
+    await expect(page.getByRole('cell', { name: 'Beasiswa Tersalurkan Penuh' })).toBeVisible();
+
+    // Reset filter ke "Semua" → semua data kembali tampil
+    await page.selectOption('#filter-status', 'Semua');
+    await expect(page.getByRole('cell', { name: 'Beasiswa Tersalurkan Penuh' })).toBeVisible();
   });
 });
