@@ -47,6 +47,19 @@ test.describe('REAL-DB · PB-17 · Tutorial Administrasi & Bookmark', () => {
     await expect(page.locator('text=Template SKTM (Surat Keterangan Tidak Mampu)')).toBeVisible();
   });
 
+  test('TC-30-09: Mahasiswa tidak melihat tombol CRUD tutorial admin', async ({ page, context }) => {
+    const mhs = await seeder.mahasiswa({ email: MHS_EMAIL });
+    await loginAs(context, 'mahasiswa', { userId: mhs.userId, accountId: mhs.accountId });
+
+    await page.goto('/tutorial-administrasi');
+    await expect(page.locator('text=Administrative Journey')).toBeVisible();
+
+    // Tombol admin CRUD tidak boleh tampil untuk role mahasiswa
+    await expect(page.locator('button:has-text("Tambah Tutorial Baru")')).toHaveCount(0);
+    await expect(page.locator('button[title="Edit Panduan"]')).toHaveCount(0);
+    await expect(page.locator('button[title="Hapus Panduan"]')).toHaveCount(0);
+  });
+
   // ── PBI-31: Bookmark Beasiswa ───────────────────────────────────────────────
   test('TC-31-01: Bookmark tanpa login → redirect ke /login', async ({ page }) => {
     await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: JUDUL, status: 'aktif' });
@@ -113,6 +126,43 @@ test.describe('REAL-DB · PB-17 · Tutorial Administrasi & Bookmark', () => {
     await page.fill('#search-beasiswa', 'Indonesia Pintar');
     await expect(page.locator('button[title="Hapus dari Favorit"]')).toBeVisible();
   });
+
+  test('TC-31-05: Membatalkan penghapusan favorit → baris tetap ada di DB', async ({ page, context }) => {
+    const mhs = await seeder.mahasiswa({ email: MHS_EMAIL });
+    const beasiswaId = await seeder.beasiswa({ pendonorId: pendonor.pendonorId, judul: JUDUL, status: 'aktif' });
+    await seeder.favorit({ userId: mhs.userId, beasiswaId });
+    await loginAs(context, 'mahasiswa', { userId: mhs.userId, accountId: mhs.accountId });
+
+    await page.goto('/mahasiswa/favorit');
+    await expect(page.locator(`text=${JUDUL}`)).toBeVisible();
+
+    await page.locator('button[title="Hapus dari Favorit"]').click();
+    const swal = page.locator('.swal2-popup');
+    await expect(swal).toBeVisible();
+    // Klik Batal (bukan "Ya, Hapus")
+    await swal.locator('button:has-text("Batal")').click();
+    await expect(swal).not.toBeVisible();
+
+    // Kartu masih tampil di halaman
+    await expect(page.locator(`text=${JUDUL}`)).toBeVisible();
+
+    // Verifikasi baris favorit tetap ada di DB
+    const { data } = await admin.from('favorit').select('favoritId').eq('userId', mhs.userId).eq('beasiswaId', beasiswaId).maybeSingle();
+    expect(data).toBeTruthy();
+  });
+
+  test('TC-31-06: Halaman favorit kosong menampilkan empty state', async ({ page, context }) => {
+    const mhs = await seeder.mahasiswa({ email: MHS_EMAIL });
+    await loginAs(context, 'mahasiswa', { userId: mhs.userId, accountId: mhs.accountId });
+
+    // Mahasiswa baru tanpa data favorit di DB
+    await page.goto('/mahasiswa/favorit');
+
+    // Tidak ada kartu beasiswa
+    await expect(page.locator('button[title="Hapus dari Favorit"]')).toHaveCount(0);
+    // Empty state tampil
+    await expect(page.locator('text=Belum ada beasiswa tersimpan')).toBeVisible();
+  });
 });
 
 /**
@@ -150,10 +200,14 @@ test.describe('REAL-DB · PB-17 · Tutorial Administrasi (Admin)', () => {
   test('TC-30-04: Admin mengedit tutorial → perubahan tersimpan di DB', async ({ page }) => {
     const judul = 'Panduan Surat Domisili';
     const judulBaru = 'Panduan Surat Domisili (Diperbarui)';
+    // Bersihkan sisa data dari run sebelumnya (terutama kalau KEEP_DATA=1)
+    await seeder.resetTutorial(judul);
+    await seeder.resetTutorial(judulBaru);
     const tutorialId = await seeder.tutorial({ judul, konten: '<p>Versi lama.</p>' });
 
     await page.goto('/tutorial-administrasi');
-    const card = page.locator('article', { hasText: judul });
+    const card = page.locator('article', { hasText: judul }).first();
+    await expect(card).toBeVisible({ timeout: 10_000 });
     await card.locator('button[title="Edit Panduan"]').click();
 
     await page.fill(TITLE_INPUT, judulBaru);
@@ -189,5 +243,44 @@ test.describe('REAL-DB · PB-17 · Tutorial Administrasi (Admin)', () => {
     await page.click('button:has-text("Simpan Panduan Baru")');
 
     await expect(page.locator('text=Judul wajib diisi')).toBeVisible();
+  });
+
+  test('TC-30-07: Admin membatalkan penghapusan tutorial → tutorial tetap ada di DB', async ({ page }) => {
+    const judul = 'Panduan yang Tidak Jadi Dihapus';
+    const tutorialId = await seeder.tutorial({ judul, konten: '<p>Konten tetap.</p>' });
+
+    await page.goto('/tutorial-administrasi');
+    const card = page.locator('article', { hasText: judul });
+    await card.locator('button[title="Hapus Panduan"]').click();
+
+    const swal = page.locator('.swal2-popup');
+    await expect(swal).toBeVisible();
+    // Klik Batal (bukan "Ya, Hapus")
+    await swal.locator('button:has-text("Batal")').click();
+    await expect(swal).not.toBeVisible();
+
+    // Tutorial masih tampil di halaman
+    await expect(page.locator(`text=${judul}`)).toBeVisible();
+
+    // Verifikasi baris tetap ada di DB
+    const { data } = await admin.from('tutorial').select('tutorialId').eq('tutorialId', tutorialId).maybeSingle();
+    expect(data).toBeTruthy();
+  });
+
+  test('TC-30-08: Validasi konten tutorial wajib diisi saat tambah tutorial', async ({ page }) => {
+    await page.goto('/tutorial-administrasi');
+    await page.click('button:has-text("Tambah Tutorial Baru")');
+    // Isi judul valid, biarkan konten kosong
+    await page.fill(TITLE_INPUT, 'Panduan Lengkap');
+    // Pastikan textarea konten benar-benar kosong (textarea punya atribut required,
+    // maka perlu clear terlebih dahulu lalu hapus atribut required via JS
+    // agar validasi kustom JS yang berjalan, bukan validasi HTML5 native).
+    const textarea = page.locator('#admin-content-textarea');
+    await textarea.fill('');
+    await textarea.evaluate(el => el.removeAttribute('required'));
+    await page.click('button:has-text("Simpan Panduan Baru")');
+
+    // Harus muncul pesan validasi konten kustom
+    await expect(page.locator('text=Konten tutorial wajib diisi')).toBeVisible();
   });
 });
